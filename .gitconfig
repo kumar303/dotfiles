@@ -1,0 +1,15 @@
+[user]
+    name = Kumar McMillan
+    email = kumar.mcmillan@gmail.com
+[color]
+    diff = auto
+    status  = auto
+    branch = auto
+[alias]
+    ci = commit
+    co = checkout
+    # get changes for master and rebase a branch on top of it
+    sync = "!f() { echo Syncing $1 with master && git checkout master && git pull && git checkout $1 && git rebase master; }; f"
+
+[core]
+	excludesfile = /Users/kumar/.gitignore
