@@ -8,8 +8,10 @@
 [alias]
     ci = commit
     co = checkout
-    # get changes for master and rebase a branch on top of it
+    # Some zamboni/AMO specific commands:
     sync = "!f() { echo Syncing $1 with master && git checkout master && git pull && git checkout $1 && git rebase master; }; f"
+    bigup = "!f() { git submodule update --init && pushd vendor && git pull && git submodule update --init && popd && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
+    check = "!f() { git whatchanged $1 -1 | awk '/^:/ {print $NF}' | xargs check.py; }; f"
 
 [core]
 	excludesfile = /Users/kumar/.gitignore
