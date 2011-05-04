@@ -10,8 +10,10 @@
     co = checkout
     # Some zamboni/AMO specific commands:
     sync = "!f() { echo Syncing $1 with master && git checkout master && git pull && git checkout $1 && git rebase master; }; f"
-    bigup = "!f() { git submodule update --init && pushd vendor && git pull && git submodule update --init && popd && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
+    bigup = "!f() { git submodule update --init && pushd vendor && git pull && git submodule sync && git submodule update --init && popd && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
     check = "!f() { git whatchanged $1 -1 | awk '/^:/ {print $NF}' | xargs check.py; }; f"
+    fix = "!f() { git commit -a -m \"fixup! $(git log -1 --pretty=format:%s)\" && git rebase -i --autosquash HEAD~4; }; f"
+    ri = rebase --interactive --autosquash HEAD~20
 
 [core]
 	excludesfile = /Users/kumar/.gitignore
