@@ -14,7 +14,7 @@
     fix = "!f() { git commit -a -m \"fixup! $(git log -1 --pretty=format:%s)\" && git rebase -i --autosquash HEAD~4; }; f"
     ri = rebase --interactive --autosquash HEAD~20
     # This is specific to Zamboni. https://github.com/jbalogh/zamboni/
-    bigup = "!f() { git submodule update --init && pushd vendor && git pull && git submodule sync && git submodule update --init && popd && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
+    bigup = "!f() { git submodule sync -q && git submodule update --init --recursive && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
 
 [core]
     excludesfile = /Users/kumar/.gitignore
