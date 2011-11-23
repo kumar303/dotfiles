@@ -11,7 +11,7 @@
     st = status
     sync = "!f() { echo Syncing this branch with master && git checkout master && git pull && git checkout - && git rebase master; }; f"
     check = "!f() { git whatchanged $1 -1 | awk '/^:/ {print $NF}' | xargs check.py; }; f"
-    fix = "!f() { git commit -a -m \"fixup! $(git log -1 --pretty=format:%s)\" && git rebase -i --autosquash HEAD~4; }; f"
+    fix = "commit -a --amend -C HEAD"
     ri = rebase --interactive --autosquash HEAD~20
     # This is specific to Zamboni. https://github.com/jbalogh/zamboni/
     bigup = "!f() { git submodule sync -q && git submodule update --init --recursive && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
