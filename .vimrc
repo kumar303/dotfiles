@@ -1,5 +1,5 @@
-" colorscheme darkblue
-colorscheme ir_black
+colorscheme darkblue
+"colorscheme ir_black
 syntax on
 
 set cursorline
