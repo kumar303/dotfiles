@@ -1,2 +1,18 @@
 [ui]
 username = Kumar McMillan <kumar.mcmillan@gmail.com>
+
+[extensions]
+color =
+mq =
+pager =
+
+[color]
+# valid modes are win32, ansi, auto, off
+mode = ansi
+
+[diff]
+git = 1
+
+[pager]
+pager = LESS='FSRX' less
+
