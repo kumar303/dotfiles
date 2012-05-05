@@ -1,6 +1,3 @@
-colorscheme darkblue
-"colorscheme ir_black
-syntax on
 
 set cursorline
 
@@ -11,12 +8,16 @@ set bs=2
 set encoding=utf-8
 set expandtab
 set fileencoding=utf-8
-"set foldmethod=manual
+set foldmethod=manual
+" disable folding:
+set foldlevelstart=99
 "set foldcolumn=2
+set guifont=Monaco:h12
 set hls
 set incsearch
 set nocompatible
-set nonumber
+set noerrorbells visualbell t_vb=
+set number
 set nowrap
 set ruler
 set scrolloff=3
@@ -25,11 +26,14 @@ set showmatch
 set smartindent
 set smarttab
 set softtabstop=4
+set tags+=$HOME/.vimtags
 set t_Co=16
 "set t_Co=256
 set tabstop=4
 set textwidth=80
 "set title
+" increase verbosity
+"set vbs=1
 set wildmenu
 "set wrap
 
@@ -39,18 +43,18 @@ map <C-K> <C-W>k<C-W>_
 map <C-H> <C-W>h<C-W><bar>
 map <C-L> <C-W>l<C-W><bar>
 
+" Allow window-switching commands in insert mode
+:imap <C-w> <C-o><C-w>
+
 " Multi-file.  CTRL+[NP] for next/previous file
 map <C-P> :prev<CR>
 map <C-N> :next<CR>
 
-" Map F5 to clear the highlighting search
-map <F5> :set hls!<bar>set hls?<CR>
-
-" PHP Syntax check
-" map <f9> :w<CR>:!php -l %<CR>
-
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e
+
+" Press Space to turn off highlighting and clear any message already displayed.
+:nnoremap <silent> <Space> :nohlsearch<Bar>:echo<CR>
 
 """ Python
 map <F8> Oimport pdb; pdb.set_trace()<Esc>
@@ -64,24 +68,24 @@ filetype plugin indent on
 
 augroup blah
     au!
-    au BufRead,BufNewFile *.html setfiletype php
-    au BufRead,BufNewFile *.thtml setfiletype htmldjango
-    au BufRead,BufNewFile *.lhtml setfiletype htmldjango
-    au BufRead,BufNewFile *.module setfiletype php
-    au BufRead,BufNewFile *.install setfiletype php
-    au BufRead,BufNewFile *.profile setfiletype php
+    au BufRead,BufNewFile *.html setfiletype htmldjango
 augroup END
 
 " HTML has long lines and short indents
-autocmd FileType kid setlocal tabstop=4 shiftwidth=4 softtabstop=4
 autocmd FileType html setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
-autocmd FileType thtml setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
-autocmd FileType lhtml setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
-
+autocmd FileType htmldjango setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
+autocmd FileType js setlocal textwidth=0 tabstop=4 shiftwidth=4 softtabstop=4
 autocmd FileType php setlocal tabstop=4 shiftwidth=4 softtabstop=4
-
 autocmd FileType python setlocal tabstop=4 shiftwidth=4 softtabstop=4
-autocmd FileType python setlocal foldmethod=indent foldminlines=15 foldnestmax=2 foldcolumn=2
+"autocmd FileType python setlocal foldmethod=indent foldminlines=15 foldnestmax=2 foldcolumn=2
 
-" fail
-autocmd FileType virata set filetype=php
+
+" Set working directory to the current file
+" http://vim.wikia.com/wiki/Set_working_directory_to_the_current_file
+autocmd BufEnter * silent! lcd %:p:h
+
+syntax on
+"http://vimcolorschemetest.googlecode.com/svn/html/index-c.html
+"colorscheme darkblue
+"colorscheme ir_black
+colorscheme AutumnLeaf
