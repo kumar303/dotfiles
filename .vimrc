@@ -88,4 +88,4 @@ syntax on
 "http://vimcolorschemetest.googlecode.com/svn/html/index-c.html
 "colorscheme darkblue
 "colorscheme ir_black
-colorscheme AutumnLeaf
+colorscheme autumnleaf
