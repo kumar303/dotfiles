@@ -14,7 +14,7 @@
     fix = "commit -a --amend -C HEAD"
     ri = rebase --interactive --autosquash HEAD~20
     # This is specific to Zamboni. https://github.com/jbalogh/zamboni/
-    bigup = "!f() { git submodule sync -q && git submodule update --init --recursive && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
+    bigup = "!f() { git pull && git submodule sync -q && git submodule update --init --recursive && pip install --no-deps -r requirements/test.txt && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
 
 [core]
     excludesfile = /Users/kumar/.gitignore
