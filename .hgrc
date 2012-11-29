@@ -5,6 +5,7 @@ username = Kumar McMillan <kumar.mcmillan@gmail.com>
 color =
 mq =
 pager =
+qimportbz = /Users/kumar/src/qimportbz/
 
 [color]
 # valid modes are win32, ansi, auto, off
