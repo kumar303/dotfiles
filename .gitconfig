@@ -18,3 +18,5 @@
 
 [core]
     excludesfile = /Users/kumar/.gitignore
+[push]
+    default = simple
