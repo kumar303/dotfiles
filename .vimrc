@@ -74,7 +74,7 @@ augroup END
 " HTML has long lines and short indents
 autocmd FileType html setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
 autocmd FileType htmldjango setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
-autocmd FileType js setlocal textwidth=0 tabstop=4 shiftwidth=4 softtabstop=4
+autocmd FileType javascript setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
 autocmd FileType php setlocal tabstop=4 shiftwidth=4 softtabstop=4
 autocmd FileType python setlocal tabstop=4 shiftwidth=4 softtabstop=4
 "autocmd FileType python setlocal foldmethod=indent foldminlines=15 foldnestmax=2 foldcolumn=2
