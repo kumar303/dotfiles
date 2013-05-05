@@ -15,7 +15,10 @@ set foldlevelstart=99
 set guifont=Monaco:h12
 set hls
 set incsearch
-set nocompatible
+set nocompatible " Use Vim settings, rather then Vi settings
+set nobackup
+set nowritebackup
+set noswapfile " http://robots.thoughtbot.com/post/18739402579/global-gitignore#comment-458413287
 set noerrorbells visualbell t_vb=
 set number
 set nowrap
