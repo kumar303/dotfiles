@@ -1,5 +1,5 @@
 let g:netrw_dirhistmax  =10
-let g:netrw_dirhist_cnt =7
+let g:netrw_dirhist_cnt =8
 let g:netrw_dirhist_1='/Users/kumar/dev/zamboni/mkt/inapp_pay/templates/inapp_pay/prototype'
 let g:netrw_dirhist_2='/Users/kumar/dev/zamboni/mkt/inapp_pay/templates'
 let g:netrw_dirhist_3='/Users/kumar/dev/zamboni/mkt/inapp_pay/templates/inapp_pay'
@@ -7,3 +7,4 @@ let g:netrw_dirhist_4='/Users/kumar/dev/zamboni/mkt/inapp_pay/templates'
 let g:netrw_dirhist_5='/Users/kumar/dev/zamboni/mkt/inapp_pay'
 let g:netrw_dirhist_6='/Users/kumar/tmp/django-s3/lib/python2.6/site-packages/django_storages-1.1.4-py2.6.egg-info'
 let g:netrw_dirhist_7='/Users/kumar/dev/solitude/solitude/locale'
+let g:netrw_dirhist_8='/Users/kumar/dev/heartbeat/requirements'
