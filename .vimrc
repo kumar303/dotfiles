@@ -49,6 +49,10 @@ map <C-L> <C-W>l<C-W><bar>
 " Allow window-switching commands in insert mode
 :imap <C-w> <C-o><C-w>
 
+" Open new split panes to right and bottom, which feels more natural
+set splitbelow
+set splitright
+
 " Multi-file.  CTRL+[NP] for next/previous file
 map <C-P> :prev<CR>
 map <C-N> :next<CR>
