@@ -14,7 +14,7 @@
     fix = "commit -a --amend -C HEAD"
     ri = rebase --interactive --autosquash HEAD~20
     # This is specific to Zamboni. https://github.com/mozilla/zamboni/
-    zup = "!f() { git pull && git submodule sync -q && git submodule update --init --recursive && pip install --no-deps -r requirements/dev.txt --exists-action=w && pushd locale && svn up && popd && find . -name '*.pyc' -exec rm {} \\;; }; f"
+    zup = "!f() { git pull && git submodule sync -q && git submodule update --init --recursive && pip install --no-deps -r requirements/dev.txt --exists-action=w && find . -name '*.pyc' -exec rm {} \\;; }; f"
     # This should work for most Mozilla pip projects.
     pup = "!f() { git pull && pip install --no-deps -r requirements/dev.txt --exists-action=w ; }; f"
 
