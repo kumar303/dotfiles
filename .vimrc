@@ -14,7 +14,7 @@ set foldlevelstart=99
 "set foldcolumn=2
 set guifont=Monaco:h12
 set hls
-set incsearch
+set incsearch " Search as string is typed
 set nocompatible " Use Vim settings, rather then Vi settings
 set nobackup
 set nowritebackup
