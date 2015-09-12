@@ -5,5 +5,5 @@ TAGS
 *.egg-info
 .emacs.desktop
 .#*
-build
 *~
+docs/_build/*

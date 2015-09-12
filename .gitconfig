@@ -12,7 +12,7 @@
     sync = "!f() { echo Syncing this branch with master && git checkout master && git pull && git checkout - && git rebase master; }; f"
     check = "!f() { git whatchanged $1 -1 | awk '/^:/ {print $NF}' | xargs check.py; }; f"
     fix = "commit -a --amend -C HEAD"
-    ri = rebase --interactive --autosquash HEAD~20
+    ri = rebase --interactive --autosquash HEAD~5
     # This is specific to Zamboni. https://github.com/mozilla/zamboni/
     zup = "!f() { git pull && git submodule sync -q && git submodule update --init --recursive && pip install --no-deps --exists-action=w --download-cache=/tmp/pip-cache -r requirements/dev.txt --find-links https://pyrepo.addons.mozilla.org/ --allow-external PIL --allow-unverified PIL && find . -name '*.pyc' -exec rm {} \\;; }; f"
     # This should work for most Mozilla pip projects.
