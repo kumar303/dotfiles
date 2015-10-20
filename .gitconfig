@@ -23,3 +23,5 @@
     excludesfile = /Users/kumar/.gitignore
 [push]
     default = current
+[help]
+    autocorrect = 1
