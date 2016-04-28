@@ -81,6 +81,11 @@ augroup blah
     au BufRead,BufNewFile *.html setfiletype htmldjango
 augroup END
 
+augroup jsm
+    au!
+    au BufRead,BufNewFile *.jsm setfiletype javascript
+augroup END
+
 autocmd FileType go setlocal noexpandtab tabstop=4 shiftwidth=4 softtabstop=4
 " HTML has long lines and short indents
 autocmd FileType html setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
