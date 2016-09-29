@@ -6,6 +6,7 @@ color =
 mq =
 pager =
 rebase =
+shelve =
 histedit =
 hgwatchman = ~/.mozbuild/hgwatchman/hgwatchman
 reviewboard = ~/.mozbuild/version-control-tools/hgext/reviewboard/client.py
