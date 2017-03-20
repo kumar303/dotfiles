@@ -60,6 +60,9 @@ map <C-N> :next<CR>
 " Save a file with ESC ESC
 map <Esc><Esc> :w<CR>
 
+" Open nerdtree in the dev directory
+map <C-N> :NERDTree ~/dev/
+
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e
 
