@@ -1,5 +1,6 @@
 [ui]
 username = Kumar McMillan <kumar.mcmillan@gmail.com>
+interface = curses
 
 [extensions]
 color =
@@ -8,15 +9,20 @@ pager =
 rebase =
 shelve =
 histedit =
-hgwatchman = ~/.mozbuild/hgwatchman/hgwatchman
-reviewboard = ~/.mozbuild/version-control-tools/hgext/reviewboard/client.py
-bzexport = ~/.mozbuild/version-control-tools/hgext/bzexport
-bzpost = ~/.mozbuild/version-control-tools/hgext/bzpost
-firefoxtree = ~/.mozbuild/version-control-tools/hgext/firefoxtree
-push-to-try = ~/.mozbuild/version-control-tools/hgext/push-to-try
-mqext = ~/.mozbuild/version-control-tools/hgext/mqext
-qimportbz = ~/.mozbuild/version-control-tools/hgext/qimportbz
-mozext = ~/.mozbuild/version-control-tools/hgext/mozext
+fsmonitor =
+blackbox =
+firefoxtree = /Users/kumar/.mozbuild/version-control-tools/hgext/firefoxtree
+reviewboard = /Users/kumar/.mozbuild/version-control-tools/hgext/reviewboard/client.py
+push-to-try = /Users/kumar/.mozbuild/version-control-tools/hgext/push-to-try
+# hgwatchman = ~/.mozbuild/hgwatchman/hgwatchman
+# reviewboard = ~/.mozbuild/version-control-tools/hgext/reviewboard/client.py
+# bzexport = ~/.mozbuild/version-control-tools/hgext/bzexport
+# bzpost = ~/.mozbuild/version-control-tools/hgext/bzpost
+# firefoxtree = ~/.mozbuild/version-control-tools/hgext/firefoxtree
+# push-to-try = ~/.mozbuild/version-control-tools/hgext/push-to-try
+# mqext = ~/.mozbuild/version-control-tools/hgext/mqext
+# qimportbz = ~/.mozbuild/version-control-tools/hgext/qimportbz
+# mozext = ~/.mozbuild/version-control-tools/hgext/mozext
 
 [paths]
 review = https://reviewboard-hg.mozilla.org/autoreview
@@ -24,6 +30,14 @@ review = https://reviewboard-hg.mozilla.org/autoreview
 [color]
 # valid modes are win32, ansi, auto, off
 mode = ansi
+wip.bookmarks = yellow underline
+wip.branch = yellow
+wip.draft = green
+wip.here = red
+wip.obsolete = none
+wip.public = blue
+wip.tags = yellow
+wip.user = magenta
 
 [diff]
 git = 1
@@ -32,16 +46,22 @@ unified = 8
 
 [pager]
 pager = LESS='FSRX' less
+attend-help = true
+attend-incoming = true
+attend-outgoing = true
+attend-status = true
+attend-wip = true
 [experimental]
 clonebundles = true
+graphshorten = true
 [alias]
 wip = log --graph --rev=wip --template=wip
 fx-team-rebase = rebase -r pending -d fx-team
 [revsetalias]
-wip = (parents(not public()) or not public() or . or (head() and branch(default))) and (not obsolete() or unstable()^) and not closed()
+wip = (parents(not public()) or not public() or . or (head() and branch(default))) and (not obsolete() or unstable()^) and not closed() and not (fxheads() - date(-90))
 pending = ancestors(.)&draft()
 [templates]
-wip = '{label("log.branch", branches)} {label("changeset.{phase}", rev)}{label("changeset.{phase}", ":")}{label("changeset.{phase}", short(node))} {label("grep.user", author|user)}{label("log.tag", if(tags," {tags}"))}{label("log.tag", if(fxheads," {fxheads}"))} {label("log.bookmark", if(bookmarks," {bookmarks}"))}\n{label(ifcontains(rev, revset("."), "desc.here"),desc|firstline)}'
+wip = '{label("wip.branch", if(branches,"{branches} "))}{label(ifeq(graphnode,"x","wip.obsolete","wip.{phase}"),"{rev}:{node|short}")}{label("wip.user", " {author|user}")}{label("wip.tags", if(tags," {tags}"))}{label("wip.tags", if(fxheads," {fxheads}"))}{if(bookmarks," ")}{label("wip.bookmarks", if(bookmarks,bookmarks))}{label(ifcontains(rev, revset("parents()"), "wip.here"), " {desc|firstline}")}'
 [mqext]
 mqcommit = auto
 [defaults]
