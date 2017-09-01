@@ -89,8 +89,8 @@ augroup jsm
     au BufRead,BufNewFile *.jsm setfiletype javascript
 augroup END
 
-" Soft wrap prose in text files.
-au BufRead,BufNewFile *.txt,*.md,*.rst set wrap linebreak nolist textwidth=0 wrapmargin=0
+" Soft wrap lines that exceed the window.
+au BufRead,BufNewFile *.* set wrap linebreak nolist textwidth=0 wrapmargin=0
 
 autocmd FileType go setlocal noexpandtab tabstop=4 shiftwidth=4 softtabstop=4
 " HTML has long lines and short indents
