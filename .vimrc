@@ -40,6 +40,28 @@ set textwidth=80
 set wildmenu
 "set wrap
 
+" Specify a directory for plugins
+" https://github.com/junegunn/vim-plug
+call plug#begin('~/.vim/plugged')
+
+" Increase verbosity for debugging.
+" let g:neoformat_verbose = 1
+
+" https://github.com/sbdchd/neoformat
+Plug 'sbdchd/neoformat'
+
+" Initialize plugin system
+call plug#end()
+
+" Format (with prettier?) every time you save.
+" https://prettier.io/docs/en/vim.html
+autocmd BufWritePre *.js Neoformat
+
+" This sets the prettier executable.
+autocmd FileType javascript setlocal formatprg=~/dev/addons-frontend/node_modules/.bin/prettier\ --stdin\ --parser\ flow\ --config\ ~/dev/addons-frontend/.prettierrc
+" Use formatprg when available
+let g:neoformat_try_formatprg = 1
+
 " Multi-windowing.  CTRL+[HJKL] to switch windows and maximize
 map <C-J> <C-W>j<C-W>_
 map <C-K> <C-W>k<C-W>_
