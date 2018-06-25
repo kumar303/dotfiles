@@ -12,7 +12,7 @@ histedit =
 fsmonitor =
 blackbox =
 firefoxtree = /Users/kumar/.mozbuild/version-control-tools/hgext/firefoxtree
-reviewboard = /Users/kumar/.mozbuild/version-control-tools/hgext/reviewboard/client.py
+# reviewboard = /Users/kumar/.mozbuild/version-control-tools/hgext/reviewboard/client.py
 push-to-try = /Users/kumar/.mozbuild/version-control-tools/hgext/push-to-try
 # hgwatchman = ~/.mozbuild/hgwatchman/hgwatchman
 # reviewboard = ~/.mozbuild/version-control-tools/hgext/reviewboard/client.py
@@ -69,5 +69,6 @@ qnew = -U
 [bugzilla]
 username = kumar.mcmillan@gmail.com
 firefoxprofile = dev-edition-default
+apikey = j6hNBIeTOZqg68TseujthLkrlUQbSCrgVdNBpKOl
 [mozilla]
 ircnick = kumar
