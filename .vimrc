@@ -63,7 +63,7 @@ autocmd FileType javascript setlocal formatprg=~/dev/addons-frontend/node_module
 " Use formatprg when available
 let g:neoformat_try_formatprg = 1
 
-nnoremap ,pp :silent %!~/dev/addons-frontend/node_modules/.bin/prettier --stdin --parser flow --config ~/dev/addons-frontend/.prettierrc<CR>
+nnoremap ,pp :silent %!~/dev/addons-frontend/node_modules/.bin/prettier --stdin --parser flow<CR>
 
 " Multi-windowing.  CTRL+[HJKL] to switch windows and maximize
 map <C-J> <C-W>j<C-W>_
