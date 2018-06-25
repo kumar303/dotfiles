@@ -53,9 +53,10 @@ Plug 'sbdchd/neoformat'
 " Initialize plugin system
 call plug#end()
 
-" Format (with prettier?) every time you save.
+" ***This only applies to addons-frontend***
+" Format (e.g. with prettier) every time you save.
 " https://prettier.io/docs/en/vim.html
-autocmd BufWritePre *.js Neoformat
+autocmd BufWritePre */addons-frontend/*.js Neoformat
 
 " This sets the prettier executable.
 autocmd FileType javascript setlocal formatprg=~/dev/addons-frontend/node_modules/.bin/prettier\ --stdin\ --parser\ flow\ --config\ ~/dev/addons-frontend/.prettierrc
