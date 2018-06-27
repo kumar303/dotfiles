@@ -69,6 +69,5 @@ qnew = -U
 [bugzilla]
 username = kumar.mcmillan@gmail.com
 firefoxprofile = dev-edition-default
-apikey = j6hNBIeTOZqg68TseujthLkrlUQbSCrgVdNBpKOl
 [mozilla]
 ircnick = kumar
