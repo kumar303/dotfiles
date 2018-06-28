@@ -56,13 +56,18 @@ call plug#end()
 " ***This only applies to addons-frontend***
 " Format (e.g. with prettier) every time you save.
 " https://prettier.io/docs/en/vim.html
-autocmd BufWritePre */addons-frontend/*.js Neoformat
+" ** Disabling this because it's a bit too slow.
+"autocmd BufWritePre */addons-frontend/*.js Neoformat
 
 " This sets the prettier executable.
-autocmd FileType javascript setlocal formatprg=~/dev/addons-frontend/node_modules/.bin/prettier\ --stdin\ --parser\ flow\ --config\ ~/dev/addons-frontend/.prettierrc
+"autocmd FileType javascript setlocal formatprg=~/dev/addons-frontend/node_modules/.bin/prettier\ --stdin\ --parser\ flow\ --config\ ~/dev/addons-frontend/.prettierrc
 " Use formatprg when available
-let g:neoformat_try_formatprg = 1
+"let g:neoformat_try_formatprg = 1
 
+" addons-frontend prettier
+nnoremap ,aa :silent %!~/dev/addons-frontend/node_modules/.bin/prettier --stdin --parser flow --config ~/dev/addons-frontend/.prettierrc --ignore-path ~/dev/addons-frontend/.prettierignore<CR>
+
+" Generic prettier. TODO: use a global prettier.
 nnoremap ,pp :silent %!~/dev/addons-frontend/node_modules/.bin/prettier --stdin --parser flow<CR>
 
 " Multi-windowing.  CTRL+[HJKL] to switch windows and maximize
