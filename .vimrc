@@ -70,7 +70,7 @@ let g:neoformat_only_msg_on_error = 1
 nnoremap ,aa :Neoformat<CR>
 
 " Generic prettier. TODO: use a global prettier and switch to :Neoformat.
-nnoremap ,pp :silent %!~/dev/addons-frontend/node_modules/.bin/prettier --stdin<CR>
+nnoremap ,pp :silent %!~/dev/addons-frontend/node_modules/.bin/prettier %<CR>
 
 " Multi-windowing.  CTRL+[HJKL] to switch windows and maximize
 map <C-J> <C-W>j<C-W>_
