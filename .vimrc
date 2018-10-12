@@ -60,7 +60,7 @@ call plug#end()
 "autocmd BufWritePre */addons-frontend/*.js Neoformat
 
 " This sets the prettier executable.
-autocmd FileType javascript setlocal formatprg=~/dev/addons-frontend/node_modules/.bin/prettier\ --stdin\ --parser\ flow\ --config\ ~/dev/addons-frontend/.prettierrc\ --ignore-path\ ~/dev/addons-frontend/.prettierignore
+autocmd FileType javascript setlocal formatprg=~/dev/addons-frontend/node_modules/.bin/prettier\ --config\ ~/dev/addons-frontend/.prettierrc\ --ignore-path\ ~/dev/addons-frontend/.prettierignore\ %
 " Use formatprg when available
 let g:neoformat_try_formatprg = 1
 
@@ -70,7 +70,7 @@ let g:neoformat_only_msg_on_error = 1
 nnoremap ,aa :Neoformat<CR>
 
 " Generic prettier. TODO: use a global prettier and switch to :Neoformat.
-nnoremap ,pp :silent %!~/dev/addons-frontend/node_modules/.bin/prettier --stdin --parser flow<CR>
+nnoremap ,pp :silent %!~/dev/addons-frontend/node_modules/.bin/prettier --stdin<CR>
 
 " Multi-windowing.  CTRL+[HJKL] to switch windows and maximize
 map <C-J> <C-W>j<C-W>_
