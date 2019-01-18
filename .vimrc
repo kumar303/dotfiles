@@ -116,16 +116,8 @@ augroup blah
     au BufRead,BufNewFile *.html setfiletype htmldjango
 augroup END
 
-augroup jsm
-    au!
-    au BufRead,BufNewFile *.jsm setfiletype javascript
-augroup END
-
-augroup tsx
-    au!
-    " FIXME: do real typescript highlighting?
-    au BufRead,BufNewFile *.tsx setfiletype javascript
-augroup END
+" FIXME: do real typescript highlighting?
+au BufRead,BufNewFile *.jsm,*.ts,*.tsx set filetype=javascript
 
 " Soft wrap lines that exceed the window.
 au BufRead,BufNewFile *.* set wrap linebreak nolist textwidth=0 wrapmargin=0
