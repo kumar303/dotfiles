@@ -121,6 +121,12 @@ augroup jsm
     au BufRead,BufNewFile *.jsm setfiletype javascript
 augroup END
 
+augroup tsx
+    au!
+    " FIXME: do real typescript highlighting?
+    au BufRead,BufNewFile *.tsx setfiletype javascript
+augroup END
+
 " Soft wrap lines that exceed the window.
 au BufRead,BufNewFile *.* set wrap linebreak nolist textwidth=0 wrapmargin=0
 
