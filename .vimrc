@@ -94,6 +94,8 @@ map <Esc><Esc> :w<CR>
 
 " Open nerdtree in the dev directory
 map <C-N> :NERDTree ~/dev/
+" Show hidden dotfiles
+let NERDTreeShowHidden=1
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e
