@@ -60,7 +60,7 @@ call plug#end()
 "autocmd BufWritePre */addons-frontend/*.js Neoformat
 
 " This sets the prettier executable.
-autocmd FileType javascript setlocal formatprg=~/dev/addons-frontend/node_modules/.bin/prettier\ --config\ ~/dev/addons-frontend/.prettierrc\ --ignore-path\ ~/dev/addons-frontend/.prettierignore\ %
+autocmd FileType javascript setlocal formatprg=~/dev/addons-code-manager/node_modules/.bin/prettier\ --config\ ~/dev/addons-code-manager/.prettierrc\ --ignore-path\ ~/dev/addons-code-manager/.prettierignore\ %
 " Use formatprg when available
 let g:neoformat_try_formatprg = 1
 
