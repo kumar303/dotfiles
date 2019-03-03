@@ -61,6 +61,9 @@ call plug#end()
 
 " This sets the prettier executable.
 autocmd FileType javascript setlocal formatprg=~/dev/addons-code-manager/node_modules/.bin/prettier\ --config\ ~/dev/addons-code-manager/.prettierrc\ --ignore-path\ ~/dev/addons-code-manager/.prettierignore\ %
+
+autocmd FileType go setlocal formatprg=gofmt\ %
+
 " Use formatprg when available
 let g:neoformat_try_formatprg = 1
 
