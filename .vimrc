@@ -72,6 +72,10 @@ let g:neoformat_only_msg_on_error = 1
 " addons-frontend prettier
 nnoremap ,aa :w<CR>:Neoformat<CR>
 
+" I dunno. It's not working.
+" https://github.com/willdurand/dotfiles/blob/0ae452464d6c9a5b48551a60e56ee6377cb9ee63/vim/ftplugin/javascript.vim#L21-L22
+" nnoremap <buffer> ,aa :!$(npm bin)/prettier --write %<CR>
+
 " Generic prettier. TODO: use a global prettier and switch to :Neoformat.
 " nnoremap ,pp :silent %!~/dev/addons-frontend/node_modules/.bin/prettier %<CR>
 
