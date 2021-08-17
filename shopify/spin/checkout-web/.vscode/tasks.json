@@ -4,6 +4,24 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "command": "tmux attach -t server",
+      "group": "build",
+      "isBackground": true,
+      "label": "dev-server",
+      "presentation": {
+        "group": "dev-servers",
+        "reveal": "always",
+        "echo": true,
+        "focus": false,
+        "panel": "dedicated"
+      },
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "type": "shell"
+    },
+    {
       "command": "yarn type-check -w",
       "group": "test",
       "isBackground": true,
