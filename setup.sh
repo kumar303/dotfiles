@@ -15,6 +15,7 @@ if [ $SPIN ]; then
   fi
   if [ -d /src/github.com/shopify/shopify/ ]; then
     echo "[kumar's dotfiles]: adding some betas"
-    SHOP_ID=1 BETA=force_checkout_one bin/rake dev:betas:enable
+    cd /src/github.com/shopify/shopify/
+    SHOP_ID=1 BETA=force_checkout_one ./bin/rake dev:betas:enable
   fi
 fi
