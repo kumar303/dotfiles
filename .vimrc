@@ -40,19 +40,6 @@ set textwidth=80
 set wildmenu
 "set wrap
 
-" Specify a directory for plugins
-" https://github.com/junegunn/vim-plug
-call plug#begin('~/.vim/plugged')
-
-" Increase verbosity for debugging.
-" let g:neoformat_verbose = 1
-
-" https://github.com/sbdchd/neoformat
-Plug 'sbdchd/neoformat'
-
-" Initialize plugin system
-call plug#end()
-
 " ***This only applies to addons-frontend***
 " Format (e.g. with prettier) every time you save.
 " https://prettier.io/docs/en/vim.html
