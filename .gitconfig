@@ -6,8 +6,10 @@
     status  = auto
     branch = auto
 [alias]
+    br = branch
     ci = commit
     co = checkout
+    pp = !git remote prune origin && git pull
     st = status
     fix = "commit -a --amend -C HEAD"
     ri = rebase --interactive --autosquash HEAD~5
