@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # This file is run by Spin https://development.shopify.io/engineering/keytech/spin/personalizing
+# Before this file runs in a Spin VM, the source will have been cloned to ~/dotfiles
 
 if [ $SPIN ]; then
   echo "[kumar's dotfiles]: bootstrapping spin"
@@ -14,6 +15,8 @@ if [ $SPIN ]; then
   git config --global alias.pp "\!git remote prune origin && git pull"
   git config --global alias.ri "rebase --interactive --autosquash HEAD~5"
   git config --global alias.st status
+
+  cat ~/dotfiles/shopify/spin/.zshrc >> ~/.zshrc
 
   # Install gh according to https://github.com/cli/cli/blob/trunk/docs/install_linux.md
   curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg
