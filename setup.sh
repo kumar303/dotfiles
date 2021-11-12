@@ -20,20 +20,20 @@ if [ $SPIN ]; then
 
   if [ -d /src/github.com ]; then
     # We're on legacy spin
-    SRC=/src/github.com
+    SRC=/src/github.com/shopify
   else
     # We're on isospin
-    SRC=/home/spin/src/github.com
+    SRC=/home/spin/src/github.com/Shopify
   fi
 
-  if [ -d $SRC/shopify/checkout-web/ ]; then
+  if [ -d $SRC/checkout-web/ ]; then
     echo "[kumar's dotfiles]: adding tasks.json to checkout-web"
-    cd $SRC/shopify/checkout-web/
+    cd $SRC/checkout-web/
     yarn init-vscode
   fi
-  if [ -d $SRC/shopify/shopify/ ]; then
+  if [ -d $SRC/shopify/ ]; then
     echo "[kumar's dotfiles]: adding some betas"
-    cd $SRC/shopify/shopify/
+    cd $SRC/shopify/
     SHOP_ID=1 BETA=force_checkout_one ./bin/rake dev:betas:enable
   fi
 fi
