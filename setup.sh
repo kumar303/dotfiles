@@ -18,14 +18,22 @@ if [ $SPIN ]; then
 
   cat ~/dotfiles/shopify/spin/.zshrc >> ~/.zshrc
 
-  if [ -d /src/github.com/shopify/checkout-web/ ]; then
+  if [ -d /src/github.com ]; then
+    # We're on legacy spin
+    SRC=/src/github.com
+  else
+    # We're on isospin
+    SRC=/home/spin/src/github.com
+  fi
+
+  if [ -d $SRC/shopify/checkout-web/ ]; then
     echo "[kumar's dotfiles]: adding tasks.json to checkout-web"
-    cd /src/github.com/shopify/checkout-web/
+    cd $SRC/shopify/checkout-web/
     yarn init-vscode
   fi
-  if [ -d /src/github.com/shopify/shopify/ ]; then
+  if [ -d $SRC/shopify/shopify/ ]; then
     echo "[kumar's dotfiles]: adding some betas"
-    cd /src/github.com/shopify/shopify/
+    cd $SRC/shopify/shopify/
     SHOP_ID=1 BETA=force_checkout_one ./bin/rake dev:betas:enable
   fi
 fi
