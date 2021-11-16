@@ -3,6 +3,8 @@
 # This file is run by Spin https://development.shopify.io/engineering/keytech/spin/personalizing
 # Before this file runs in a Spin VM, the source will have been cloned to ~/dotfiles
 
+set -x
+
 if [ $SPIN ]; then
   echo "[kumar's dotfiles]: bootstrapping spin"
 
@@ -41,6 +43,22 @@ if [ $SPIN ]; then
       echo "[kumar's dotfiles]: adding some betas"
       cd $SRC/shopify/
       SHOP_ID=1 BETA=force_checkout_one ./bin/rake dev:betas:enable
+    fi
+  fi
+
+  if [ $LEGACY -eq "0" ]; then
+    if [ -d $SRC/shopify/ ]; then
+      echo "[kumar's dotfiles]: adding some betas on isospin"
+      cd $SRC/shopify/
+      BETA_EXIT=1
+      # This needs to run in a loop because core might not have booted yet.
+      while [ $BETA_EXIT -gt 0 ]
+      do
+        echo "Trying to enable BETA=force_checkout_one"
+        SHOP_ID=1 BETA=force_checkout_one shadowenv exec -- bin/rake dev:betas:enable
+        BETA_EXIT=$?
+        sleep 2
+      done
     fi
   fi
 fi
