@@ -1,7 +1,7 @@
 These are my [dotfiles](https://dotfiles.github.io/) for configs and stuff.
 I mostly just copied them from people 😅
 
-Here's what I run on a new machine (todo: add this to `setup.sh` duh).
+Here's what I run on a new machine.
 
 ```
 mkdir -p ~/src/github.com/kumar303
