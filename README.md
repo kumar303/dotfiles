@@ -45,10 +45,11 @@ Add this `[include]` section to `.gitconfig`:
 
 ### File navigation
 
-| Scope | Key      | Action                     |
-| ----- | -------- | -------------------------- |
-| Vim   | `ctrl+p` | Open a file finder palette |
-| Vim   | `ctrl+s` | Save the file              |
+| Scope | Key      | Action                       |
+| ----- | -------- | ---------------------------- |
+| Vim   | `ctrl+p` | Open a file finder palette   |
+| Vim   | `ctrl+.` | Open a symbol finder palette |
+| Vim   | `ctrl+s` | Save the file                |
 
 ### Panes
 
@@ -69,11 +70,12 @@ Add this `[include]` section to `.gitconfig`:
 ## Vim
 
 Install [fzf](https://github.com/junegunn/fzf),
-[fd](https://github.com/sharkdp/fd), and
-[ripgrep](https://github.com/BurntSushi/ripgrep):
+[fd](https://github.com/sharkdp/fd),
+[ripgrep](https://github.com/BurntSushi/ripgrep), and
+[Universal Ctags](https://github.com/universal-ctags/ctags):
 
 ```sh
-brew install fzf fd ripgrep
+brew install fzf fd ripgrep universal-ctags
 ```
 
 `ctrl+r` and `ctrl+f` can pass any ripgrep option. Example of searching for the

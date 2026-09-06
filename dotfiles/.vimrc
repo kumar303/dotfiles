@@ -87,6 +87,53 @@ function! RipgrepFile(args)
 endfunction
 command! -nargs=+ RgFile call RipgrepFile(<q-args>)
 
+function! CurrentFileSymbols()
+    let file = expand('%:p')
+    if !filereadable(file)
+        echoerr 'Current buffer is not a readable file'
+        return []
+    endif
+    let command = 'ctags --output-format=json --fields=+nK --extras=-F --excmd=number --sort=no -f - ' . shellescape(file)
+    let output = systemlist(command)
+    if v:shell_error
+        echoerr join(output, ' ')
+        return []
+    endif
+
+    let symbols = []
+    for line in output
+        try
+            let tag = json_decode(line)
+        catch
+            continue
+        endtry
+        if get(tag, '_type', '') ==# 'tag' && has_key(tag, 'line')
+            call add(symbols, printf('%6d  %-12s %s', tag.line, get(tag, 'kind', ''), tag.name))
+        endif
+    endfor
+    return symbols
+endfunction
+
+function! OpenSymbol(line)
+    let line_number = matchstr(a:line, '^\s*\zs\d\+')
+    if !empty(line_number)
+        execute line_number
+        normal! zz
+    endif
+endfunction
+
+function! Symbols()
+    let symbols = CurrentFileSymbols()
+    if empty(symbols)
+        echo 'No symbols found'
+        return
+    endif
+    let options = g:fzf_picker_options + ['--prompt=Symbol> ']
+    call fzf#run(fzf#wrap('symbols', {'source': symbols, 'sink': function('OpenSymbol'), 'options': options}))
+endfunction
+command! Symbols call Symbols()
+
+nnoremap <silent> <C-.> :Symbols<CR>
 nnoremap <silent> <C-p> :Files<CR>
 nnoremap <C-f> :RgFile<Space>
 nnoremap <C-r> :Rg<Space>
