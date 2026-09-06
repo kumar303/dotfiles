@@ -127,7 +127,7 @@ hi VertSplit	ctermbg=6   ctermfg=14
 " hi Folded
 " hi FoldColumn
 " hi SignColumn
-hi Comment	ctermbg=10  ctermfg=2
+hi Comment	ctermbg=bg  ctermfg=2
 hi Constant	ctermbg=bg  ctermfg=9
 hi String	ctermbg=bg  ctermfg=9  cterm=italic
 hi Character	ctermbg=bg  ctermfg=9  cterm=italic
