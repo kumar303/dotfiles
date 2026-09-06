@@ -19,12 +19,10 @@ Required: Node.js, Vim, Ghostty, and Herdr.
    ./setup.sh
    ```
 
-
 The setup script recursively links each file under [`dotfiles`](dotfiles) to the
 matching path under `~/`. It prompts before replacing existing files. Run it
 again when this repository adds a dotfile. Herdr's runtime files remain
 untouched.
-
 Add this `[include]` section to `.gitconfig`:
 
 ```gitconfig
@@ -38,6 +36,41 @@ The setup script links the tracked
 [Ghostty configuration](dotfiles/.config/ghostty/config.ghostty) to
 `~/.config/ghostty/config.ghostty`. It maps `Option+Backspace` to `Control+W`
 before the key reaches Herdr.
+
+## Key bindings
+
+Herdr's prefix is `Control+B`. Press and release the prefix before its next key.
+
+### File navigation
+
+| Scope | Key                        | Action                           |
+| ----- | -------------------------- | -------------------------------- |
+| Herdr | `Command+Option+Backtick`  | Create a terminal tab            |
+| Herdr | `Control+Command+Backtick` | Select the next terminal tab     |
+| Herdr | `Control+B`, `p`           | Select the previous terminal tab |
+| Herdr | `Command+Shift+K`          | Close the terminal tab           |
+| Vim   | `Control+P`                | Find and open a file             |
+| Vim   | `Control+S`                | Save the file                    |
+
+### Panes
+
+| Scope | Key                    | Action                                       |
+| ----- | ---------------------- | -------------------------------------------- |
+| Herdr | `Control+Backtick`     | Show, hide, or focus the Vim pane            |
+| Herdr | `Control+B`, `Shift+E` | Show, hide, or focus the Vim pane (fallback) |
+| Herdr | `Control+B`, `v` / `-` | Open a vertical / horizontal split           |
+| Herdr | `Control+B`, `x`       | Close the focused pane                       |
+| Herdr | `Control+B`, `h/j/k/l` | Focus the left/down/up/right pane            |
+| Vim   | `Control+W`, `v/s`     | Open a vertical / horizontal split           |
+| Vim   | `Control+W`, `c`       | Close the split                              |
+| Vim   | `Control+W`, `h/j/k/l` | Focus the left/down/up/right split           |
+
+### Searching
+
+| Scope | Key         | Action                                    |
+| ----- | ----------- | ----------------------------------------- |
+| Vim   | `Control+R` | Search files under Vim's launch directory |
+| Vim   | `Control+F` | Search only the current file              |
 
 ## Vim
 
