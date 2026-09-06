@@ -79,13 +79,6 @@ brew install fzf fd ripgrep
 The Homebrew `fzf` package includes the Vim integration used by `.vimrc`. No
 separate Vim plugin checkout is needed.
 
-Press `ctrl+s` to save in normal or insert mode. Saving in insert mode keeps
-Vim in insert mode.
-
-Press `ctrl+p` in Vim to fuzzy-find files under the directory where Vim
-started. Splits and buffer changes do not change this root. The launcher includes
-hidden files, respects `.gitignore`, and omits `.git` directories.
-
 Press `ctrl+r` in a file or netrw directory view to enter `:Rg `. Add the
 search pattern and optional ripgrep arguments, then press Enter. Use the arrow
 keys to select a result and Enter to open it. The search uses Vim's launch
