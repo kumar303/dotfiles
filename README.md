@@ -66,6 +66,7 @@ Add this `[include]` section to `.gitconfig`:
 | ----- | -------- | -------------------------------------- |
 | Vim   | `ctrl+r` | Ripgrep through Vim's launch directory |
 | Vim   | `ctrl+f` | Find text in the current file          |
+| Vim   | `space`  | Clear search highlighting              |
 
 ## Vim
 
