@@ -85,9 +85,6 @@ text `authorization`:
 :Rg authorization -g'!**/*test*'
 ```
 
-Use ripgrep's short `-g` flag instead of `--glob`. The glob can follow `-g`
-directly, as in `-g'!**/*test*'`.
-
 ## Vim pane toggle
 
 The local [`split-vim-above`](plugins/split-vim-above) plugin keeps one Vim pane
