@@ -3,6 +3,17 @@
 Personal configuration for Vim, Git, [Ghostty](https://ghostty.org/), and
 [Herdr](https://github.com/ogulcancelik/herdr).
 
+## Demo
+
+<details>
+<summary>Watch the demo</summary>
+
+<video controls width="100%">
+  <source src="assets/dotfiles-herdr-vim-demo.mp4" type="video/mp4">
+</video>
+
+</details>
+
 ## Setup
 
 Required: Node.js, Vim, Ghostty, and Herdr.
