@@ -28,7 +28,9 @@ set showmatch
 set smartindent
 set smarttab
 set softtabstop=4
-set t_Co=16
+if has('termguicolors')
+    set termguicolors
+endif
 set tabstop=4
 set textwidth=80
 "set title
@@ -51,7 +53,7 @@ let g:fzf_file_picker_root = getcwd()
 let g:fzf_picker_options = [
     \ '--layout=reverse',
     \ '--info=inline',
-    \ '--color=fg:#000000,bg:#fffdfa,hl:#aa7733,fg+:#000000,bg+:#ddeedd,hl+:#aa7733,prompt:#003399,pointer:#cc0000,marker:#228877,spinner:#003399,header:#555555'
+    \ '--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97'
     \ ]
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
 command! Files call fzf#run(fzf#wrap('files', {'dir': g:fzf_file_picker_root, 'source': $FZF_DEFAULT_COMMAND, 'sink': 'edit', 'options': g:fzf_picker_options}))
@@ -180,4 +182,4 @@ autocmd FileType python setlocal tabstop=4 shiftwidth=4 softtabstop=4
 autocmd BufEnter * silent! lcd %:p:h
 
 syntax on
-colorscheme autumnleaf
+colorscheme light-owl
