@@ -69,7 +69,7 @@ before the key reaches Herdr.
 | Scope | Key      | Action                                 |
 | ----- | -------- | -------------------------------------- |
 | Vim   | `ctrl+r` | Ripgrep through Vim's launch directory |
-| Vim   | `ctrl+f` | Search only the current file           |
+| Vim   | `ctrl+f` | Find text in the current file          |
 
 ## Vim
 
