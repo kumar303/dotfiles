@@ -62,9 +62,12 @@ directory and respects `.gitignore`.
 
 ```vim
 :Rg authentication
-:Rg authentication --glob '!**/*test*'
-:Rg authentication --glob '*.js' --glob '!**/*test*'
+:Rg authentication -g '!**/*test*'
+:Rg authentication -g'*.js' -g'!**/*test*'
 ```
+
+Use ripgrep's short `-g` flag instead of `--glob`. The glob can follow `-g`
+directly, as in `-g'!**/*test*'`.
 
 ## Vim pane toggle
 
