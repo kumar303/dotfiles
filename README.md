@@ -39,15 +39,20 @@ before the key reaches Herdr.
 
 ## Key bindings
 
-### File navigation
+### Terminal
 
 | Scope | Key                 | Action                       |
 | ----- | ------------------- | ---------------------------- |
 | Herdr | `cmd+opt+backtick`  | Create a terminal tab        |
 | Herdr | `ctrl+cmd+backtick` | Select the next terminal tab |
 | Herdr | `cmd+shift+k`       | Close the terminal tab       |
-| Vim   | `ctrl+p`            | Find and open a file         |
-| Vim   | `ctrl+s`            | Save the file                |
+
+### File navigation
+
+| Scope | Key      | Action               |
+| ----- | -------- | -------------------- |
+| Vim   | `ctrl+p` | Find and open a file |
+| Vim   | `ctrl+s` | Save the file        |
 
 ### Panes
 
