@@ -40,8 +40,9 @@ set wildmenu
 set splitbelow
 set splitright
 
-" Save a file with ESC ESC
-map <Esc><Esc> :w<CR>
+" Save without leaving insert mode
+nnoremap <C-s> :w<CR>
+inoremap <C-s> <C-o>:w<CR>
 
 if exists('$HOMEBREW_PREFIX')
     execute 'set runtimepath+=' . fnameescape($HOMEBREW_PREFIX . '/opt/fzf')

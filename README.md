@@ -19,6 +19,7 @@ Required: Node.js, Vim, Ghostty, and Herdr.
    ./setup.sh
    ```
 
+
 The setup script recursively links each file under [`dotfiles`](dotfiles) to the
 matching path under `~/`. It prompts before replacing existing files. Run it
 again when this repository adds a dotfile. Herdr's runtime files remain
@@ -50,6 +51,9 @@ brew install fzf fd ripgrep
 
 The Homebrew `fzf` package includes the Vim integration used by `.vimrc`. No
 separate Vim plugin checkout is needed.
+
+Press `Control+S` to save in normal or insert mode. Saving in insert mode keeps
+Vim in insert mode.
 
 Press `Control+P` in Vim to fuzzy-find files under the directory where Vim
 started. Splits and buffer changes do not change this root. The launcher includes
