@@ -92,9 +92,6 @@ per working directory and workspace. It parks the running pane in an inactive
 Herdr tab, then moves the same pane above the focused pane when reopened. The
 pane takes 80% of the split and leaves unrelated Vim panes alone.
 
-Session metadata lives in Herdr's isolated `HERDR_PLUGIN_STATE_DIR`. The plugin
-owns its JSON records and locks; Herdr owns the state directory location.
-
 ## Development
 
 ```sh
