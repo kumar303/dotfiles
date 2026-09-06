@@ -47,12 +47,27 @@ if exists('$HOMEBREW_PREFIX')
     execute 'set runtimepath+=' . fnameescape($HOMEBREW_PREFIX . '/opt/fzf')
 endif
 let g:fzf_file_picker_root = getcwd()
+let g:fzf_picker_options = [
+    \ '--layout=reverse',
+    \ '--info=inline',
+    \ '--color=fg:#000000,bg:#fffdfa,hl:#aa7733,fg+:#000000,bg+:#ddeedd,hl+:#aa7733,prompt:#003399,pointer:#cc0000,marker:#228877,spinner:#003399,header:#555555'
+    \ ]
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
-command! Files call fzf#run(fzf#wrap('files', {'dir': g:fzf_file_picker_root, 'source': $FZF_DEFAULT_COMMAND, 'sink': 'edit'}))
+command! Files call fzf#run(fzf#wrap('files', {'dir': g:fzf_file_picker_root, 'source': $FZF_DEFAULT_COMMAND, 'sink': 'edit', 'options': g:fzf_picker_options}))
+
+function! OpenRipgrepResult(line)
+    let match = matchlist(a:line, '^\(.\{-}\):\(\d\+\):\(\d\+\):')
+    if empty(match)
+        return
+    endif
+    execute 'edit ' . fnameescape(match[1])
+    call cursor(str2nr(match[2]), str2nr(match[3]))
+endfunction
 
 function! Ripgrep(args)
-    let command = 'rg --column --line-number --no-heading --color=always --smart-case ' . a:args
-    call fzf#vim#grep(command, 1, {'dir': g:fzf_file_picker_root}, 0)
+    let command = 'rg --column --line-number --no-heading --color=never --smart-case ' . a:args
+    let options = g:fzf_picker_options + ['--delimiter=:', '--nth=1,4..', '--prompt=Search> ']
+    call fzf#run(fzf#wrap('rg', {'dir': g:fzf_file_picker_root, 'source': command, 'sink': function('OpenRipgrepResult'), 'options': options}))
 endfunction
 command! -nargs=+ -complete=file Rg call Ripgrep(<q-args>)
 
