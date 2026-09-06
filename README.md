@@ -49,10 +49,10 @@ before the key reaches Herdr.
 
 ### File navigation
 
-| Scope | Key      | Action               |
-| ----- | -------- | -------------------- |
-| Vim   | `ctrl+p` | Find and open a file |
-| Vim   | `ctrl+s` | Save the file        |
+| Scope | Key      | Action                     |
+| ----- | -------- | -------------------------- |
+| Vim   | `ctrl+p` | Open a file finder palette |
+| Vim   | `ctrl+s` | Save the file              |
 
 ### Panes
 
