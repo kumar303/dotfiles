@@ -1,0 +1,18 @@
+{
+  "name": "dotfiles",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "format": "oxfmt README.md AGENTS.md package.json package-lock.json tsconfig.json vite.config.js plugins tests",
+    "format:check": "oxfmt --check README.md AGENTS.md package.json package-lock.json tsconfig.json vite.config.js plugins tests"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1",
+    "oxfmt": "0.65.0",
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vitest": "5.0.0"
+  }
+}

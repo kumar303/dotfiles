@@ -1,0 +1,26 @@
+onboarding = false
+
+[keys]
+close_tab = "cmd+shift+k"
+next_tab = "ctrl+cmd+backtick"
+
+[ui.toast]
+delivery = "system"
+
+[ui]
+show_agent_labels_on_pane_borders = true
+
+[[keys.command]]
+key = "ctrl+backtick"
+type = "plugin_action"
+command = "kumar303.split-vim-above.toggle"
+
+[[keys.command]]
+key = "prefix+shift+e"
+type = "plugin_action"
+command = "kumar303.split-vim-above.toggle"
+
+[[keys.command]]
+key = "cmd+alt+backtick"
+type = "shell"
+command = "herdr tab create --workspace \"$HERDR_ACTIVE_WORKSPACE_ID\" --cwd \"$HERDR_ACTIVE_PANE_CWD\" --focus"
