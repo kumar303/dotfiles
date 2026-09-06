@@ -122,13 +122,27 @@ function! OpenSymbol(line)
     endif
 endfunction
 
+function! SymbolPosition(symbols, cursor_line)
+    let position = 1
+    for index in range(len(a:symbols))
+        let symbol_line = str2nr(matchstr(a:symbols[index], '^\s*\zs\d\+'))
+        if symbol_line > a:cursor_line
+            break
+        endif
+        let position = index + 1
+    endfor
+    return position
+endfunction
+
 function! Symbols()
+    let cursor_line = line('.')
     let symbols = CurrentFileSymbols()
     if empty(symbols)
         echo 'No symbols found'
         return
     endif
-    let options = g:fzf_picker_options + ['--prompt=Symbol> ']
+    let position = SymbolPosition(symbols, cursor_line)
+    let options = g:fzf_picker_options + ['--prompt=Symbol> ', '--bind=load:pos(' . position . ')']
     call fzf#run(fzf#wrap('symbols', {'source': symbols, 'sink': function('OpenSymbol'), 'options': options}))
 endfunction
 command! Symbols call Symbols()
