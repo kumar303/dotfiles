@@ -73,6 +73,7 @@ command! -nargs=+ -complete=file Rg call Ripgrep(<q-args>)
 
 nnoremap <silent> <C-p> :Files<CR>
 nnoremap <C-r> :Rg<Space>
+autocmd FileType netrw nnoremap <buffer> <C-r> :Rg<Space>
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e

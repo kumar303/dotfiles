@@ -55,10 +55,10 @@ Press `Control+P` in Vim to fuzzy-find files under the directory where Vim
 started. Splits and buffer changes do not change this root. The launcher includes
 hidden files, respects `.gitignore`, and omits `.git` directories.
 
-Press `Control+R` in Vim to enter `:Rg `. Add the search pattern and
-optional ripgrep arguments, then press Enter. Use the arrow keys to select a
-result and Enter to open it. The search uses Vim's launch directory and respects
-`.gitignore`.
+Press `Control+R` in a file or netrw directory view to enter `:Rg `. Add the
+search pattern and optional ripgrep arguments, then press Enter. Use the arrow
+keys to select a result and Enter to open it. The search uses Vim's launch
+directory and respects `.gitignore`.
 
 ```vim
 :Rg authentication
