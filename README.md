@@ -48,7 +48,7 @@ Add this `[include]` section to `.gitconfig`:
 | Scope | Key      | Action                       |
 | ----- | -------- | ---------------------------- |
 | Vim   | `ctrl+p` | Open a file finder palette   |
-| Vim   | `ctrl+.` | Open a symbol finder palette |
+| Vim   | `ctrl+l` | Open a symbol finder palette |
 | Vim   | `ctrl+s` | Save the file                |
 
 ### Panes

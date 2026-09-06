@@ -1,3 +1,2 @@
 theme = Atom One Light
 keybind = alt+backspace=text:\x17
-keybind = ctrl+period=text:\x1b[26~

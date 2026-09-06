@@ -133,7 +133,7 @@ function! Symbols()
 endfunction
 command! Symbols call Symbols()
 
-nnoremap <silent> <F14> :Symbols<CR>
+nnoremap <silent> <C-l> :Symbols<CR>
 nnoremap <silent> <C-p> :Files<CR>
 nnoremap <C-f> :RgFile<Space>
 nnoremap <C-r> :Rg<Space>
