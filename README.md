@@ -50,9 +50,9 @@ brew install fzf fd
 The Homebrew `fzf` package includes the Vim integration used by `.vimrc`. No
 separate Vim plugin checkout is needed.
 
-Press `Control+P` in Vim to fuzzy-find files under the current working
-directory. The launcher includes hidden files, respects `.gitignore`, and omits
-`.git` directories.
+Press `Control+P` in Vim to fuzzy-find files under the directory where Vim
+started. Splits and buffer changes do not change this root. The launcher includes
+hidden files, respects `.gitignore`, and omits `.git` directories.
 
 ## Vim pane toggle
 

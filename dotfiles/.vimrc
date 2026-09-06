@@ -46,8 +46,9 @@ map <Esc><Esc> :w<CR>
 if exists('$HOMEBREW_PREFIX')
     execute 'set runtimepath+=' . fnameescape($HOMEBREW_PREFIX . '/opt/fzf')
 endif
+let g:fzf_file_picker_root = getcwd()
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
-command! Files call fzf#run(fzf#wrap('files', {'source': $FZF_DEFAULT_COMMAND, 'sink': 'edit'}))
+command! Files call fzf#run(fzf#wrap('files', {'dir': g:fzf_file_picker_root, 'source': $FZF_DEFAULT_COMMAND, 'sink': 'edit'}))
 nnoremap <silent> <C-p> :Files<CR>
 
 " Strip trailing whitespace
