@@ -43,8 +43,11 @@ set splitright
 " Save a file with ESC ESC
 map <Esc><Esc> :w<CR>
 
-" Show hidden dotfiles
-let NERDTreeShowHidden=1
+if exists('$HOMEBREW_PREFIX')
+    execute 'set runtimepath+=' . fnameescape($HOMEBREW_PREFIX . '/opt/fzf')
+endif
+let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
+nnoremap <silent> <C-p> :Files<CR>
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e

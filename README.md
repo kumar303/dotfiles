@@ -38,6 +38,21 @@ The setup script links the tracked
 `~/.config/ghostty/config.ghostty`. It maps `Option+Backspace` to `Control+W`
 before the key reaches Herdr.
 
+## Vim
+
+Install [fzf](https://github.com/junegunn/fzf),
+[fd](https://github.com/sharkdp/fd), and
+[fzf.vim](https://github.com/junegunn/fzf.vim):
+
+```sh
+brew install fzf fd
+git clone --depth 1 https://github.com/junegunn/fzf.vim ~/.vim/pack/plugins/start/fzf.vim
+```
+
+Press `Control+P` in Vim to fuzzy-find files under the current working
+directory. The launcher includes hidden files, respects `.gitignore`, and omits
+`.git` directories.
+
 ## Vim pane toggle
 
 The local [`split-vim-above`](plugins/split-vim-above) plugin keeps one Vim pane
