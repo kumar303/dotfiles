@@ -93,8 +93,12 @@ function! CurrentFileSymbols()
         echoerr 'Current buffer is not a readable file'
         return []
     endif
-    let command = 'ctags --output-format=json --fields=+nK --extras=-F --excmd=number --sort=no -f - ' . shellescape(file)
-    let output = systemlist(command)
+    let command = 'ctags --output-format=json --fields=+nK --extras=-F --excmd=number --sort=no -f -'
+    if file =~# '\.js$'
+        let test_regex = '--regex-JavaScript=/^[ \t]*(describe|it|test)(\.(only|skip|todo))?[ \t]*\([ \t]*["'']([^"'']+)/\4/t,test/'
+        let command .= ' ' . shellescape(test_regex)
+    endif
+    let output = systemlist(command . ' ' . shellescape(file))
     if v:shell_error
         echoerr join(output, ' ')
         return []
