@@ -72,7 +72,7 @@ endfunction
 command! -nargs=+ -complete=file Rg call Ripgrep(<q-args>)
 
 nnoremap <silent> <C-p> :Files<CR>
-nnoremap <F13> :Rg<Space>
+nnoremap <C-r> :Rg<Space>
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e
