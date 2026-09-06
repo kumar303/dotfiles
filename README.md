@@ -79,18 +79,13 @@ brew install fzf fd ripgrep
 The Homebrew `fzf` package includes the Vim integration used by `.vimrc`. No
 separate Vim plugin checkout is needed.
 
-Press `ctrl+r` in a file or netrw directory view to enter `:Rg `. Add the
-search pattern and optional ripgrep arguments, then press Enter. Use the arrow
-keys to select a result and Enter to open it. The search uses Vim's launch
-directory and respects `.gitignore`.
-
-Press `ctrl+f` to enter `:RgFile ` and search only the current file. This
-replaces Vim's default page-forward shortcut.
+`ctrl+r` and `ctrl+f` can pass any ripgrep option. Example of searching for the
+text `authorization`:
 
 ```vim
-:Rg authentication
-:Rg authentication -g '!**/*test*'
-:Rg authentication -g'*.js' -g'!**/*test*'
+:Rg authorization
+:RgFile authorization
+:Rg authorization -g'!**/*test*'
 ```
 
 Use ripgrep's short `-g` flag instead of `--glob`. The glob can follow `-g`
