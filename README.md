@@ -66,10 +66,10 @@ before the key reaches Herdr.
 
 ### Searching
 
-| Scope | Key      | Action                                    |
-| ----- | -------- | ----------------------------------------- |
-| Vim   | `ctrl+r` | Search files under Vim's launch directory |
-| Vim   | `ctrl+f` | Search only the current file              |
+| Scope | Key      | Action                                 |
+| ----- | -------- | -------------------------------------- |
+| Vim   | `ctrl+r` | Ripgrep through Vim's launch directory |
+| Vim   | `ctrl+f` | Search only the current file           |
 
 ## Vim
 
