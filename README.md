@@ -34,43 +34,43 @@ Add this `[include]` section to `.gitconfig`:
 
 The setup script links the tracked
 [Ghostty configuration](dotfiles/.config/ghostty/config.ghostty) to
-`~/.config/ghostty/config.ghostty`. It maps `Option+Backspace` to `Control+W`
+`~/.config/ghostty/config.ghostty`. It maps `opt+backspace` to `ctrl+w`
 before the key reaches Herdr.
 
 ## Key bindings
 
-Herdr's prefix is `Control+B`. Press and release the prefix before its next key.
+Herdr's prefix is `ctrl+b`. Press and release the prefix before its next key.
 
 ### File navigation
 
-| Scope | Key                        | Action                           |
-| ----- | -------------------------- | -------------------------------- |
-| Herdr | `Command+Option+Backtick`  | Create a terminal tab            |
-| Herdr | `Control+Command+Backtick` | Select the next terminal tab     |
-| Herdr | `Control+B`, `p`           | Select the previous terminal tab |
-| Herdr | `Command+Shift+K`          | Close the terminal tab           |
-| Vim   | `Control+P`                | Find and open a file             |
-| Vim   | `Control+S`                | Save the file                    |
+| Scope | Key                 | Action                           |
+| ----- | ------------------- | -------------------------------- |
+| Herdr | `cmd+opt+backtick`  | Create a terminal tab            |
+| Herdr | `ctrl+cmd+backtick` | Select the next terminal tab     |
+| Herdr | `ctrl+b`, `p`       | Select the previous terminal tab |
+| Herdr | `cmd+shift+k`       | Close the terminal tab           |
+| Vim   | `ctrl+p`            | Find and open a file             |
+| Vim   | `ctrl+s`            | Save the file                    |
 
 ### Panes
 
-| Scope | Key                    | Action                                       |
-| ----- | ---------------------- | -------------------------------------------- |
-| Herdr | `Control+Backtick`     | Show, hide, or focus the Vim pane            |
-| Herdr | `Control+B`, `Shift+E` | Show, hide, or focus the Vim pane (fallback) |
-| Herdr | `Control+B`, `v` / `-` | Open a vertical / horizontal split           |
-| Herdr | `Control+B`, `x`       | Close the focused pane                       |
-| Herdr | `Control+B`, `h/j/k/l` | Focus the left/down/up/right pane            |
-| Vim   | `Control+W`, `v/s`     | Open a vertical / horizontal split           |
-| Vim   | `Control+W`, `c`       | Close the split                              |
-| Vim   | `Control+W`, `h/j/k/l` | Focus the left/down/up/right split           |
+| Scope | Key                 | Action                                       |
+| ----- | ------------------- | -------------------------------------------- |
+| Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane            |
+| Herdr | `ctrl+b`, `shift+e` | Show, hide, or focus the Vim pane (fallback) |
+| Herdr | `ctrl+b`, `v` / `-` | Open a vertical / horizontal split           |
+| Herdr | `ctrl+b`, `x`       | Close the focused pane                       |
+| Herdr | `ctrl+b`, `h/j/k/l` | Focus the left/down/up/right pane            |
+| Vim   | `ctrl+w`, `v/s`     | Open a vertical / horizontal split           |
+| Vim   | `ctrl+w`, `c`       | Close the split                              |
+| Vim   | `ctrl+w`, `h/j/k/l` | Focus the left/down/up/right split           |
 
 ### Searching
 
-| Scope | Key         | Action                                    |
-| ----- | ----------- | ----------------------------------------- |
-| Vim   | `Control+R` | Search files under Vim's launch directory |
-| Vim   | `Control+F` | Search only the current file              |
+| Scope | Key      | Action                                    |
+| ----- | -------- | ----------------------------------------- |
+| Vim   | `ctrl+r` | Search files under Vim's launch directory |
+| Vim   | `ctrl+f` | Search only the current file              |
 
 ## Vim
 
@@ -85,19 +85,19 @@ brew install fzf fd ripgrep
 The Homebrew `fzf` package includes the Vim integration used by `.vimrc`. No
 separate Vim plugin checkout is needed.
 
-Press `Control+S` to save in normal or insert mode. Saving in insert mode keeps
+Press `ctrl+s` to save in normal or insert mode. Saving in insert mode keeps
 Vim in insert mode.
 
-Press `Control+P` in Vim to fuzzy-find files under the directory where Vim
+Press `ctrl+p` in Vim to fuzzy-find files under the directory where Vim
 started. Splits and buffer changes do not change this root. The launcher includes
 hidden files, respects `.gitignore`, and omits `.git` directories.
 
-Press `Control+R` in a file or netrw directory view to enter `:Rg `. Add the
+Press `ctrl+r` in a file or netrw directory view to enter `:Rg `. Add the
 search pattern and optional ripgrep arguments, then press Enter. Use the arrow
 keys to select a result and Enter to open it. The search uses Vim's launch
 directory and respects `.gitignore`.
 
-Press `Control+F` to enter `:RgFile ` and search only the current file. This
+Press `ctrl+f` to enter `:RgFile ` and search only the current file. This
 replaces Vim's default page-forward shortcut.
 
 ```vim
