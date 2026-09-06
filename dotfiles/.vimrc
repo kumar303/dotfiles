@@ -64,14 +64,30 @@ function! OpenRipgrepResult(line)
     call cursor(str2nr(match[2]), str2nr(match[3]))
 endfunction
 
-function! Ripgrep(args)
-    let command = 'rg --column --line-number --no-heading --color=never --smart-case ' . a:args
+function! RunRipgrep(name, command)
     let options = g:fzf_picker_options + ['--delimiter=:', '--nth=1,4..', '--prompt=Search> ']
-    call fzf#run(fzf#wrap('rg', {'dir': g:fzf_file_picker_root, 'source': command, 'sink': function('OpenRipgrepResult'), 'options': options}))
+    call fzf#run(fzf#wrap(a:name, {'dir': g:fzf_file_picker_root, 'source': a:command, 'sink': function('OpenRipgrepResult'), 'options': options}))
+endfunction
+
+function! Ripgrep(args)
+    let command = 'rg --column --line-number --with-filename --no-heading --color=never --smart-case ' . a:args
+    call RunRipgrep('rg', command)
 endfunction
 command! -nargs=+ -complete=file Rg call Ripgrep(<q-args>)
 
+function! RipgrepFile(args)
+    let file = expand('%:p')
+    if !filereadable(file)
+        echoerr 'Current buffer is not a readable file'
+        return
+    endif
+    let command = 'rg --column --line-number --with-filename --no-heading --color=never --smart-case ' . a:args . ' -- ' . shellescape(file)
+    call RunRipgrep('rg-file', command)
+endfunction
+command! -nargs=+ RgFile call RipgrepFile(<q-args>)
+
 nnoremap <silent> <C-p> :Files<CR>
+nnoremap <C-f> :RgFile<Space>
 nnoremap <C-r> :Rg<Space>
 autocmd FileType netrw nnoremap <buffer> <C-r> :Rg<Space>
 

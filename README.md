@@ -60,6 +60,9 @@ search pattern and optional ripgrep arguments, then press Enter. Use the arrow
 keys to select a result and Enter to open it. The search uses Vim's launch
 directory and respects `.gitignore`.
 
+Press `Control+F` to enter `:RgFile ` and search only the current file. This
+replaces Vim's default page-forward shortcut.
+
 ```vim
 :Rg authentication
 :Rg authentication -g '!**/*test*'
