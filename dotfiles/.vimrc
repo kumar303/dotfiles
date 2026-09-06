@@ -68,7 +68,4 @@ autocmd FileType python setlocal tabstop=4 shiftwidth=4 softtabstop=4
 autocmd BufEnter * silent! lcd %:p:h
 
 syntax on
-"http://vimcolorschemetest.googlecode.com/svn/html/index-c.html
-"colorscheme darkblue
-"colorscheme ir_black
 colorscheme autumnleaf
