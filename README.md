@@ -1,12 +1,13 @@
 # Dotfiles
 
-Personal configuration for Vim, Git, [Ghostty](https://ghostty.org/), and
-[Herdr](https://github.com/ogulcancelik/herdr).
+This is my setup for [Herdr](https://github.com/ogulcancelik/herdr) and Vim in [Ghostty](https://ghostty.org/).
 
-## Demo
+See [pie](https://github.com/kumar303/pie) for `pi` configuration.
+
+# 📹
 
 <details>
-<summary>Watch the demo</summary>
+<summary>Demo screencast</summary>
 
 <video controls width="100%">
   <source src="assets/dotfiles-herdr-vim-demo.mp4" type="video/mp4">
