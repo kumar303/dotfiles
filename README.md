@@ -82,9 +82,8 @@ brew install fzf fd ripgrep universal-ctags
 text `authorization`:
 
 ```vim
-:Rg authorization
+:Rg -g'!**/*test*' authorization
 :RgFile authorization
-:Rg authorization -g'!**/*test*'
 ```
 
 ## Vim pane toggle

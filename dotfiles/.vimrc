@@ -155,8 +155,8 @@ command! Symbols call Symbols()
 nnoremap <silent> <C-l> :Symbols<CR>
 nnoremap <silent> <C-p> :Files<CR>
 nnoremap <C-f> :RgFile<Space>
-nnoremap <C-r> :Rg<Space>
-autocmd FileType netrw nnoremap <buffer> <C-r> :Rg<Space>
+nnoremap <C-r> :Rg -g'!**/*test*'<Space>
+autocmd FileType netrw nnoremap <buffer> <C-r> :Rg -g'!**/*test*'<Space>
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e
