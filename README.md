@@ -41,11 +41,12 @@ before the key reaches Herdr.
 
 ### Terminal
 
-| Scope | Key                 | Action                       |
-| ----- | ------------------- | ---------------------------- |
-| Herdr | `cmd+opt+backtick`  | Create a terminal tab        |
-| Herdr | `ctrl+cmd+backtick` | Select the next terminal tab |
-| Herdr | `cmd+shift+k`       | Close the terminal tab       |
+| Scope | Key                 | Action                            |
+| ----- | ------------------- | --------------------------------- |
+| Herdr | `cmd+opt+backtick`  | Create a terminal tab             |
+| Herdr | `ctrl+cmd+backtick` | Select the next terminal tab      |
+| Herdr | `cmd+shift+k`       | Close the terminal tab            |
+| Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane |
 
 ### File navigation
 
@@ -58,7 +59,6 @@ before the key reaches Herdr.
 
 | Scope | Key                 | Action                             |
 | ----- | ------------------- | ---------------------------------- |
-| Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane  |
 | Vim   | `ctrl+w`, `v/s`     | Open a vertical / horizontal split |
 | Vim   | `ctrl+w`, `c`       | Close the split                    |
 | Vim   | `ctrl+w`, `h/j/k/l` | Focus the left/down/up/right split |
