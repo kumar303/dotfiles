@@ -30,13 +30,6 @@ Add this `[include]` section to `.gitconfig`:
     path = ~/.gitconfig.defaults
 ```
 
-[View the Herdr configuration](dotfiles/.config/herdr/config.toml).
-
-The setup script links the tracked
-[Ghostty configuration](dotfiles/.config/ghostty/config.ghostty) to
-`~/.config/ghostty/config.ghostty`. It maps `opt+backspace` to `ctrl+w`
-before the key reaches Herdr.
-
 ## Key bindings
 
 ### Terminal
