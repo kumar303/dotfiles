@@ -41,25 +41,29 @@ before the key reaches Herdr.
 
 ### File navigation
 
-| Key      | Action               |
-| -------- | -------------------- |
-| `ctrl+p` | Find and open a file |
-| `ctrl+s` | Save the file        |
+| Scope | Key                 | Action                       |
+| ----- | ------------------- | ---------------------------- |
+| Herdr | `cmd+opt+backtick`  | Create a terminal tab        |
+| Herdr | `ctrl+cmd+backtick` | Select the next terminal tab |
+| Herdr | `cmd+shift+k`       | Close the terminal tab       |
+| Vim   | `ctrl+p`            | Find and open a file         |
+| Vim   | `ctrl+s`            | Save the file                |
 
 ### Panes
 
-| Key                 | Action                             |
-| ------------------- | ---------------------------------- |
-| `ctrl+w`, `v/s`     | Open a vertical / horizontal split |
-| `ctrl+w`, `c`       | Close the split                    |
-| `ctrl+w`, `h/j/k/l` | Focus the left/down/up/right split |
+| Scope | Key                 | Action                             |
+| ----- | ------------------- | ---------------------------------- |
+| Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane  |
+| Vim   | `ctrl+w`, `v/s`     | Open a vertical / horizontal split |
+| Vim   | `ctrl+w`, `c`       | Close the split                    |
+| Vim   | `ctrl+w`, `h/j/k/l` | Focus the left/down/up/right split |
 
 ### Searching
 
-| Key      | Action                                    |
-| -------- | ----------------------------------------- |
-| `ctrl+r` | Search files under Vim's launch directory |
-| `ctrl+f` | Search only the current file              |
+| Scope | Key      | Action                                    |
+| ----- | -------- | ----------------------------------------- |
+| Vim   | `ctrl+r` | Search files under Vim's launch directory |
+| Vim   | `ctrl+f` | Search only the current file              |
 
 ## Vim
 
