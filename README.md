@@ -9,9 +9,7 @@ See [pie](https://github.com/kumar303/pie) for `pi` configuration.
 <details>
 <summary>Demo screencast</summary>
 
-<video controls width="100%">
-  <source src="assets/dotfiles-herdr-vim-demo.mp4" type="video/mp4">
-</video>
+https://github.com/user-attachments/assets/2d99c01b-bbeb-4ee6-b818-1d7eaf472ec6
 
 </details>
 
