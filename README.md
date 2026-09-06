@@ -40,14 +40,15 @@ before the key reaches Herdr.
 
 ## Vim
 
-Install [fzf](https://github.com/junegunn/fzf),
-[fd](https://github.com/sharkdp/fd), and
-[fzf.vim](https://github.com/junegunn/fzf.vim):
+Install [fzf](https://github.com/junegunn/fzf) and
+[fd](https://github.com/sharkdp/fd):
 
 ```sh
 brew install fzf fd
-git clone --depth 1 https://github.com/junegunn/fzf.vim ~/.vim/pack/plugins/start/fzf.vim
 ```
+
+The Homebrew `fzf` package includes the Vim integration used by `.vimrc`. No
+separate Vim plugin checkout is needed.
 
 Press `Control+P` in Vim to fuzzy-find files under the current working
 directory. The launcher includes hidden files, respects `.gitignore`, and omits
