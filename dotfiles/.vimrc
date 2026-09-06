@@ -49,7 +49,15 @@ endif
 let g:fzf_file_picker_root = getcwd()
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
 command! Files call fzf#run(fzf#wrap('files', {'dir': g:fzf_file_picker_root, 'source': $FZF_DEFAULT_COMMAND, 'sink': 'edit'}))
+
+function! Ripgrep(args)
+    let command = 'rg --column --line-number --no-heading --color=always --smart-case ' . a:args
+    call fzf#vim#grep(command, 1, {'dir': g:fzf_file_picker_root}, 0)
+endfunction
+command! -nargs=+ -complete=file Rg call Ripgrep(<q-args>)
+
 nnoremap <silent> <C-p> :Files<CR>
+nnoremap <F13> :Rg <CR>
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e

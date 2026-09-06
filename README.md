@@ -40,11 +40,12 @@ before the key reaches Herdr.
 
 ## Vim
 
-Install [fzf](https://github.com/junegunn/fzf) and
-[fd](https://github.com/sharkdp/fd):
+Install [fzf](https://github.com/junegunn/fzf),
+[fd](https://github.com/sharkdp/fd), and
+[ripgrep](https://github.com/BurntSushi/ripgrep):
 
 ```sh
-brew install fzf fd
+brew install fzf fd ripgrep
 ```
 
 The Homebrew `fzf` package includes the Vim integration used by `.vimrc`. No
@@ -53,6 +54,17 @@ separate Vim plugin checkout is needed.
 Press `Control+P` in Vim to fuzzy-find files under the directory where Vim
 started. Splits and buffer changes do not change this root. The launcher includes
 hidden files, respects `.gitignore`, and omits `.git` directories.
+
+Press `Command+Shift+F` in Ghostty to enter `:Rg `. Add the search pattern and
+optional ripgrep arguments, then press Enter. Use the arrow keys to select a
+result and Enter to open it. The search uses Vim's launch directory and respects
+`.gitignore`.
+
+```vim
+:Rg authentication
+:Rg authentication --glob '!**/*test*'
+:Rg authentication --glob '*.js' --glob '!**/*test*'
+```
 
 ## Vim pane toggle
 
