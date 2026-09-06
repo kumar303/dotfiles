@@ -89,8 +89,7 @@ text `authorization`:
 
 The local [`split-vim-above`](plugins/split-vim-above) plugin keeps one Vim pane
 per working directory and workspace. It parks the running pane in an inactive
-Herdr tab, then moves the same pane above the focused pane when reopened. The
-pane takes 80% of the split and leaves unrelated Vim panes alone.
+Herdr tab, then moves the same pane above the focused pane when reopened.
 
 ## Development
 
