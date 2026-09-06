@@ -76,9 +76,6 @@ Install [fzf](https://github.com/junegunn/fzf),
 brew install fzf fd ripgrep
 ```
 
-The Homebrew `fzf` package includes the Vim integration used by `.vimrc`. No
-separate Vim plugin checkout is needed.
-
 `ctrl+r` and `ctrl+f` can pass any ripgrep option. Example of searching for the
 text `authorization`:
 
