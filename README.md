@@ -54,16 +54,15 @@ Herdr's prefix is `ctrl+b`. Press and release the prefix before its next key.
 
 ### Panes
 
-| Scope | Key                 | Action                                       |
-| ----- | ------------------- | -------------------------------------------- |
-| Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane            |
-| Herdr | `ctrl+b`, `shift+e` | Show, hide, or focus the Vim pane (fallback) |
-| Herdr | `ctrl+b`, `v` / `-` | Open a vertical / horizontal split           |
-| Herdr | `ctrl+b`, `x`       | Close the focused pane                       |
-| Herdr | `ctrl+b`, `h/j/k/l` | Focus the left/down/up/right pane            |
-| Vim   | `ctrl+w`, `v/s`     | Open a vertical / horizontal split           |
-| Vim   | `ctrl+w`, `c`       | Close the split                              |
-| Vim   | `ctrl+w`, `h/j/k/l` | Focus the left/down/up/right split           |
+| Scope | Key                 | Action                             |
+| ----- | ------------------- | ---------------------------------- |
+| Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane  |
+| Herdr | `ctrl+b`, `v` / `-` | Open a vertical / horizontal split |
+| Herdr | `ctrl+b`, `x`       | Close the focused pane             |
+| Herdr | `ctrl+b`, `h/j/k/l` | Focus the left/down/up/right pane  |
+| Vim   | `ctrl+w`, `v/s`     | Open a vertical / horizontal split |
+| Vim   | `ctrl+w`, `c`       | Close the split                    |
+| Vim   | `ctrl+w`, `h/j/k/l` | Focus the left/down/up/right split |
 
 ### Searching
 

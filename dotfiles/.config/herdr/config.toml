@@ -16,11 +16,6 @@ type = "plugin_action"
 command = "kumar303.split-vim-above.toggle"
 
 [[keys.command]]
-key = "prefix+shift+e"
-type = "plugin_action"
-command = "kumar303.split-vim-above.toggle"
-
-[[keys.command]]
 key = "cmd+alt+backtick"
 type = "shell"
 command = "herdr tab create --workspace \"$HERDR_ACTIVE_WORKSPACE_ID\" --cwd \"$HERDR_ACTIVE_PANE_CWD\" --focus"
