@@ -63,7 +63,11 @@ function! OpenRipgrepResult(line)
     if empty(match)
         return
     endif
-    execute 'edit ' . fnameescape(match[1])
+    let file = match[1]
+    if file !~# '^/'
+        let file = g:fzf_file_picker_root . '/' . file
+    endif
+    execute 'edit ' . fnameescape(file)
     call cursor(str2nr(match[2]), str2nr(match[3]))
 endfunction
 
@@ -180,9 +184,5 @@ autocmd FileType javascript,typescript,typescriptreact setlocal textwidth=0 tabs
 autocmd FileType typescript,typescriptreact setlocal syntax=javascript
 autocmd FileType python setlocal tabstop=4 shiftwidth=4 softtabstop=4
 
-
-" Set working directory to the current file
-" http://vim.wikia.com/wiki/Set_working_directory_to_the_current_file
-autocmd BufEnter * silent! lcd %:p:h
 
 colorscheme light-owl
