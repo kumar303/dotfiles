@@ -169,11 +169,15 @@ autocmd BufWritePre * :%s/\s\+$//e
 " Soft wrap lines that exceed the window.
 au BufRead,BufNewFile *.* set wrap linebreak nolist textwidth=0 wrapmargin=0
 
+syntax on
+
 autocmd FileType go setlocal noexpandtab tabstop=4 shiftwidth=4 softtabstop=4
 " HTML has long lines and short indents
 autocmd FileType html setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
 autocmd FileType css setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
-autocmd FileType javascript setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
+autocmd FileType javascript,typescript,typescriptreact setlocal textwidth=0 tabstop=2 shiftwidth=2 softtabstop=2
+" Vim's TypeScript syntax can block redraws on generic function calls.
+autocmd FileType typescript,typescriptreact setlocal syntax=javascript
 autocmd FileType python setlocal tabstop=4 shiftwidth=4 softtabstop=4
 
 
@@ -181,5 +185,4 @@ autocmd FileType python setlocal tabstop=4 shiftwidth=4 softtabstop=4
 " http://vim.wikia.com/wiki/Set_working_directory_to_the_current_file
 autocmd BufEnter * silent! lcd %:p:h
 
-syntax on
 colorscheme light-owl
