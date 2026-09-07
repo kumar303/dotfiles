@@ -162,7 +162,9 @@ nnoremap <silent> <C-l> :Symbols<CR>
 nnoremap <silent> <C-p> :Files<CR>
 nnoremap <C-f> :RgFile<Space>
 nnoremap <C-r> :Rg -g'!**/*test*'<Space>
-autocmd FileType netrw nnoremap <buffer> <C-r> :Rg -g'!**/*test*'<Space>
+" Leave netrw before opening fzf to avoid conflicts when fzf returns.
+autocmd FileType netrw nnoremap <buffer> <silent> <C-p> :enew<CR>:Files<CR>
+autocmd FileType netrw nnoremap <buffer> <C-r> :enew<CR>:Rg -g'!**/*test*'<Space>
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e
