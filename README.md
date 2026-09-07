@@ -32,7 +32,7 @@ Required: Node.js, Vim, Ghostty, and Herdr.
 The setup script recursively links each file under [`dotfiles`](dotfiles) to the
 matching path under `~/`. It prompts before replacing existing files. Run it
 again when this repository adds a dotfile. `.zshenv` exports `BRAIN_HERDR=1`
-only inside Herdr panes.
+in Herdr panes and clears it in VS Code terminals.
 
 ### Manual setup
 
