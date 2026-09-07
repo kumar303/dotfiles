@@ -2,4 +2,5 @@
 
 - Run tests with `npm test`.
 - After every change, run `npm run format` and `npm run typecheck`.
-- Keep `README.md` current when setup, behavior, or keybindings change.
+- Document only reader-required setup, configuration changes, and usage references in `README.md`.
+- Omit implementation details from `README.md`.
