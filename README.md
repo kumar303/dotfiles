@@ -23,7 +23,7 @@ Required: Node.js, Vim, Ghostty, and Herdr.
    npx skills add ogulcancelik/herdr
    ```
 
-2. Link the tracked dotfiles and plugin, then reload Herdr:
+2. Link the tracked dotfiles and plugins, then reload Herdr:
 
    ```sh
    ./setup.sh
@@ -32,6 +32,8 @@ Required: Node.js, Vim, Ghostty, and Herdr.
 The setup script recursively links each file under [`dotfiles`](dotfiles) to the
 matching path under `~/`. It prompts before replacing existing files. Run it
 again when this repository adds a dotfile.
+
+New Herdr workspaces use their working directory leaf as the workspace name.
 
 ### Manual setup
 

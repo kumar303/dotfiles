@@ -53,8 +53,10 @@ if [ -L "$legacy_script" ] && [ "$(readlink "$legacy_script")" = "$legacy_target
   echo "Removed legacy link: $legacy_script"
 fi
 
-echo "Linking split-vim-above Herdr plugin"
-herdr plugin link "$repo_dir/plugins/split-vim-above" --enabled
+echo "Linking Herdr plugins"
+for plugin_dir in "$repo_dir"/plugins/*; do
+  herdr plugin link "$plugin_dir" --enabled
+done
 
 echo "Reloading Herdr configuration"
 herdr server reload-config

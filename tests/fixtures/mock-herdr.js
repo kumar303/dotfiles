@@ -34,6 +34,8 @@ if (area === "tab" && command === "create") {
   });
 } else if (area === "pane") {
   handlePaneCommand(command);
+} else if (area === "workspace" && command === "rename") {
+  output({ result: {} });
 } else {
   fail(`unexpected mock invocation: ${args.join(" ")}`);
 }
