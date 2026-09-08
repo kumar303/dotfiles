@@ -14,7 +14,8 @@ const mockHerdrPath = join(repositoryRoot, "tests", "fixtures", "mock-herdr.js")
 
 /** @typedef {Record<string, unknown>} Pane */
 /** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
-/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string}>}} VimState */
+/** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
+/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view?: VimView}>}} VimState */
 
 /** @type {string} */
 let testDirectory;
@@ -89,6 +90,8 @@ describe("split-vim-above", () => {
     runScript({ vimState });
 
     expect(herdrCommandCalls("send-text")[0]?.[3]).toContain(":call writefile(");
+    expect(herdrCommandCalls("send-text")[0]?.[3]).toContain("getcurpos(v:val.winid)");
+    expect(herdrCommandCalls("send-text")[0]?.[3]).toContain('"topline": v:val.topline');
     expect(herdrCommandCalls("send-text")).toContainEqual(["pane", "send-text", "w1:p101", ":qa!"]);
     expect(herdrCalls()).toContainEqual(["pane", "close", "w1:p101"]);
     expect(herdrCommandCalls("move")).toHaveLength(0);
@@ -130,21 +133,39 @@ describe("split-vim-above", () => {
     const run = herdrCommandCalls("run")[0];
     expect(run?.slice(0, 5)).toEqual(["pane", "run", "w1:p102", "vim", "-S"]);
     const restoreScript = readFileSync(String(run?.[5]), "utf8");
+    const view = { lnum: 1, col: 0, topline: 1, leftcol: 0 };
     expect(restoreScript).toContain(
       JSON.stringify([
         "col",
         [
-          ["leaf", a],
+          ["leaf", { file: a, view }],
           [
             "row",
             [
-              ["leaf", b],
-              ["leaf", c],
+              ["leaf", { file: b, view }],
+              ["leaf", { file: c, view }],
             ],
           ],
         ],
       ]),
     );
+  });
+
+  it("restores each file's cursor and scroll position", () => {
+    const file = createFile("project/a.js");
+    const cwd = join(testDirectory, "project");
+    const view = { lnum: 80, col: 4, topline: 70, leftcol: 2 };
+    setPanes([sourcePane({ cwd })]);
+    writeLayoutState("w1", {
+      layout: ["leaf", 11],
+      windows: [{ id: 11, file, view }],
+    });
+
+    runScript();
+
+    const restoreScript = restoreScriptFromLastRun();
+    expect(restoreScript).toContain(JSON.stringify(view));
+    expect(restoreScript).toContain("call winrestview(a:layout[1].view)");
   });
 
   it("ignores remembered files that no longer exist", () => {
@@ -162,8 +183,9 @@ describe("split-vim-above", () => {
 
     runScript();
 
-    expect(herdrCommandCalls("run").at(-1)).toEqual(["pane", "run", "w1:p101", "vim", existing]);
-    expect(herdrCalls().flat()).not.toContain(missing);
+    const restoreScript = restoreScriptFromLastRun();
+    expect(restoreScript).toContain(existing);
+    expect(restoreScript).not.toContain(missing);
   });
 
   it("uses --file in place of the leftmost remembered split", () => {

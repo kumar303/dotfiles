@@ -29,8 +29,10 @@ import { join, resolve } from "node:path";
 /** @typedef {{result: {move_result: {pane: Pane}}}} PaneMoveResponse */
 /** @typedef {{pane_id: string, terminal_id: string}} PaneMarker */
 /** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
-/** @typedef {["leaf", string] | ["row" | "col", RestoredLayout[]]} RestoredLayout */
-/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string}>}} VimState */
+/** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
+/** @typedef {{file: string, view: VimView}} RestoredWindow */
+/** @typedef {["leaf", RestoredWindow] | ["row" | "col", RestoredLayout[]]} RestoredLayout */
+/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view?: VimView}>}} VimState */
 
 const herdrCommand = process.env.HERDR_BIN_PATH || "herdr";
 const stateHome = process.env.XDG_STATE_HOME || join(process.env.HOME || "", ".local", "state");
@@ -198,6 +200,15 @@ function validVimLayout(layout) {
   );
 }
 
+/** @param {unknown} view @returns {view is VimView} */
+function validVimView(view) {
+  if (!view || typeof view !== "object") return false;
+  const candidate = /** @type {Partial<VimView>} */ (view);
+  return [candidate.lnum, candidate.col, candidate.topline, candidate.leftcol].every(
+    Number.isInteger,
+  );
+}
+
 /** @param {unknown} state @returns {state is VimState} */
 function validVimState(state) {
   if (!state || typeof state !== "object") return false;
@@ -206,7 +217,10 @@ function validVimState(state) {
     validVimLayout(candidate.layout) &&
     Array.isArray(candidate.windows) &&
     candidate.windows.every(
-      (window) => Number.isInteger(window?.id) && typeof window?.file === "string",
+      (window) =>
+        Number.isInteger(window?.id) &&
+        typeof window?.file === "string" &&
+        (window.view === undefined || validVimView(window.view)),
     )
   );
 }
@@ -217,19 +231,27 @@ function validVimState(state) {
  * @returns {RestoredLayout | null}
  */
 function restoredLayout(state, requestedFile) {
-  if (!state) return requestedFile ? ["leaf", requestedFile] : null;
-  const files = new Map(state.windows.map((window) => [window.id, window.file]));
+  if (!state) {
+    return requestedFile
+      ? ["leaf", { file: requestedFile, view: { lnum: 1, col: 0, topline: 1, leftcol: 0 } }]
+      : null;
+  }
+  const windows = new Map(state.windows.map((window) => [window.id, window]));
+  const defaultView = { lnum: 1, col: 0, topline: 1, leftcol: 0 };
   let replacedFirst = false;
 
   /** @param {VimLayout} layout @returns {RestoredLayout | null} */
   function restore(layout) {
     if (layout[0] === "leaf") {
-      let file = files.get(layout[1]) || "";
+      const remembered = windows.get(layout[1]);
+      let file = remembered?.file || "";
+      let view = remembered?.view || defaultView;
       if (requestedFile && !replacedFirst) {
         file = requestedFile;
+        view = defaultView;
         replacedFirst = true;
       }
-      return file && existsSync(file) ? ["leaf", file] : null;
+      return file && existsSync(file) ? ["leaf", { file, view }] : null;
     }
 
     const children = layout[1].map(restore).filter((child) => child !== null);
@@ -239,7 +261,9 @@ function restoredLayout(state, requestedFile) {
   }
 
   const layout = restore(state.layout);
-  if (!layout && requestedFile) return ["leaf", requestedFile];
+  if (!layout && requestedFile) {
+    return ["leaf", { file: requestedFile, view: defaultView }];
+  }
   return layout;
 }
 
@@ -250,7 +274,8 @@ function writeRestoreScript(path, layout) {
 function! s:restore_layout(layout, window_id) abort
   call win_gotoid(a:window_id)
   if a:layout[0] ==# 'leaf'
-    execute 'edit ' . fnameescape(a:layout[1])
+    execute 'edit ' . fnameescape(a:layout[1].file)
+    call winrestview(a:layout[1].view)
     return
   endif
   let l:window_ids = [a:window_id]
@@ -294,7 +319,7 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
   const layout = restoredLayout(state, requestedFile);
 
   try {
-    if (layout && layout[0] !== "leaf") {
+    if (layout && state) {
       const restoreScript = `${layoutPath}.vim`;
       writeRestoreScript(restoreScript, layout);
       runHerdr(["pane", "run", pane.pane_id, "vim", "-S", restoreScript]);
@@ -304,7 +329,7 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
         "run",
         pane.pane_id,
         "vim",
-        layout?.[0] === "leaf" ? layout[1] : sourcePane.cwd,
+        layout?.[0] === "leaf" ? layout[1].file : sourcePane.cwd,
       ]);
     }
     return pane;
@@ -318,7 +343,7 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
 function saveLayoutAndClose(pane, layoutPath) {
   const capturePath = `${layoutPath}.capture.${process.pid}`;
   rmSync(capturePath, { force: true });
-  const command = `:call writefile([json_encode({'layout': winlayout(), 'windows': map(getwininfo(), '{"id": v:val.winid, "file": fnamemodify(bufname(v:val.bufnr), ":p")}')})], '${vimSingleQuoted(capturePath)}')`;
+  const command = `:call writefile([json_encode({'layout': winlayout(), 'windows': map(getwininfo(), '{"id": v:val.winid, "file": fnamemodify(bufname(v:val.bufnr), ":p"), "view": {"lnum": getcurpos(v:val.winid)[1], "col": getcurpos(v:val.winid)[2] - 1, "topline": v:val.topline, "leftcol": v:val.leftcol}}')})], '${vimSingleQuoted(capturePath)}')`;
   runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
   runHerdr(["pane", "send-text", pane.pane_id, command]);
   runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);

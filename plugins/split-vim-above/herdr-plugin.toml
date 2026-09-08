@@ -1,6 +1,6 @@
 id = "kumar303.split-vim-above"
 name = "Split Vim Above"
-version = "0.3.1"
+version = "0.3.2"
 min_herdr_version = "0.8.2"
 description = "Toggle Vim panes and restore their split files across workspace tabs"
 platforms = ["linux", "macos"]
