@@ -47,6 +47,14 @@ set splitright
 nnoremap <C-s> :w<CR>
 inoremap <C-s> <C-o>:w<CR>
 
+" Copy yanked text to the OS clipboard without changing Vim's registers.
+if has('clipboard')
+    augroup os_clipboard_yank
+        autocmd!
+        autocmd TextYankPost * if v:event.operator ==# 'y' | call setreg('+', v:event.regcontents, v:event.regtype) | endif
+    augroup END
+endif
+
 if exists('$HOMEBREW_PREFIX')
     execute 'set runtimepath+=' . fnameescape($HOMEBREW_PREFIX . '/opt/fzf')
 endif
