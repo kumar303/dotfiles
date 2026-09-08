@@ -134,9 +134,9 @@ function acquireLock(lockDirectory) {
   return true;
 }
 
-/** @param {string} workspaceId @param {string} cwd */
-function vimLayoutPath(workspaceId, cwd) {
-  const id = createHash("sha256").update(`${workspaceId}\0${cwd}`).digest("hex").slice(0, 16);
+/** @param {string} workspaceId */
+function vimLayoutPath(workspaceId) {
+  const id = createHash("sha256").update(workspaceId).digest("hex").slice(0, 16);
   return join(vimLayoutDirectory, `${id}.json`);
 }
 
@@ -381,7 +381,7 @@ function main() {
             pane.workspace_id === sourcePane.workspace_id,
         )
       : undefined;
-    const layoutPath = vimLayoutPath(sourcePane.workspace_id, sourcePane.cwd);
+    const layoutPath = vimLayoutPath(sourcePane.workspace_id);
 
     if (markedPane) {
       if (requestedFile) {

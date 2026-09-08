@@ -92,7 +92,7 @@ describe("split-vim-above", () => {
     expect(herdrCommandCalls("send-text")).toContainEqual(["pane", "send-text", "w1:p101", ":qa!"]);
     expect(herdrCalls()).toContainEqual(["pane", "close", "w1:p101"]);
     expect(herdrCommandCalls("move")).toHaveLength(0);
-    expect(readLayoutState("w1", "/tmp/project")).toEqual(vimState);
+    expect(readLayoutState("w1")).toEqual(vimState);
   });
 
   it("starts a new Vim process with the remembered split files and layout", () => {
@@ -154,7 +154,6 @@ describe("split-vim-above", () => {
     setPanes([sourcePane({ cwd })]);
     writeLayoutState(
       "w1",
-      cwd,
       layoutState([
         [11, existing],
         [22, missing],
@@ -175,7 +174,6 @@ describe("split-vim-above", () => {
     setPanes([sourcePane({ cwd })]);
     writeLayoutState(
       "w1",
-      cwd,
       layoutState([
         [11, first],
         [22, second],
@@ -190,7 +188,35 @@ describe("split-vim-above", () => {
     expect(restoreScript).not.toContain(first);
   });
 
-  it("starts separate Vim processes and stores layouts for different directories", () => {
+  it("restores the same layout in every tab of a workspace", () => {
+    const a = createFile("project-one/a.js");
+    const b = createFile("project-one/b.js");
+    const vimState = layoutState([
+      [11, a],
+      [22, b],
+    ]);
+    setPanes([
+      sourcePane({ cwd: join(testDirectory, "project-one") }),
+      sourcePane({
+        pane_id: "w1:p2",
+        terminal_id: "term_source_two",
+        cwd: join(testDirectory, "project-two"),
+        tab_id: "w1:t2",
+        focused: false,
+      }),
+    ]);
+
+    runScript({ paneId: "w1:p1" });
+    runScript({ paneId: "w1:p1", vimState });
+    clearHerdrCalls();
+    runScript({ paneId: "w1:p2" });
+
+    const restoreScript = restoreScriptFromLastRun();
+    expect(restoreScript).toContain(a);
+    expect(restoreScript).toContain(b);
+  });
+
+  it("starts separate Vim processes for different tabs", () => {
     setPanes([
       sourcePane({ cwd: "/tmp/project-one" }),
       sourcePane({
@@ -349,22 +375,22 @@ function createFile(relativePath) {
   return path;
 }
 
-/** @param {string} workspaceId @param {string} cwd */
-function layoutStatePath(workspaceId, cwd) {
-  const id = createHash("sha256").update(`${workspaceId}\0${cwd}`).digest("hex").slice(0, 16);
+/** @param {string} workspaceId */
+function layoutStatePath(workspaceId) {
+  const id = createHash("sha256").update(workspaceId).digest("hex").slice(0, 16);
   return join(stateDirectory, "vim-layouts", `${id}.json`);
 }
 
-/** @param {string} workspaceId @param {string} cwd @param {VimState} state */
-function writeLayoutState(workspaceId, cwd, state) {
-  const path = layoutStatePath(workspaceId, cwd);
+/** @param {string} workspaceId @param {VimState} state */
+function writeLayoutState(workspaceId, state) {
+  const path = layoutStatePath(workspaceId);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(state)}\n`);
 }
 
-/** @param {string} workspaceId @param {string} cwd */
-function readLayoutState(workspaceId, cwd) {
-  return JSON.parse(readFileSync(layoutStatePath(workspaceId, cwd), "utf8"));
+/** @param {string} workspaceId */
+function readLayoutState(workspaceId) {
+  return JSON.parse(readFileSync(layoutStatePath(workspaceId), "utf8"));
 }
 
 function restoreScriptFromLastRun() {

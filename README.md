@@ -100,8 +100,8 @@ text `authorization`:
 ## Vim pane toggle
 
 `ctrl+backtick` closes Vim when it hides the pane. Save changes before hiding
-it. When reopened, Vim restores the existing files and split layout remembered
-for that working directory and workspace.
+it. Every tab in the workspace restores the same remembered files and split
+layout.
 
 ## Development
 
