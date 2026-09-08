@@ -267,8 +267,8 @@ function restoredLayout(state, requestedFile) {
   return layout;
 }
 
-/** @param {string} path @param {RestoredLayout} layout */
-function writeRestoreScript(path, layout) {
+/** @param {string} path @param {RestoredLayout} layout @param {boolean} focusFirst */
+function writeRestoreScript(path, layout, focusFirst) {
   const encodedLayout = vimSingleQuoted(JSON.stringify(layout));
   const script = `let s:layout = json_decode('${encodedLayout}')
 function! s:restore_layout(layout, window_id) abort
@@ -294,7 +294,7 @@ function! s:restore_layout(layout, window_id) abort
 endfunction
 call s:restore_layout(s:layout, win_getid())
 unlet s:layout
-`;
+${focusFirst ? "wincmd t\n" : ""}`;
   writeFileSync(path, script, { mode: 0o600 });
 }
 
@@ -321,7 +321,7 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
   try {
     if (layout && state) {
       const restoreScript = `${layoutPath}.vim`;
-      writeRestoreScript(restoreScript, layout);
+      writeRestoreScript(restoreScript, layout, requestedFile !== null);
       runHerdr(["pane", "run", pane.pane_id, "vim", "-S", restoreScript]);
     } else {
       runHerdr([

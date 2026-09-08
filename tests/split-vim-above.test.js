@@ -208,6 +208,7 @@ describe("split-vim-above", () => {
     expect(restoreScript).toContain(requested);
     expect(restoreScript).toContain(second);
     expect(restoreScript).not.toContain(first);
+    expect(restoreScript).toMatch(/wincmd t\n$/);
   });
 
   it("restores the same layout in every tab of a workspace", () => {
