@@ -86,7 +86,7 @@ Install [fzf](https://github.com/junegunn/fzf),
 [Universal Ctags](https://github.com/universal-ctags/ctags):
 
 ```sh
-brew install fzf fd ripgrep universal-ctags
+brew install fzf fd ripgrep universal-ctags jq
 ```
 
 `ctrl+r` and `ctrl+f` can pass any ripgrep option. Example of searching for the

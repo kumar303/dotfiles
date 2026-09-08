@@ -9,7 +9,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const scriptPath = join(repositoryRoot, "plugins", "split-vim-above", "split-vim-above.js");
-const gitEditorPath = join(repositoryRoot, "dotfiles", ".local", "bin", "pie-git-editor");
 const mockHerdrPath = join(repositoryRoot, "tests", "fixtures", "mock-herdr.js");
 
 /** @typedef {Record<string, unknown>} Pane */
@@ -210,7 +209,7 @@ describe("split-vim-above", () => {
   it("starts Vim with a requested file", () => {
     setPanes([sourcePane({ cwd: "/tmp/project" })]);
 
-    runScript({ filePath: "src/file.ts", gitEditor: true });
+    runScript({ filePath: "src/file.ts" });
 
     expect(herdrCommandCalls("run")).toContainEqual([
       "pane",
@@ -287,15 +286,11 @@ function setPanes(panes) {
 }
 
 /**
- * @param {{paneId?: string, now?: number, filePath?: string, gitEditor?: boolean}} [options]
+ * @param {{paneId?: string, now?: number, filePath?: string}} [options]
  */
 function runScript(options = {}) {
-  const args = options.filePath
-    ? options.gitEditor
-      ? [options.filePath]
-      : ["--file", options.filePath]
-    : [];
-  const result = spawnSync(options.gitEditor ? gitEditorPath : scriptPath, args, {
+  const args = options.filePath ? ["--file", options.filePath] : [];
+  const result = spawnSync(scriptPath, args, {
     encoding: "utf8",
     env: {
       ...process.env,
