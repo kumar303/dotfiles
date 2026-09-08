@@ -57,11 +57,12 @@ Add this `[include]` section to `.gitconfig`:
 
 ### File navigation
 
-| Scope | Key      | Action                        |
-| ----- | -------- | ----------------------------- |
-| Vim   | `ctrl+p` | Open a file finder palette    |
-| Vim   | `ctrl+l` | List code symbols in the file |
-| Vim   | `ctrl+s` | Save the file                 |
+| Scope | Key      | Action                           |
+| ----- | -------- | -------------------------------- |
+| Vim   | `ctrl+p` | Open a file finder palette       |
+| Vim   | `ctrl+l` | List code symbols in the file    |
+| Vim   | `ctrl+g` | Open the line on GitHub's `main` |
+| Vim   | `ctrl+s` | Save the file                    |
 
 ### Panes
 
