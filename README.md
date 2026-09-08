@@ -33,8 +33,6 @@ The setup script recursively links each file under [`dotfiles`](dotfiles) to the
 matching path under `~/`. It prompts before replacing existing files. Run it
 again when this repository adds a dotfile.
 
-New Herdr workspaces use their working directory leaf as the workspace name.
-
 ### Manual setup
 
 Add this `[include]` section to `.gitconfig`:
