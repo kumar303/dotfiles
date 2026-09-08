@@ -22,6 +22,7 @@ set noerrorbells visualbell t_vb=
 set number
 set nowrap
 set ruler
+set laststatus=2
 set scrolloff=3
 set shiftwidth=4
 set showmatch
