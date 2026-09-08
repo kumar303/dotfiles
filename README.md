@@ -89,8 +89,9 @@ Install [fzf](https://github.com/junegunn/fzf),
 brew install fzf fd ripgrep universal-ctags jq
 ```
 
-`ctrl+r` and `ctrl+f` can pass any ripgrep option. Example of searching for the
-text `authorization`:
+Select text with `v`, then press `ctrl+r` to use it as the search term.
+`ctrl+r` and `ctrl+f` can also pass any ripgrep option. Example of searching for
+the text `authorization`:
 
 ```vim
 :Rg -g'!**/*test*' authorization
