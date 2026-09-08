@@ -102,9 +102,15 @@ function handlePaneCommand(command) {
       output({ result: { pane } });
       break;
     }
+    case "send-text": {
+      const layout = process.env.HERDR_MOCK_VIM_LAYOUT;
+      const statePath = String(args[3]).match(/\], '((?:''|[^'])+)'\)$/)?.[1];
+      if (layout && statePath) writeFileSync(statePath.replaceAll("''", "'"), `${layout}\n`);
+      output({ result: {} });
+      break;
+    }
     case "focus":
     case "send-keys":
-    case "send-text":
     case "swap":
     case "run":
       output({ result: {} });

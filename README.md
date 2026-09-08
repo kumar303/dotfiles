@@ -99,9 +99,9 @@ text `authorization`:
 
 ## Vim pane toggle
 
-The local [`split-vim-above`](plugins/split-vim-above) plugin keeps one Vim pane
-per working directory and workspace. It parks the running pane in an inactive
-Herdr tab, then moves the same pane above the focused pane when reopened.
+`ctrl+backtick` closes Vim when it hides the pane. Save changes before hiding
+it. When reopened, Vim restores the existing files and split layout remembered
+for that working directory and workspace.
 
 ## Development
 

@@ -8,7 +8,6 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  readdirSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -24,19 +23,14 @@ import { join, resolve } from "node:path";
  * @property {string} workspace_id
  * @property {boolean} [focused]
  */
-
 /** @typedef {{result: {panes: Pane[]}}} PaneListResponse */
 /** @typedef {{result: {pane: Pane}}} PaneResponse */
 /** @typedef {{result: {root_pane: Pane}}} TabCreateResponse */
 /** @typedef {{result: {move_result: {pane: Pane}}}} PaneMoveResponse */
 /** @typedef {{pane_id: string, terminal_id: string}} PaneMarker */
-/**
- * @typedef {object} VimSession
- * @property {string} cwd
- * @property {string} workspace_id
- * @property {string} pane_id
- * @property {string} terminal_id
- */
+/** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
+/** @typedef {["leaf", string] | ["row" | "col", RestoredLayout[]]} RestoredLayout */
+/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string}>}} VimState */
 
 const herdrCommand = process.env.HERDR_BIN_PATH || "herdr";
 const stateHome = process.env.XDG_STATE_HOME || join(process.env.HOME || "", ".local", "state");
@@ -44,26 +38,18 @@ const pluginStateDirectory =
   process.env.HERDR_PLUGIN_STATE_DIR ||
   join(stateHome, "herdr", "plugins", "kumar303.split-vim-above");
 const paneMarkerDirectory = join(pluginStateDirectory, "pane-markers");
-const vimSessionDirectory = join(pluginStateDirectory, "vim-sessions");
+const vimLayoutDirectory = join(pluginStateDirectory, "vim-layouts");
 const fileOptionIndex = process.argv.indexOf("--file");
 const requestedFileArgument = fileOptionIndex >= 0 ? process.argv[fileOptionIndex + 1] : undefined;
-if (fileOptionIndex >= 0 && !requestedFileArgument) {
-  throw new Error("--file requires a path");
-}
+if (fileOptionIndex >= 0 && !requestedFileArgument) throw new Error("--file requires a path");
 
 /**
  * @param {string[]} args
  * @param {{allowFailure?: boolean}} [options]
  */
 function runHerdrProcess(args, options = {}) {
-  const result = spawnSync(herdrCommand, args, {
-    encoding: "utf8",
-    env: process.env,
-  });
-
-  if (result.error) {
-    throw new Error(`could not run ${herdrCommand}: ${result.error.message}`);
-  }
+  const result = spawnSync(herdrCommand, args, { encoding: "utf8", env: process.env });
+  if (result.error) throw new Error(`could not run ${herdrCommand}: ${result.error.message}`);
   if (result.status !== 0 && !options.allowFailure) {
     const detail = result.stderr.trim();
     throw new Error(`herdr ${args.join(" ")} failed${detail ? `: ${detail}` : ""}`);
@@ -80,10 +66,8 @@ function runHerdrProcess(args, options = {}) {
 function runHerdr(args, options = {}) {
   const result = runHerdrProcess(args, options);
   if (result.status !== 0) return null;
-
   const output = result.stdout.trim();
   if (!output) return /** @type {T} */ ({});
-
   try {
     return /** @type {T} */ (JSON.parse(output));
   } catch {
@@ -91,10 +75,7 @@ function runHerdr(args, options = {}) {
   }
 }
 
-/**
- * @param {Pane[]} panes
- * @returns {Pane | undefined}
- */
+/** @param {Pane[]} panes */
 function findSourcePane(panes) {
   for (const candidate of [process.env.HERDR_ACTIVE_PANE_ID, process.env.HERDR_PANE_ID]) {
     if (!candidate) continue;
@@ -117,11 +98,7 @@ function findSourcePane(panes) {
   );
 }
 
-/**
- * @template T
- * @param {string} path
- * @returns {T | null}
- */
+/** @template T @param {string} path @returns {T | null} */
 function readJson(path) {
   if (!existsSync(path)) return null;
   try {
@@ -131,20 +108,14 @@ function readJson(path) {
   }
 }
 
-/**
- * @param {string} path
- * @param {unknown} value
- */
+/** @param {string} path @param {unknown} value */
 function writeJsonAtomically(path, value) {
   const temporaryPath = `${path}.${process.pid}`;
   writeFileSync(temporaryPath, `${JSON.stringify(value)}\n`, { mode: 0o600 });
   renameSync(temporaryPath, path);
 }
 
-/**
- * @param {string} lockDirectory
- * @returns {boolean}
- */
+/** @param {string} lockDirectory */
 function acquireLock(lockDirectory) {
   try {
     mkdirSync(lockDirectory);
@@ -159,38 +130,14 @@ function acquireLock(lockDirectory) {
       mkdirSync(lockDirectory);
     }
   }
-
   writeFileSync(join(lockDirectory, "pid"), `${process.pid}\n`);
   return true;
 }
 
-/**
- * @param {string} workspaceId
- * @param {string} cwd
- */
-function vimSessionIdentity(workspaceId, cwd) {
+/** @param {string} workspaceId @param {string} cwd */
+function vimLayoutPath(workspaceId, cwd) {
   const id = createHash("sha256").update(`${workspaceId}\0${cwd}`).digest("hex").slice(0, 16);
-  return {
-    stateFile: join(vimSessionDirectory, `${id}.json`),
-  };
-}
-
-/**
- * @param {Partial<VimSession> | null} session
- * @returns {session is VimSession}
- */
-function validVimSession(session) {
-  return Boolean(session?.cwd && session.workspace_id && session.pane_id && session.terminal_id);
-}
-
-/**
- * @param {Pane[]} panes
- * @param {Partial<VimSession>} session
- */
-function findSessionPane(panes, session) {
-  return panes.find(
-    (pane) => pane.pane_id === session.pane_id && pane.terminal_id === session.terminal_id,
-  );
+  return join(vimLayoutDirectory, `${id}.json`);
 }
 
 /** @param {Pane} pane */
@@ -199,31 +146,7 @@ function requireTerminalId(pane) {
   return pane.terminal_id;
 }
 
-/**
- * @param {Pane} pane
- * @param {string} workspaceId
- */
-function parkPane(pane, workspaceId) {
-  const response = /** @type {PaneMoveResponse} */ (
-    runHerdr([
-      "pane",
-      "move",
-      pane.pane_id,
-      "--new-tab",
-      "--workspace",
-      workspaceId,
-      "--label",
-      "vim-cache",
-      "--no-focus",
-    ])
-  );
-  return response.result.move_result.pane;
-}
-
-/**
- * @param {Pane} pane
- * @param {Pane} sourcePane
- */
+/** @param {Pane} pane @param {Pane} sourcePane */
 function showPane(pane, sourcePane) {
   const response = /** @type {PaneMoveResponse} */ (
     runHerdr([
@@ -246,23 +169,112 @@ function showPane(pane, sourcePane) {
   return movedPane;
 }
 
-/**
- * @param {Pane} pane
- * @param {string} file
- */
+/** @param {string} value */
+function vimSingleQuoted(value) {
+  if (/[\r\n]/.test(value)) throw new Error("file path must not contain a newline");
+  return value.replaceAll("'", "''");
+}
+
+/** @param {Pane} pane @param {string} file */
 function openFileInVim(pane, file) {
-  if (/[\r\n]/.test(file)) throw new Error("file path must not contain a newline");
-  const escapedFile = file.replaceAll("'", "''");
   runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
-  runHerdr(["pane", "send-text", pane.pane_id, `:execute 'edit ' . fnameescape('${escapedFile}')`]);
+  runHerdr([
+    "pane",
+    "send-text",
+    pane.pane_id,
+    `:wincmd t | execute 'edit ' . fnameescape('${vimSingleQuoted(file)}')`,
+  ]);
   runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
 }
 
+/** @param {unknown} layout @returns {layout is VimLayout} */
+function validVimLayout(layout) {
+  if (!Array.isArray(layout) || layout.length !== 2) return false;
+  if (layout[0] === "leaf") return Number.isInteger(layout[1]);
+  return (
+    (layout[0] === "row" || layout[0] === "col") &&
+    Array.isArray(layout[1]) &&
+    layout[1].every(validVimLayout)
+  );
+}
+
+/** @param {unknown} state @returns {state is VimState} */
+function validVimState(state) {
+  if (!state || typeof state !== "object") return false;
+  const candidate = /** @type {Partial<VimState>} */ (state);
+  return (
+    validVimLayout(candidate.layout) &&
+    Array.isArray(candidate.windows) &&
+    candidate.windows.every(
+      (window) => Number.isInteger(window?.id) && typeof window?.file === "string",
+    )
+  );
+}
+
 /**
- * @param {Pane} sourcePane
+ * @param {VimState | null} state
  * @param {string | null} requestedFile
+ * @returns {RestoredLayout | null}
  */
-function createVimPane(sourcePane, requestedFile) {
+function restoredLayout(state, requestedFile) {
+  if (!state) return requestedFile ? ["leaf", requestedFile] : null;
+  const files = new Map(state.windows.map((window) => [window.id, window.file]));
+  let replacedFirst = false;
+
+  /** @param {VimLayout} layout @returns {RestoredLayout | null} */
+  function restore(layout) {
+    if (layout[0] === "leaf") {
+      let file = files.get(layout[1]) || "";
+      if (requestedFile && !replacedFirst) {
+        file = requestedFile;
+        replacedFirst = true;
+      }
+      return file && existsSync(file) ? ["leaf", file] : null;
+    }
+
+    const children = layout[1].map(restore).filter((child) => child !== null);
+    if (children.length === 0) return null;
+    if (children.length === 1) return children[0];
+    return [layout[0], children];
+  }
+
+  const layout = restore(state.layout);
+  if (!layout && requestedFile) return ["leaf", requestedFile];
+  return layout;
+}
+
+/** @param {string} path @param {RestoredLayout} layout */
+function writeRestoreScript(path, layout) {
+  const encodedLayout = vimSingleQuoted(JSON.stringify(layout));
+  const script = `let s:layout = json_decode('${encodedLayout}')
+function! s:restore_layout(layout, window_id) abort
+  call win_gotoid(a:window_id)
+  if a:layout[0] ==# 'leaf'
+    execute 'edit ' . fnameescape(a:layout[1])
+    return
+  endif
+  let l:window_ids = [a:window_id]
+  for l:index in range(1, len(a:layout[1]) - 1)
+    call win_gotoid(l:window_ids[-1])
+    if a:layout[0] ==# 'row'
+      rightbelow vsplit
+    else
+      rightbelow split
+    endif
+    call add(l:window_ids, win_getid())
+  endfor
+  for l:index in range(0, len(a:layout[1]) - 1)
+    call s:restore_layout(a:layout[1][l:index], l:window_ids[l:index])
+  endfor
+endfunction
+call s:restore_layout(s:layout, win_getid())
+unlet s:layout
+`;
+  writeFileSync(path, script, { mode: 0o600 });
+}
+
+/** @param {Pane} sourcePane @param {string | null} requestedFile @param {string} layoutPath */
+function createVimPane(sourcePane, requestedFile, layoutPath) {
   const response = /** @type {TabCreateResponse} */ (
     runHerdr([
       "tab",
@@ -272,14 +284,29 @@ function createVimPane(sourcePane, requestedFile) {
       "--cwd",
       sourcePane.cwd,
       "--label",
-      "vim-cache",
+      "vim",
       "--no-focus",
     ])
   );
   const pane = response.result.root_pane;
+  const rememberedState = readJson(layoutPath);
+  const state = validVimState(rememberedState) ? rememberedState : null;
+  const layout = restoredLayout(state, requestedFile);
 
   try {
-    runHerdr(["pane", "run", pane.pane_id, "vim", requestedFile || sourcePane.cwd]);
+    if (layout && layout[0] !== "leaf") {
+      const restoreScript = `${layoutPath}.vim`;
+      writeRestoreScript(restoreScript, layout);
+      runHerdr(["pane", "run", pane.pane_id, "vim", "-S", restoreScript]);
+    } else {
+      runHerdr([
+        "pane",
+        "run",
+        pane.pane_id,
+        "vim",
+        layout?.[0] === "leaf" ? layout[1] : sourcePane.cwd,
+      ]);
+    }
     return pane;
   } catch (error) {
     runHerdr(["pane", "close", pane.pane_id], { allowFailure: true });
@@ -287,29 +314,42 @@ function createVimPane(sourcePane, requestedFile) {
   }
 }
 
-/**
- * @param {Pane[]} panes
- * @param {Pane} markedPane
- */
-function findSessionStateForPane(panes, markedPane) {
-  for (const entry of readdirSync(vimSessionDirectory)) {
-    if (!entry.endsWith(".json")) continue;
-    const stateFile = join(vimSessionDirectory, entry);
-    const state = /** @type {Partial<VimSession> | null} */ (readJson(stateFile));
-    if (!validVimSession(state)) continue;
-    const pane = findSessionPane(panes, /** @type {Partial<VimSession>} */ (state));
-    if (pane?.pane_id === markedPane.pane_id) {
-      return { state: /** @type {VimSession} */ (state), stateFile };
+/** @param {Pane} pane @param {string} layoutPath */
+function saveLayoutAndClose(pane, layoutPath) {
+  const capturePath = `${layoutPath}.capture.${process.pid}`;
+  rmSync(capturePath, { force: true });
+  const command = `:call writefile([json_encode({'layout': winlayout(), 'windows': map(getwininfo(), '{"id": v:val.winid, "file": fnamemodify(bufname(v:val.bufnr), ":p")}')})], '${vimSingleQuoted(capturePath)}')`;
+  runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
+  runHerdr(["pane", "send-text", pane.pane_id, command]);
+  runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
+
+  const waiter = new Int32Array(new SharedArrayBuffer(4));
+  const deadline = Date.now() + 2_000;
+  let capturedState = null;
+  while (Date.now() < deadline) {
+    const candidate = readJson(capturePath);
+    if (validVimState(candidate)) {
+      capturedState = candidate;
+      break;
     }
+    Atomics.wait(waiter, 0, 0, 25);
   }
-  return null;
+  rmSync(capturePath, { force: true });
+  if (!capturedState) {
+    throw new Error("Vim did not save its split layout; the pane remains open");
+  }
+
+  writeJsonAtomically(layoutPath, capturedState);
+  runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
+  runHerdr(["pane", "send-text", pane.pane_id, ":qa!"]);
+  runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
+  runHerdr(["pane", "close", pane.pane_id]);
 }
 
 function main() {
   const paneList = runHerdr(/** @type {string[]} */ (["pane", "list"]));
   const panes = /** @type {PaneListResponse} */ (paneList).result.panes;
   const sourcePane = findSourcePane(panes);
-
   if (!sourcePane?.pane_id || !sourcePane.tab_id || !sourcePane.workspace_id || !sourcePane.cwd) {
     throw new Error("could not determine the focused pane, tab, and cwd");
   }
@@ -318,7 +358,7 @@ function main() {
     : null;
 
   mkdirSync(paneMarkerDirectory, { recursive: true });
-  mkdirSync(vimSessionDirectory, { recursive: true });
+  mkdirSync(vimLayoutDirectory, { recursive: true });
   try {
     chmodSync(pluginStateDirectory, 0o700);
   } catch {
@@ -341,6 +381,7 @@ function main() {
             pane.workspace_id === sourcePane.workspace_id,
         )
       : undefined;
+    const layoutPath = vimLayoutPath(sourcePane.workspace_id, sourcePane.cwd);
 
     if (markedPane) {
       if (requestedFile) {
@@ -348,65 +389,18 @@ function main() {
         runHerdr(["pane", "focus", "--direction", "up", "--pane", sourcePane.pane_id]);
         return;
       }
-      const sessionRecord = findSessionStateForPane(panes, markedPane);
-      const parkedPane = parkPane(markedPane, sourcePane.workspace_id);
-      const stateFile =
-        sessionRecord?.stateFile ||
-        vimSessionIdentity(sourcePane.workspace_id, markedPane.cwd).stateFile;
-      writeJsonAtomically(stateFile, {
-        cwd: sessionRecord?.state.cwd || markedPane.cwd,
-        workspace_id: sourcePane.workspace_id,
-        pane_id: parkedPane.pane_id,
-        terminal_id: requireTerminalId(parkedPane),
-      });
+      saveLayoutAndClose(markedPane, layoutPath);
       rmSync(paneMarkerFile, { force: true });
       return;
     }
+
     rmSync(paneMarkerFile, { force: true });
-
-    const identity = vimSessionIdentity(sourcePane.workspace_id, sourcePane.cwd);
-    const sessionLockDirectory = `${identity.stateFile}.lock`;
-    if (!acquireLock(sessionLockDirectory)) return;
-
-    try {
-      const state = /** @type {Partial<VimSession> | null} */ (readJson(identity.stateFile));
-      let vimPane = validVimSession(state)
-        ? findSessionPane(panes, /** @type {Partial<VimSession>} */ (state))
-        : undefined;
-      let startedVim = false;
-      if (!vimPane) {
-        rmSync(identity.stateFile, { force: true });
-        vimPane = createVimPane(sourcePane, requestedFile);
-        startedVim = true;
-      }
-
-      let movedPane;
-      try {
-        movedPane = showPane(vimPane, sourcePane);
-      } catch (error) {
-        if (vimPane.tab_id !== sourcePane.tab_id) {
-          parkPane(vimPane, sourcePane.workspace_id);
-        }
-        throw error;
-      }
-
-      if (requestedFile && !startedVim) {
-        openFileInVim(movedPane, requestedFile);
-      }
-
-      writeJsonAtomically(identity.stateFile, {
-        cwd: sourcePane.cwd,
-        workspace_id: sourcePane.workspace_id,
-        pane_id: movedPane.pane_id,
-        terminal_id: requireTerminalId(movedPane),
-      });
-      writeJsonAtomically(paneMarkerFile, {
-        pane_id: movedPane.pane_id,
-        terminal_id: requireTerminalId(movedPane),
-      });
-    } finally {
-      rmSync(sessionLockDirectory, { recursive: true, force: true });
-    }
+    const vimPane = createVimPane(sourcePane, requestedFile, layoutPath);
+    const movedPane = showPane(vimPane, sourcePane);
+    writeJsonAtomically(paneMarkerFile, {
+      pane_id: movedPane.pane_id,
+      terminal_id: requireTerminalId(movedPane),
+    });
   } finally {
     rmSync(paneLockDirectory, { recursive: true, force: true });
   }
