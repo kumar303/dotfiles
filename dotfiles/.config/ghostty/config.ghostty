@@ -1,2 +1,3 @@
 theme = Atom One Light
+font-feature = -calt
 keybind = alt+backspace=text:\x17
