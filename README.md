@@ -102,8 +102,7 @@ the text `authorization`:
 ## Vim pane toggle
 
 `ctrl+backtick` closes Vim when it hides the pane. Save changes before hiding
-it. Every tab in the workspace restores the same remembered files, split
-layout, cursor positions, and scroll positions.
+it.
 
 ## Development
 
