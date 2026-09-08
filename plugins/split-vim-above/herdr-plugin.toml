@@ -1,8 +1,8 @@
 id = "kumar303.split-vim-above"
 name = "Split Vim Above"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.8.2"
-description = "Toggle persistent Vim panes by working directory"
+description = "Toggle persistent Vim panes and open files by working directory"
 platforms = ["linux", "macos"]
 
 [[actions]]

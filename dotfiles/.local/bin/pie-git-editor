@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+
+if (process.argv.length !== 3) {
+  console.error("usage: $PIE_GIT_EDITOR <path_to_file>");
+  process.exit(2);
+}
+
+process.argv.splice(2, 0, "--file");
+await import("../../../plugins/split-vim-above/split-vim-above.js");

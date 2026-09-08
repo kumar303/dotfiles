@@ -13,7 +13,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 /**
  * @typedef {object} Pane
@@ -39,9 +39,17 @@ import { join } from "node:path";
  */
 
 const herdrCommand = process.env.HERDR_BIN_PATH || "herdr";
-const pluginStateDirectory = process.env.HERDR_PLUGIN_STATE_DIR || "";
+const stateHome = process.env.XDG_STATE_HOME || join(process.env.HOME || "", ".local", "state");
+const pluginStateDirectory =
+  process.env.HERDR_PLUGIN_STATE_DIR ||
+  join(stateHome, "herdr", "plugins", "kumar303.split-vim-above");
 const paneMarkerDirectory = join(pluginStateDirectory, "pane-markers");
 const vimSessionDirectory = join(pluginStateDirectory, "vim-sessions");
+const fileOptionIndex = process.argv.indexOf("--file");
+const requestedFileArgument = fileOptionIndex >= 0 ? process.argv[fileOptionIndex + 1] : undefined;
+if (fileOptionIndex >= 0 && !requestedFileArgument) {
+  throw new Error("--file requires a path");
+}
 
 /**
  * @param {string[]} args
@@ -239,9 +247,22 @@ function showPane(pane, sourcePane) {
 }
 
 /**
- * @param {Pane} sourcePane
+ * @param {Pane} pane
+ * @param {string} file
  */
-function createVimPane(sourcePane) {
+function openFileInVim(pane, file) {
+  if (/[\r\n]/.test(file)) throw new Error("file path must not contain a newline");
+  const escapedFile = file.replaceAll("'", "''");
+  runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
+  runHerdr(["pane", "send-text", pane.pane_id, `:execute 'edit ' . fnameescape('${escapedFile}')`]);
+  runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
+}
+
+/**
+ * @param {Pane} sourcePane
+ * @param {string | null} requestedFile
+ */
+function createVimPane(sourcePane, requestedFile) {
   const response = /** @type {TabCreateResponse} */ (
     runHerdr([
       "tab",
@@ -258,7 +279,7 @@ function createVimPane(sourcePane) {
   const pane = response.result.root_pane;
 
   try {
-    runHerdr(["pane", "run", pane.pane_id, "vim", sourcePane.cwd]);
+    runHerdr(["pane", "run", pane.pane_id, "vim", requestedFile || sourcePane.cwd]);
     return pane;
   } catch (error) {
     runHerdr(["pane", "close", pane.pane_id], { allowFailure: true });
@@ -285,9 +306,6 @@ function findSessionStateForPane(panes, markedPane) {
 }
 
 function main() {
-  if (!pluginStateDirectory) {
-    throw new Error("HERDR_PLUGIN_STATE_DIR is not set");
-  }
   const paneList = runHerdr(/** @type {string[]} */ (["pane", "list"]));
   const panes = /** @type {PaneListResponse} */ (paneList).result.panes;
   const sourcePane = findSourcePane(panes);
@@ -295,6 +313,9 @@ function main() {
   if (!sourcePane?.pane_id || !sourcePane.tab_id || !sourcePane.workspace_id || !sourcePane.cwd) {
     throw new Error("could not determine the focused pane, tab, and cwd");
   }
+  const requestedFile = requestedFileArgument
+    ? resolve(sourcePane.cwd, requestedFileArgument)
+    : null;
 
   mkdirSync(paneMarkerDirectory, { recursive: true });
   mkdirSync(vimSessionDirectory, { recursive: true });
@@ -322,6 +343,11 @@ function main() {
       : undefined;
 
     if (markedPane) {
+      if (requestedFile) {
+        openFileInVim(markedPane, requestedFile);
+        runHerdr(["pane", "focus", "--direction", "up", "--pane", sourcePane.pane_id]);
+        return;
+      }
       const sessionRecord = findSessionStateForPane(panes, markedPane);
       const parkedPane = parkPane(markedPane, sourcePane.workspace_id);
       const stateFile =
@@ -347,9 +373,11 @@ function main() {
       let vimPane = validVimSession(state)
         ? findSessionPane(panes, /** @type {Partial<VimSession>} */ (state))
         : undefined;
+      let startedVim = false;
       if (!vimPane) {
         rmSync(identity.stateFile, { force: true });
-        vimPane = createVimPane(sourcePane);
+        vimPane = createVimPane(sourcePane, requestedFile);
+        startedVim = true;
       }
 
       let movedPane;
@@ -360,6 +388,10 @@ function main() {
           parkPane(vimPane, sourcePane.workspace_id);
         }
         throw error;
+      }
+
+      if (requestedFile && !startedVim) {
+        openFileInVim(movedPane, requestedFile);
       }
 
       writeJsonAtomically(identity.stateFile, {

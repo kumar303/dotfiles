@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const scriptPath = join(repositoryRoot, "plugins", "split-vim-above", "split-vim-above.js");
+const gitEditorPath = join(repositoryRoot, "dotfiles", ".local", "bin", "pie-git-editor");
 const mockHerdrPath = join(repositoryRoot, "tests", "fixtures", "mock-herdr.js");
 
 /** @typedef {Record<string, unknown>} Pane */
@@ -206,6 +207,45 @@ describe("split-vim-above", () => {
     );
   });
 
+  it("starts Vim with a requested file", () => {
+    setPanes([sourcePane({ cwd: "/tmp/project" })]);
+
+    runScript({ filePath: "src/file.ts", gitEditor: true });
+
+    expect(herdrCommandCalls("run")).toContainEqual([
+      "pane",
+      "run",
+      "w1:p101",
+      "vim",
+      "/tmp/project/src/file.ts",
+    ]);
+  });
+
+  it("opens a requested file in an existing parked Vim process", () => {
+    setPanes([sourcePane({ cwd: "/tmp/project" })]);
+    runScript();
+    runScript();
+    clearHerdrCalls();
+
+    runScript({ filePath: "src/a file's.ts" });
+
+    expect(herdrCommandCalls("run")).toHaveLength(0);
+    expect(herdrCommandCalls("move")).toHaveLength(1);
+    expect(herdrCommandCalls("send-keys")).toContainEqual(["pane", "send-keys", "w1:p101", "esc"]);
+    expect(herdrCommandCalls("send-text")).toContainEqual([
+      "pane",
+      "send-text",
+      "w1:p101",
+      ":execute 'edit ' . fnameescape('/tmp/project/src/a file''s.ts')",
+    ]);
+    expect(herdrCommandCalls("send-keys")).toContainEqual([
+      "pane",
+      "send-keys",
+      "w1:p101",
+      "enter",
+    ]);
+  });
+
   it("alternates show, park, and show with spaces in the cwd", () => {
     setPanes([sourcePane({ cwd: "/tmp/a dir" })]);
 
@@ -247,10 +287,15 @@ function setPanes(panes) {
 }
 
 /**
- * @param {{paneId?: string, now?: number}} [options]
+ * @param {{paneId?: string, now?: number, filePath?: string, gitEditor?: boolean}} [options]
  */
 function runScript(options = {}) {
-  const result = spawnSync(scriptPath, {
+  const args = options.filePath
+    ? options.gitEditor
+      ? [options.filePath]
+      : ["--file", options.filePath]
+    : [];
+  const result = spawnSync(options.gitEditor ? gitEditorPath : scriptPath, args, {
     encoding: "utf8",
     env: {
       ...process.env,

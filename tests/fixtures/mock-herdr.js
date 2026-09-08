@@ -102,6 +102,9 @@ function handlePaneCommand(command) {
       output({ result: { pane } });
       break;
     }
+    case "focus":
+    case "send-keys":
+    case "send-text":
     case "swap":
     case "run":
       output({ result: {} });
