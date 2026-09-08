@@ -35,7 +35,7 @@ let g:colors_name = 'light-owl'
 highlight Normal guifg=#403f53 guibg=#fbfbfb ctermfg=8 ctermbg=15
 highlight NormalNC guifg=#403f53 guibg=#fbfbfb ctermfg=8 ctermbg=15
 highlight Cursor guifg=#fbfbfb guibg=#403f53 ctermfg=15 ctermbg=8
-highlight CursorLine guibg=#f0f0f0 ctermbg=7
+highlight CursorLine guibg=#f0f0f0 gui=NONE ctermbg=7 cterm=NONE term=NONE
 highlight CursorColumn guibg=#f0f0f0 ctermbg=7
 highlight ColorColumn guibg=#f0f0f0 ctermbg=7
 highlight LineNr guifg=#90a7b2 guibg=#fbfbfb ctermfg=7 ctermbg=15
