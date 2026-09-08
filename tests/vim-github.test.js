@@ -22,7 +22,10 @@ afterEach(() => {
 });
 
 describe("OpenCurrentFileOnGitHub", () => {
-  it("opens the current line on the main branch of the origin repository", () => {
+  it.each([
+    ["GitHub", "git@github.com:owner/repo.git", "owner/repo"],
+    ["Gitstream", "https://gitstream.shopify.io/shop/world.git", "shop/world"],
+  ])("opens a %s origin on GitHub's main branch", (_name, remote, githubRepository) => {
     const repository = join(testDirectory, "project");
     const sourceDirectory = join(repository, "a directory");
     const sourceFile = join(sourceDirectory, "example.js");
@@ -34,14 +37,7 @@ describe("OpenCurrentFileOnGitHub", () => {
     writeFileSync(fakeOpen, '#!/bin/sh\nprintf "%s" "$1" > "$OPEN_LOG"\n');
     chmodSync(fakeOpen, 0o755);
     execFileSync("git", ["init", "-q", repository]);
-    execFileSync("git", [
-      "-C",
-      repository,
-      "remote",
-      "add",
-      "origin",
-      "git@github.com:owner/repo.git",
-    ]);
+    execFileSync("git", ["-C", repository, "remote", "add", "origin", remote]);
 
     const result = spawnSync(
       "vim",
@@ -71,7 +67,7 @@ describe("OpenCurrentFileOnGitHub", () => {
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     expect(readFileSync(openLog, "utf8")).toBe(
-      "https://github.com/owner/repo/blob/main/a%20directory/example.js#L2",
+      `https://github.com/${githubRepository}/blob/main/a%20directory/example.js#L2`,
     );
   });
 });
