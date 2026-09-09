@@ -23,11 +23,13 @@ afterEach(() => {
 
 describe("fzf result opening", () => {
   it.each([
-    ["file", "enter", ["A.ts", "B.ts"]],
-    ["file", "ctrl-o", ["B.ts"]],
-    ["ripgrep", "enter", ["A.ts", "B.ts"]],
-    ["ripgrep", "ctrl-o", ["B.ts"]],
-  ])("opens a %s result for %s", (picker, key, expectedFiles) => {
+    ["file", "enter", true, ["A.ts", "B.ts"]],
+    ["file", "enter", false, ["B.ts"]],
+    ["file", "ctrl-o", true, ["B.ts"]],
+    ["ripgrep", "enter", true, ["A.ts", "B.ts"]],
+    ["ripgrep", "enter", false, ["B.ts"]],
+    ["ripgrep", "ctrl-o", true, ["B.ts"]],
+  ])("opens a %s result for %s", (picker, key, hasCurrentFile, expectedFiles) => {
     const firstFile = join(testDirectory, "A.ts");
     const secondFile = join(testDirectory, "B.ts");
     const resultPath = join(testDirectory, "result.json");
@@ -36,8 +38,10 @@ describe("fzf result opening", () => {
     writeFileSync(secondFile, "one\ntwo\n");
     writeFileSync(
       scriptPath,
-      `execute 'edit ' . fnameescape($VIM_TEST_FIRST)
-call cursor(1, 1)
+      `if $VIM_TEST_HAS_CURRENT ==# '1'
+    execute 'edit ' . fnameescape($VIM_TEST_FIRST)
+    call cursor(1, 1)
+endif
 if $VIM_TEST_PICKER ==# 'file'
     call OpenFileResults([$VIM_TEST_KEY, 'B.ts'])
 else
@@ -58,6 +62,7 @@ qa!
       env: {
         ...process.env,
         VIM_TEST_FIRST: firstFile,
+        VIM_TEST_HAS_CURRENT: hasCurrentFile ? "1" : "0",
         VIM_TEST_KEY: key,
         VIM_TEST_PICKER: picker,
         VIM_TEST_RESULT: resultPath,

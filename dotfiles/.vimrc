@@ -86,7 +86,7 @@ let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
 let g:fzf_open_options = g:fzf_picker_options + ['--expect=enter,ctrl-o']
 
 function! FzfOpenCommand(key)
-    return a:key ==# 'enter' ? 'rightbelow vsplit' : 'edit'
+    return a:key ==# 'enter' && !empty(expand('%:p')) ? 'rightbelow vsplit' : 'edit'
 endfunction
 
 function! OpenFileResults(lines)
