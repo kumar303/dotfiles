@@ -10,5 +10,5 @@
     "target": "ES2022",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["plugins/**/*.js", "tests/**/*.js", "vite.config.js"]
+  "include": ["dotfiles/.vim/**/*.js", "plugins/**/*.js", "tests/**/*.js", "vite.config.js"]
 }

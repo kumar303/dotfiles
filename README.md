@@ -26,6 +26,7 @@ Required: Node.js, Vim, Ghostty, and Herdr.
 2. Link the tracked dotfiles and plugins, then reload Herdr:
 
    ```sh
+   npm install
    ./setup.sh
    ```
 
@@ -60,6 +61,7 @@ Add this `[include]` section to `.gitconfig`:
 | Vim   | `ctrl+p` | Open a file finder palette       |
 | Vim   | `ctrl+l` | List code symbols in the file    |
 | Vim   | `ctrl+g` | Open the line on GitHub's `main` |
+| Vim   | `ctrl+j` | Open the import under the cursor |
 | Vim   | `ctrl+s` | Save the file                    |
 
 ### Panes
