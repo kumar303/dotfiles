@@ -29,7 +29,6 @@ peach = "#c96765"
 [keys]
 close_tab = "cmd+shift+k"
 next_tab = "ctrl+cmd+backtick"
-workspace_picker = "ctrl+shift+enter"
 
 [ui.toast]
 delivery = "system"
