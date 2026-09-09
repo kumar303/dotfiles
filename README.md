@@ -50,6 +50,7 @@ Add this `[include]` section to `.gitconfig`:
 | ----- | ------------------- | --------------------------------- |
 | Herdr | `cmd+opt+backtick`  | Create a terminal tab             |
 | Herdr | `ctrl+cmd+backtick` | Select the next terminal tab      |
+| Herdr | `ctrl+shift+enter`  | Select a workspace                |
 | Herdr | `cmd+shift+k`       | Close the terminal tab            |
 | Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane |
 
