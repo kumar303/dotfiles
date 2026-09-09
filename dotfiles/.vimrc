@@ -47,6 +47,24 @@ set splitright
 nnoremap <C-s> :w<CR>
 inoremap <C-s> <C-o>:w<CR>
 
+function! MoveCurrentFileWindow(direction)
+    let source_window = win_getid()
+    let target_window = win_getid(winnr(a:direction))
+    if target_window == source_window
+        return
+    endif
+
+    let source_buffer = bufnr()
+    call win_gotoid(target_window)
+    execute 'hide buffer ' . source_buffer
+    call win_gotoid(source_window)
+    close
+    call win_gotoid(target_window)
+endfunction
+
+nnoremap <silent> <C-M-Left> :call MoveCurrentFileWindow('h')<CR>
+nnoremap <silent> <C-M-Right> :call MoveCurrentFileWindow('l')<CR>
+
 " Copy yanked text to the OS clipboard without changing Vim's registers.
 if has('clipboard')
     augroup os_clipboard_yank

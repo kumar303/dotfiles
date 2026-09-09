@@ -64,12 +64,13 @@ Add this `[include]` section to `.gitconfig`:
 
 ### Panes
 
-| Scope | Key                 | Action                             |
-| ----- | ------------------- | ---------------------------------- |
-| Vim   | `ctrl+w`, `v/s`     | Open a vertical / horizontal split |
-| Vim   | `ctrl+w`, `c`       | Close the split                    |
-| Vim   | `ctrl+w`, `h/j/k/l` | Focus the left/down/up/right split |
-| Vim   | `ctrl+w`, `w`       | Focus the next split               |
+| Scope | Key                   | Action                             |
+| ----- | --------------------- | ---------------------------------- |
+| Vim   | `ctrl+w`, `v/s`       | Open a vertical / horizontal split |
+| Vim   | `ctrl+w`, `c`         | Close the split                    |
+| Vim   | `ctrl+w`, `h/j/k/l`   | Focus the left/down/up/right split |
+| Vim   | `ctrl+w`, `w`         | Focus the next split               |
+| Vim   | `ctrl+cmd+left/right` | Move the file left/right           |
 
 ### Searching
 
