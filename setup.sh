@@ -43,6 +43,13 @@ if [ -L "$legacy_vim" ] && [ "$(readlink "$legacy_vim")" = "$legacy_vim_target" 
   echo "Removed legacy link: $legacy_vim"
 fi
 
+legacy_import_resolver="$HOME/.vim/import-resolver.js"
+legacy_import_resolver_target="$dotfiles_dir/.vim/import-resolver.js"
+if [ -L "$legacy_import_resolver" ] && [ "$(readlink "$legacy_import_resolver")" = "$legacy_import_resolver_target" ]; then
+  rm "$legacy_import_resolver"
+  echo "Removed legacy link: $legacy_import_resolver"
+fi
+
 while IFS= read -r -d '' -u 3 src; do
   relative_path="${src#"$dotfiles_dir"/}"
   link_file "$src" "$HOME/$relative_path"

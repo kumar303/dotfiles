@@ -264,7 +264,7 @@ function! JumpToImport()
     let source_file = expand('%:p')
     let specifier = import.specifier
     let symbol = import.symbol
-    let resolver = g:vim_dotfiles_directory . '/.vim/import-resolver.js'
+    let resolver = g:vim_dotfiles_directory . '/.vim/bin/import-resolver.js'
     let output = systemlist('node ' . shellescape(resolver) . ' ' . shellescape(source_file) . ' ' . shellescape(specifier))
     if v:shell_error || empty(output)
         echoerr empty(output) ? 'Could not resolve import' : join(output, ' ')

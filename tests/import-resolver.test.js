@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const resolverPath = join(repositoryRoot, "dotfiles", ".vim", "import-resolver.js");
+const resolverPath = join(repositoryRoot, "dotfiles", ".vim", "bin", "import-resolver.js");
 
 /** @type {string} */
 let testDirectory;
