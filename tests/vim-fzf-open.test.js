@@ -24,9 +24,9 @@ afterEach(() => {
 describe("fzf result opening", () => {
   it.each([
     ["file", "enter", ["A.ts", "B.ts"]],
-    ["file", "alt-enter", ["B.ts"]],
+    ["file", "ctrl-o", ["B.ts"]],
     ["ripgrep", "enter", ["A.ts", "B.ts"]],
-    ["ripgrep", "alt-enter", ["B.ts"]],
+    ["ripgrep", "ctrl-o", ["B.ts"]],
   ])("opens a %s result for %s", (picker, key, expectedFiles) => {
     const firstFile = join(testDirectory, "A.ts");
     const secondFile = join(testDirectory, "B.ts");

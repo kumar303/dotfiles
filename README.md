@@ -91,7 +91,7 @@ Install [fzf](https://github.com/junegunn/fzf),
 brew install fzf fd ripgrep universal-ctags jq
 ```
 
-In `ctrl+p` and `ctrl+r` results, `enter` opens a right split. `alt+enter`
+In `ctrl+p` and `ctrl+r` results, `enter` opens a right split. `ctrl+enter`
 reuses the current split.
 
 Select text with `v`, then press `ctrl+r` to use it as the search term.

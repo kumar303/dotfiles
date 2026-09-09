@@ -1,5 +1,6 @@
 theme = Atom One Light
 font-feature = -calt
 keybind = alt+backspace=text:\x17
+keybind = ctrl+enter=text:\x0f
 keybind = ctrl+super+arrow_left=text:\x1b[1;7D
 keybind = ctrl+super+arrow_right=text:\x1b[1;7C

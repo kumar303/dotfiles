@@ -83,7 +83,7 @@ let g:fzf_picker_options = [
     \ '--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97'
     \ ]
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
-let g:fzf_open_options = g:fzf_picker_options + ['--expect=enter,alt-enter']
+let g:fzf_open_options = g:fzf_picker_options + ['--expect=enter,ctrl-o']
 
 function! FzfOpenCommand(key)
     return a:key ==# 'enter' ? 'rightbelow vsplit' : 'edit'
