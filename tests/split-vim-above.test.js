@@ -15,7 +15,7 @@ const mockHerdrPath = join(repositoryRoot, "tests", "fixtures", "mock-herdr.js")
 /** @typedef {Record<string, unknown>} Pane */
 /** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
 /** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
-/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view?: VimView}>}} VimState */
+/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view?: VimView}>, focused?: number}} VimState */
 
 /** @type {string} */
 let testDirectory;
@@ -92,6 +92,7 @@ describe("split-vim-above", () => {
     expect(herdrCommandCalls("send-text")[0]?.[3]).toContain(":call writefile(");
     expect(herdrCommandCalls("send-text")[0]?.[3]).toContain("getcurpos(v:val.winid)");
     expect(herdrCommandCalls("send-text")[0]?.[3]).toContain('"topline": v:val.topline');
+    expect(herdrCommandCalls("send-text")[0]?.[3]).toContain("'focused': win_getid()");
     expect(herdrCommandCalls("send-text")).toContainEqual(["pane", "send-text", "w1:p101", ":qa!"]);
     expect(herdrCalls()).toContainEqual(["pane", "close", "w1:p101"]);
     expect(herdrCommandCalls("move")).toHaveLength(0);
@@ -138,12 +139,12 @@ describe("split-vim-above", () => {
       JSON.stringify([
         "col",
         [
-          ["leaf", { file: a, view }],
+          ["leaf", { file: a, view, focused: false }],
           [
             "row",
             [
-              ["leaf", { file: b, view }],
-              ["leaf", { file: c, view }],
+              ["leaf", { file: b, view, focused: false }],
+              ["leaf", { file: c, view, focused: false }],
             ],
           ],
         ],
@@ -166,6 +167,46 @@ describe("split-vim-above", () => {
     const restoreScript = restoreScriptFromLastRun();
     expect(restoreScript).toContain(JSON.stringify(view));
     expect(restoreScript).toContain("call winrestview(a:layout[1].view)");
+  });
+
+  it("restores the focused split", () => {
+    const first = createFile("project/a.js");
+    const second = createFile("project/b.js");
+    const cwd = join(testDirectory, "project");
+    setPanes([sourcePane({ cwd })]);
+    writeLayoutState("w1", {
+      ...layoutState([
+        [11, first],
+        [22, second],
+      ]),
+      focused: 22,
+    });
+
+    runScript();
+
+    const restoreScript = restoreScriptFromLastRun();
+    expect(restoreScript).toContain('"focused":true');
+    expect(restoreScript).toContain("call win_gotoid(s:focused_window)");
+    expect(focusedFileAfterRestore()).toBe(second);
+  });
+
+  it("focuses the leftmost split without a remembered focus", () => {
+    const first = createFile("project/a.js");
+    const second = createFile("project/b.js");
+    const cwd = join(testDirectory, "project");
+    setPanes([sourcePane({ cwd })]);
+    writeLayoutState(
+      "w1",
+      layoutState([
+        [11, first],
+        [22, second],
+      ]),
+    );
+
+    runScript();
+
+    expect(restoreScriptFromLastRun()).toMatch(/else\n  wincmd t/);
+    expect(focusedFileAfterRestore()).toBe(first);
   });
 
   it("ignores remembered files that no longer exist", () => {
@@ -420,6 +461,29 @@ function restoreScriptFromLastRun() {
   const run = herdrCommandCalls("run").at(-1);
   expect(run?.slice(3, 5)).toEqual(["vim", "-S"]);
   return readFileSync(String(run?.[5]), "utf8");
+}
+
+function focusedFileAfterRestore() {
+  const run = herdrCommandCalls("run").at(-1);
+  const resultPath = join(testDirectory, "focused-file");
+  const result = spawnSync(
+    "vim",
+    [
+      "-Nu",
+      "NONE",
+      "-n",
+      "-es",
+      "-S",
+      String(run?.[5]),
+      "-c",
+      "call writefile([expand('%:p')], $VIM_TEST_RESULT)",
+      "-c",
+      "qa!",
+    ],
+    { encoding: "utf8", env: { ...process.env, VIM_TEST_RESULT: resultPath } },
+  );
+  expect(result.status, result.stderr).toBe(0);
+  return readFileSync(resultPath, "utf8").trim();
 }
 
 /**

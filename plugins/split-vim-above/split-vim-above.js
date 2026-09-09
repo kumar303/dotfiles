@@ -30,9 +30,9 @@ import { join, resolve } from "node:path";
 /** @typedef {{pane_id: string, terminal_id: string}} PaneMarker */
 /** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
 /** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
-/** @typedef {{file: string, view: VimView}} RestoredWindow */
+/** @typedef {{file: string, view: VimView, focused: boolean}} RestoredWindow */
 /** @typedef {["leaf", RestoredWindow] | ["row" | "col", RestoredLayout[]]} RestoredLayout */
-/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view?: VimView}>}} VimState */
+/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view?: VimView}>, focused?: number}} VimState */
 
 const herdrCommand = process.env.HERDR_BIN_PATH || "herdr";
 const stateHome = process.env.XDG_STATE_HOME || join(process.env.HOME || "", ".local", "state");
@@ -215,6 +215,7 @@ function validVimState(state) {
   const candidate = /** @type {Partial<VimState>} */ (state);
   return (
     validVimLayout(candidate.layout) &&
+    (candidate.focused === undefined || Number.isInteger(candidate.focused)) &&
     Array.isArray(candidate.windows) &&
     candidate.windows.every(
       (window) =>
@@ -233,10 +234,18 @@ function validVimState(state) {
 function restoredLayout(state, requestedFile) {
   if (!state) {
     return requestedFile
-      ? ["leaf", { file: requestedFile, view: { lnum: 1, col: 0, topline: 1, leftcol: 0 } }]
+      ? [
+          "leaf",
+          {
+            file: requestedFile,
+            view: { lnum: 1, col: 0, topline: 1, leftcol: 0 },
+            focused: false,
+          },
+        ]
       : null;
   }
   const windows = new Map(state.windows.map((window) => [window.id, window]));
+  const focusedWindowId = state.focused;
   const defaultView = { lnum: 1, col: 0, topline: 1, leftcol: 0 };
   let replacedFirst = false;
 
@@ -246,12 +255,13 @@ function restoredLayout(state, requestedFile) {
       const remembered = windows.get(layout[1]);
       let file = remembered?.file || "";
       let view = remembered?.view || defaultView;
+      const focused = remembered?.id === focusedWindowId;
       if (requestedFile && !replacedFirst) {
         file = requestedFile;
         view = defaultView;
         replacedFirst = true;
       }
-      return file && existsSync(file) ? ["leaf", { file, view }] : null;
+      return file && existsSync(file) ? ["leaf", { file, view, focused }] : null;
     }
 
     const children = layout[1].map(restore).filter((child) => child !== null);
@@ -262,7 +272,7 @@ function restoredLayout(state, requestedFile) {
 
   const layout = restore(state.layout);
   if (!layout && requestedFile) {
-    return ["leaf", { file: requestedFile, view: defaultView }];
+    return ["leaf", { file: requestedFile, view: defaultView, focused: false }];
   }
   return layout;
 }
@@ -271,11 +281,15 @@ function restoredLayout(state, requestedFile) {
 function writeRestoreScript(path, layout, focusFirst) {
   const encodedLayout = vimSingleQuoted(JSON.stringify(layout));
   const script = `let s:layout = json_decode('${encodedLayout}')
+let s:focused_window = 0
 function! s:restore_layout(layout, window_id) abort
   call win_gotoid(a:window_id)
   if a:layout[0] ==# 'leaf'
     execute 'edit ' . fnameescape(a:layout[1].file)
     call winrestview(a:layout[1].view)
+    if a:layout[1].focused
+      let s:focused_window = win_getid()
+    endif
     return
   endif
   let l:window_ids = [a:window_id]
@@ -294,7 +308,17 @@ function! s:restore_layout(layout, window_id) abort
 endfunction
 call s:restore_layout(s:layout, win_getid())
 unlet s:layout
-${focusFirst ? "wincmd t\n" : ""}`;
+${
+  focusFirst
+    ? "unlet s:focused_window\nwincmd t\n"
+    : `if s:focused_window
+  call win_gotoid(s:focused_window)
+else
+  wincmd t
+endif
+unlet s:focused_window
+`
+}`;
   writeFileSync(path, script, { mode: 0o600 });
 }
 
@@ -343,7 +367,7 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
 function saveLayoutAndClose(pane, layoutPath) {
   const capturePath = `${layoutPath}.capture.${process.pid}`;
   rmSync(capturePath, { force: true });
-  const command = `:call writefile([json_encode({'layout': winlayout(), 'windows': map(getwininfo(), '{"id": v:val.winid, "file": fnamemodify(bufname(v:val.bufnr), ":p"), "view": {"lnum": getcurpos(v:val.winid)[1], "col": getcurpos(v:val.winid)[2] - 1, "topline": v:val.topline, "leftcol": v:val.leftcol}}')})], '${vimSingleQuoted(capturePath)}')`;
+  const command = `:call writefile([json_encode({'layout': winlayout(), 'focused': win_getid(), 'windows': map(getwininfo(), '{"id": v:val.winid, "file": fnamemodify(bufname(v:val.bufnr), ":p"), "view": {"lnum": getcurpos(v:val.winid)[1], "col": getcurpos(v:val.winid)[2] - 1, "topline": v:val.topline, "leftcol": v:val.leftcol}}')})], '${vimSingleQuoted(capturePath)}')`;
   runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
   runHerdr(["pane", "send-text", pane.pane_id, command]);
   runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
