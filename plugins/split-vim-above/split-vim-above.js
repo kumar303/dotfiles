@@ -32,7 +32,7 @@ import { join, resolve } from "node:path";
 /** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
 /** @typedef {{file: string, view: VimView, focused: boolean}} RestoredWindow */
 /** @typedef {["leaf", RestoredWindow] | ["row" | "col", RestoredLayout[]]} RestoredLayout */
-/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view?: VimView}>, focused?: number}} VimState */
+/** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view: VimView}>, focused: number}} VimState */
 
 const herdrCommand = process.env.HERDR_BIN_PATH || "herdr";
 const stateHome = process.env.XDG_STATE_HOME || join(process.env.HOME || "", ".local", "state");
@@ -215,13 +215,13 @@ function validVimState(state) {
   const candidate = /** @type {Partial<VimState>} */ (state);
   return (
     validVimLayout(candidate.layout) &&
-    (candidate.focused === undefined || Number.isInteger(candidate.focused)) &&
+    Number.isInteger(candidate.focused) &&
     Array.isArray(candidate.windows) &&
     candidate.windows.every(
       (window) =>
         Number.isInteger(window?.id) &&
         typeof window?.file === "string" &&
-        (window.view === undefined || validVimView(window.view)),
+        validVimView(window.view),
     )
   );
 }
@@ -253,9 +253,10 @@ function restoredLayout(state, requestedFile) {
   function restore(layout) {
     if (layout[0] === "leaf") {
       const remembered = windows.get(layout[1]);
-      let file = remembered?.file || "";
-      let view = remembered?.view || defaultView;
-      const focused = remembered?.id === focusedWindowId;
+      if (!remembered) return null;
+      let file = remembered.file;
+      let view = remembered.view;
+      const focused = remembered.id === focusedWindowId;
       if (requestedFile && !replacedFirst) {
         file = requestedFile;
         view = defaultView;
