@@ -9,6 +9,7 @@
     "format:check": "oxfmt --check README.md AGENTS.md package.json package-lock.json tsconfig.json vite.config.js dotfiles/.vim/bin/import-resolver.js plugins tests"
   },
   "dependencies": {
+    "@unblessed/core": "^1.0.0-alpha.23",
     "oxc-resolver": "^11.24.2"
   },
   "devDependencies": {

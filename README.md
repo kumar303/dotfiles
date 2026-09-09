@@ -15,7 +15,7 @@ https://github.com/user-attachments/assets/2d99c01b-bbeb-4ee6-b818-1d7eaf472ec6
 
 ## Setup
 
-Required: Node.js, Vim, Ghostty, and Herdr.
+Required: Node.js 22 or newer, Vim, Ghostty, and Herdr.
 
 1. Install the Herdr skill:
 
@@ -50,8 +50,11 @@ Add this `[include]` section to `.gitconfig`:
 | ----- | ------------------- | --------------------------------- |
 | Herdr | `cmd+opt+backtick`  | Create a terminal tab             |
 | Herdr | `ctrl+cmd+backtick` | Select the next terminal tab      |
+| Herdr | `ctrl+shift+enter`  | Select a workspace                |
 | Herdr | `cmd+shift+k`       | Close the terminal tab            |
 | Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane |
+
+In the workspace switcher, use `up/down` to navigate, `/` to search, `enter` to select, and `esc` to close.
 
 ### File navigation
 
