@@ -9,6 +9,9 @@ if [ ! -d "$dotfiles_dir" ]; then
   exit 1
 fi
 
+echo "Installing Node dependencies"
+npm install --prefix "$repo_dir"
+
 link_file() {
   local src="$1"
   local dest="$2"

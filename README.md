@@ -26,7 +26,6 @@ Required: Node.js, Vim, Ghostty, and Herdr.
 2. Link the tracked dotfiles and plugins, then reload Herdr:
 
    ```sh
-   npm install
    ./setup.sh
    ```
 
