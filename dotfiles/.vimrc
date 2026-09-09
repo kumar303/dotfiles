@@ -224,7 +224,7 @@ function! CurrentFileSymbols()
             continue
         endtry
         let kind = get(tag, 'kind', '')
-        if get(tag, '_type', '') ==# 'tag' && has_key(tag, 'line') && index(['constant', 'property', 'variable'], kind) == -1
+        if get(tag, '_type', '') ==# 'tag' && has_key(tag, 'line') && index(['alias', 'constant', 'property', 'variable'], kind) == -1
             call add(symbols, printf('%6d  %-12s %s', tag.line, kind, tag.name))
         endif
     endfor
