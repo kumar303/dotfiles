@@ -71,6 +71,7 @@ Add this `[include]` section to `.gitconfig`:
 | Vim   | `ctrl+w`, `h/j/k/l`   | Focus the left/down/up/right split |
 | Vim   | `ctrl+w`, `w`         | Focus the next split               |
 | Vim   | `ctrl+cmd+left/right` | Move the file left/right           |
+| Vim   | `ctrl+backslash`      | Duplicate in a right split         |
 
 ### Searching
 

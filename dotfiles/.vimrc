@@ -64,6 +64,7 @@ endfunction
 
 nnoremap <silent> <C-M-Left> :call MoveCurrentFileWindow('h')<CR>
 nnoremap <silent> <C-M-Right> :call MoveCurrentFileWindow('l')<CR>
+nnoremap <silent> <C-\> :rightbelow vsplit<CR>
 
 " Copy yanked text to the OS clipboard without changing Vim's registers.
 if has('clipboard')
