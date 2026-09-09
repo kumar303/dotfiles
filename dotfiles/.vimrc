@@ -83,9 +83,26 @@ let g:fzf_picker_options = [
     \ '--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97'
     \ ]
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
-command! Files call fzf#run(fzf#wrap('files', {'dir': g:fzf_file_picker_root, 'source': $FZF_DEFAULT_COMMAND, 'sink': 'edit', 'options': g:fzf_picker_options}))
+let g:fzf_open_options = g:fzf_picker_options + ['--expect=enter,alt-enter']
 
-function! OpenRipgrepResult(line)
+function! FzfOpenCommand(key)
+    return a:key ==# 'enter' ? 'rightbelow vsplit' : 'edit'
+endfunction
+
+function! OpenFileResults(lines)
+    if len(a:lines) < 2
+        return
+    endif
+    let file = a:lines[1]
+    if file !~# '^/'
+        let file = g:fzf_file_picker_root . '/' . file
+    endif
+    execute FzfOpenCommand(a:lines[0]) . ' ' . fnameescape(file)
+endfunction
+
+command! Files call fzf#run(fzf#wrap('files', {'dir': g:fzf_file_picker_root, 'source': $FZF_DEFAULT_COMMAND, 'sink*': function('OpenFileResults'), 'options': g:fzf_open_options}))
+
+function! OpenRipgrepResult(line, command)
     let match = matchlist(a:line, '^\(.\{-}\):\(\d\+\):\(\d\+\):')
     if empty(match)
         return
@@ -94,13 +111,20 @@ function! OpenRipgrepResult(line)
     if file !~# '^/'
         let file = g:fzf_file_picker_root . '/' . file
     endif
-    execute 'edit ' . fnameescape(file)
+    execute a:command . ' ' . fnameescape(file)
     call cursor(str2nr(match[2]), str2nr(match[3]))
 endfunction
 
+function! OpenRipgrepResults(lines)
+    if len(a:lines) < 2
+        return
+    endif
+    call OpenRipgrepResult(a:lines[1], FzfOpenCommand(a:lines[0]))
+endfunction
+
 function! RunRipgrep(name, command)
-    let options = g:fzf_picker_options + ['--delimiter=:', '--nth=1,4..', '--prompt=Search> ']
-    call fzf#run(fzf#wrap(a:name, {'dir': g:fzf_file_picker_root, 'source': a:command, 'sink': function('OpenRipgrepResult'), 'options': options}))
+    let options = g:fzf_open_options + ['--delimiter=:', '--nth=1,4..', '--prompt=Search> ']
+    call fzf#run(fzf#wrap(a:name, {'dir': g:fzf_file_picker_root, 'source': a:command, 'sink*': function('OpenRipgrepResults'), 'options': options}))
 endfunction
 
 function! Ripgrep(args)
