@@ -241,7 +241,7 @@ describe("split-vim-above", () => {
     expect(restoreScript).not.toContain(missing);
   });
 
-  it("uses --file in place of the leftmost remembered split", () => {
+  it("opens --file in a right split beside remembered files", () => {
     const first = createFile("project/a.js");
     const second = createFile("project/b.js");
     const requested = createFile("project/requested.js");
@@ -258,10 +258,26 @@ describe("split-vim-above", () => {
     runScript({ filePath: requested });
 
     const restoreScript = restoreScriptFromLastRun();
-    expect(restoreScript).toContain(requested);
+    expect(restoreScript).toContain(first);
     expect(restoreScript).toContain(second);
-    expect(restoreScript).not.toContain(first);
-    expect(restoreScript).toMatch(/wincmd t\n$/);
+    expect(restoreScript).toContain(requested);
+    expect(focusedFileAfterRestore()).toBe(requested);
+  });
+
+  it("opens --file based on whether Vim already has files", () => {
+    const existing = createFile("project/existing.js");
+    const requested = createFile("project/requested.js");
+    setPanes([sourcePane({ cwd: join(testDirectory, "project") })]);
+    runScript();
+    clearHerdrCalls();
+
+    runScript({ filePath: requested });
+
+    const command = herdrCommandCalls("send-text")[0]?.[3];
+    expect(command).toContain("getbufinfo({'bufloaded': 1})");
+    expect(command).toContain("rightbelow vsplit");
+    expect(filesAfterVimCommand(String(command), existing)).toEqual([existing, requested]);
+    expect(filesAfterVimCommand(String(command))).toEqual([requested]);
   });
 
   it("restores the same layout in every tab of a workspace", () => {
@@ -478,6 +494,37 @@ function restoreScriptFromLastRun() {
   const run = herdrCommandCalls("run").at(-1);
   expect(run?.slice(3, 5)).toEqual(["vim", "-S"]);
   return readFileSync(String(run?.[5]), "utf8");
+}
+
+/** @param {string} command @param {string} [initialFile] @returns {string[]} */
+function filesAfterVimCommand(command, initialFile = "") {
+  const resultPath = join(testDirectory, `command-files-${initialFile ? "loaded" : "empty"}`);
+  const scriptPath = join(testDirectory, `command-${initialFile ? "loaded" : "empty"}.vim`);
+  writeFileSync(
+    scriptPath,
+    `if !empty($VIM_TEST_INITIAL_FILE)
+    execute 'edit ' . fnameescape($VIM_TEST_INITIAL_FILE)
+endif
+execute $VIM_TEST_COMMAND
+let files = []
+for window_number in range(1, winnr('$'))
+    call add(files, expand('#' . winbufnr(window_number) . ':p'))
+endfor
+call writefile([json_encode(files)], $VIM_TEST_RESULT)
+qa!
+`,
+  );
+  const result = spawnSync("vim", ["-Nu", "NONE", "-n", "-es", "-S", scriptPath], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      VIM_TEST_COMMAND: command.replace(/^:/, ""),
+      VIM_TEST_INITIAL_FILE: initialFile,
+      VIM_TEST_RESULT: resultPath,
+    },
+  });
+  expect(result.status, result.stderr).toBe(0);
+  return JSON.parse(readFileSync(resultPath, "utf8"));
 }
 
 function focusedFileAfterRestore() {

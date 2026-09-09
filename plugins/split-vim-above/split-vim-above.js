@@ -184,7 +184,7 @@ function openFileInVim(pane, file) {
     "pane",
     "send-text",
     pane.pane_id,
-    `:wincmd t | execute 'edit ' . fnameescape('${vimSingleQuoted(file)}')`,
+    `:execute (empty(filter(getbufinfo({'bufloaded': 1}), '!empty(v:val.name) && getbufvar(v:val.bufnr, "&buftype") ==# ""')) ? 'edit ' : 'rightbelow vsplit ') . fnameescape('${vimSingleQuoted(file)}')`,
   ]);
   runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
 }
@@ -247,21 +247,15 @@ function restoredLayout(state, requestedFile) {
   const windows = new Map(state.windows.map((window) => [window.id, window]));
   const focusedWindowId = state.focused;
   const defaultView = { lnum: 1, col: 0, topline: 1, leftcol: 0 };
-  let replacedFirst = false;
 
   /** @param {VimLayout} layout @returns {RestoredLayout | null} */
   function restore(layout) {
     if (layout[0] === "leaf") {
       const remembered = windows.get(layout[1]);
       if (!remembered) return null;
-      let file = remembered.file;
-      let view = remembered.view;
-      const focused = remembered.id === focusedWindowId;
-      if (requestedFile && !replacedFirst) {
-        file = requestedFile;
-        view = defaultView;
-        replacedFirst = true;
-      }
+      const file = remembered.file;
+      const view = remembered.view;
+      const focused = requestedFile === null && remembered.id === focusedWindowId;
       return file && existsSync(file) ? ["leaf", { file, view, focused }] : null;
     }
 
@@ -272,14 +266,18 @@ function restoredLayout(state, requestedFile) {
   }
 
   const layout = restore(state.layout);
-  if (!layout && requestedFile) {
-    return ["leaf", { file: requestedFile, view: defaultView, focused: false }];
+  if (requestedFile) {
+    const requestedWindow = /** @type {RestoredLayout} */ ([
+      "leaf",
+      { file: requestedFile, view: defaultView, focused: true },
+    ]);
+    return layout ? ["row", [layout, requestedWindow]] : requestedWindow;
   }
   return layout;
 }
 
-/** @param {string} path @param {RestoredLayout} layout @param {boolean} focusFirst */
-function writeRestoreScript(path, layout, focusFirst) {
+/** @param {string} path @param {RestoredLayout} layout */
+function writeRestoreScript(path, layout) {
   const encodedLayout = vimSingleQuoted(JSON.stringify(layout));
   const script = `let s:layout = json_decode('${encodedLayout}')
 let s:focused_window = 0
@@ -309,17 +307,13 @@ function! s:restore_layout(layout, window_id) abort
 endfunction
 call s:restore_layout(s:layout, win_getid())
 unlet s:layout
-${
-  focusFirst
-    ? "unlet s:focused_window\nwincmd t\n"
-    : `if s:focused_window
+if s:focused_window
   call win_gotoid(s:focused_window)
 else
   wincmd t
 endif
 unlet s:focused_window
-`
-}`;
+`;
   writeFileSync(path, script, { mode: 0o600 });
 }
 
@@ -346,7 +340,7 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
   try {
     if (layout && state) {
       const restoreScript = `${layoutPath}.vim`;
-      writeRestoreScript(restoreScript, layout, requestedFile !== null);
+      writeRestoreScript(restoreScript, layout);
       runHerdr(["pane", "run", pane.pane_id, "vim", "-S", restoreScript]);
     } else {
       runHerdr([
