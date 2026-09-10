@@ -217,6 +217,23 @@ describe("workspace-switcher plugin", () => {
     expect(text).toContain("checkout-web");
   });
 
+  it("restores the Today heading when g returns from the bottom", async () => {
+    const now = Date.now();
+    writeHistory(
+      Array.from({ length: 50 }, (_, index) => ({
+        dir: join(testDirectory, `workspace-${String(index).padStart(2, "0")}`),
+        branch: null,
+        lastFocused: now - index,
+      })),
+    );
+
+    const result = await runPicker("Gg\r");
+    const lastToday = result.stdout.lastIndexOf("Today");
+    const lastBottomWorkspace = result.stdout.lastIndexOf("workspace-49");
+
+    expect(lastToday).toBeGreaterThan(lastBottomWorkspace);
+  });
+
   it("renders a key legend at the bottom of the picker", async () => {
     const remembered = join(testDirectory, "remembered");
     writeHistory([{ dir: remembered, branch: null, lastFocused: Date.now() }]);

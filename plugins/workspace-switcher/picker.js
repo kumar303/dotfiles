@@ -107,7 +107,9 @@ function render() {
 
   const selectedRow = rows.findIndex((row) => row.kind === "entry" && row.selected);
   const visibleRows = Math.max(1, content.height);
-  if (selectedRow < scrollOffset) {
+  if (model.selectedIndex === 0) {
+    scrollOffset = 0;
+  } else if (selectedRow < scrollOffset) {
     scrollOffset = selectedRow;
   } else if (selectedRow >= scrollOffset + visibleRows) {
     scrollOffset = selectedRow - visibleRows + 1;
