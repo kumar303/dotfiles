@@ -447,6 +447,7 @@ function! Symbols()
         \ '--bind=load:pos(' . position . ')',
         \ '--bind=focus:execute-silent(' . focus_command . ')',
         \ '--no-scrollbar',
+        \ '--no-separator',
         \ ]
     let popup_window = {
         \ 'border': layout.border,
