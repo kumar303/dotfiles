@@ -217,6 +217,17 @@ describe("workspace-switcher plugin", () => {
     expect(text).toContain("checkout-web");
   });
 
+  it("renders a key legend at the bottom of the picker", async () => {
+    const remembered = join(testDirectory, "remembered");
+    writeHistory([{ dir: remembered, branch: null, lastFocused: Date.now() }]);
+
+    const result = await runPicker("\r");
+
+    expect(stripTerminalControls(result.stdout)).toContain(
+      "↑/↓ select  enter open  / search  esc close",
+    );
+  });
+
   it("opens its picker through Herdr's plugin pane command", () => {
     runPlugin("open.js");
 

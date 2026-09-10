@@ -11,6 +11,7 @@ import { readWorkspaceSwitcherTheme } from "./theme.js";
 import { buildWorkspaceRows } from "./view.js";
 
 const theme = await readWorkspaceSwitcherTheme();
+const KEY_LEGEND = "↑/↓ select  enter open  / search  esc close";
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const initialSnapshot = readSnapshot();
 seedWorkspaceHistory(currentWorkspaceDirectories(initialSnapshot), stateDirectory);
@@ -119,7 +120,7 @@ function render() {
   } else if (model.searchMode) {
     status.setContent(`{${theme.muted}-fg} / ${escape(model.searchQuery)}_{/}`);
   } else {
-    status.setContent("");
+    status.setContent(`{${theme.muted}-fg} ${KEY_LEGEND}{/}`);
   }
   screen.render();
 }
