@@ -355,7 +355,7 @@ function! SymbolPopupLayout()
     let pane_position = win_screenpos(0)
     let pane_width = winwidth(0)
     let pane_height = winheight(0)
-    let width = min([75, &columns])
+    let width = min([75, &columns, max([8, float2nr(pane_width * 0.7)])])
     let height = max([4, float2nr(pane_height * 0.8)])
     let leftmost = pane_position[1] == 1
     let side = leftmost ? 'right' : 'left'
@@ -446,6 +446,7 @@ function! Symbols()
         \ '--prompt=Symbol> ',
         \ '--bind=load:pos(' . position . ')',
         \ '--bind=focus:execute-silent(' . focus_command . ')',
+        \ '--no-scrollbar',
         \ ]
     let popup_window = {
         \ 'border': layout.border,
