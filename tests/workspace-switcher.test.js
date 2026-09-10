@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse } from "smol-toml";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -114,6 +115,39 @@ describe("workspace-switcher plugin", () => {
 
     expect(historyEntries().map((entry) => entry.dir)).toEqual([current, other, current, current]);
     expect(historyEntries().some((entry) => entry.dir === later)).toBe(false);
+  });
+
+  it("records a manually created workspace before it receives further use", async () => {
+    const existing = createGitDirectory("existing", "main");
+    const created = createGitDirectory("created", "feature/new-workspace");
+    writeHistory([{ dir: existing, branch: "main", lastFocused: Date.now() - 1 }]);
+    writeHerdrSnapshot({
+      workspaces: [
+        { workspace_id: "w1", focused: false, number: 1 },
+        { workspace_id: "w2", focused: true, number: 2 },
+      ],
+      panes: [
+        { workspace_id: "w1", cwd: existing, focused: true },
+        { workspace_id: "w2", cwd: created, focused: true },
+      ],
+    });
+
+    emitPluginEvent("workspace.created", {
+      workspace_id: "w2",
+      workspace_cwd: created,
+    });
+    clearHerdrCalls();
+    await runPicker("\r");
+
+    expect(historyEntries().at(-1)).toMatchObject({
+      dir: created,
+      branch: "feature/new-workspace",
+    });
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["api", "snapshot"],
+      ["workspace", "focus", "w2"],
+    ]);
   });
 
   it("searches directory paths and branches before it opens a workspace", async () => {
@@ -261,6 +295,26 @@ describe("workspace-switcher plugin", () => {
     expect(result.stdout).toContain("\x1b[48;5;236;35m   > remembered");
   });
 });
+
+/**
+ * @param {string} eventName
+ * @param {Record<string, unknown>} context
+ */
+function emitPluginEvent(eventName, context) {
+  const manifest = /** @type {any} */ (
+    parse(readFileSync(join(pluginDirectory, "herdr-plugin.toml"), "utf8"))
+  );
+  const event = manifest.events?.find((/** @type {any} */ candidate) => candidate.on === eventName);
+  expect(event, `missing ${eventName} plugin event`).toBeDefined();
+  const [command, ...args] = event.command;
+  const result = spawnSync(command, args, {
+    cwd: pluginDirectory,
+    encoding: "utf8",
+    env: { ...pluginEnvironment, HERDR_PLUGIN_CONTEXT_JSON: JSON.stringify(context) },
+  });
+  expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+}
 
 /**
  * @param {string} script

@@ -1,6 +1,6 @@
 id = "kumar303.workspace-switcher"
 name = "Workspace Switcher"
-version = "0.1.0"
+version = "0.1.1"
 min_herdr_version = "0.8.2"
 description = "Switch between recent workspace directories"
 platforms = ["linux", "macos"]
@@ -10,6 +10,10 @@ id = "open"
 title = "Open workspace switcher"
 contexts = ["pane"]
 command = ["node", "open.js"]
+
+[[events]]
+on = "workspace.created"
+command = ["node", "record-workspace.js"]
 
 [[events]]
 on = "workspace.focused"
