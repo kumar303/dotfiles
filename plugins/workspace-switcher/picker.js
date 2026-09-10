@@ -15,8 +15,12 @@ const KEY_LEGEND =
   "↑/↓ select  •  g/G top/bottom  •  d/u page  •  enter open  •  / search  •  esc close";
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const initialSnapshot = readSnapshot();
-seedWorkspaceHistory(currentWorkspaceDirectories(initialSnapshot), stateDirectory);
+const currentWorkspaces = currentWorkspaceDirectories(initialSnapshot);
+seedWorkspaceHistory(currentWorkspaces, stateDirectory);
 const model = new WorkspacePickerModel(readWorkspaceHistory(stateDirectory));
+const currentDirectory = currentWorkspaces[0]?.dir;
+const lastUsedIndex = model.entries.findIndex((entry) => entry.dir !== currentDirectory);
+if (lastUsedIndex >= 0) model.selectedIndex = lastUsedIndex;
 let scrollOffset = 0;
 let errorMessage = "";
 

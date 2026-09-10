@@ -77,7 +77,7 @@ describe("workspace-switcher plugin", () => {
     runPlugin("record-workspace.js", { workspace_cwd: dotfiles });
     runPlugin("record-workspace.js", { workspace_cwd: checkout });
     clearHerdrCalls();
-    await runPicker("\x1b[B\r");
+    await runPicker("\r");
 
     expect(herdrCalls()).toEqual([
       ["api", "snapshot"],
@@ -137,7 +137,7 @@ describe("workspace-switcher plugin", () => {
       workspace_cwd: created,
     });
     clearHerdrCalls();
-    await runPicker("\r");
+    await runPicker("/created\r");
 
     expect(historyEntries().at(-1)).toMatchObject({
       dir: created,
@@ -170,6 +170,40 @@ describe("workspace-switcher plugin", () => {
 
     await runPicker("/payment\r");
 
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["api", "snapshot"],
+      ["workspace", "focus", "w2"],
+    ]);
+  });
+
+  it("starts on the last used workspace without changing history order", async () => {
+    const current = join(testDirectory, "current");
+    const previous = join(testDirectory, "previous");
+    const older = join(testDirectory, "older");
+    writeHistory([
+      { dir: current, branch: null, lastFocused: Date.now() },
+      { dir: previous, branch: null, lastFocused: Date.now() - 1 },
+      { dir: older, branch: null, lastFocused: Date.now() - 2 },
+    ]);
+    writeHerdrSnapshot({
+      workspaces: [
+        { workspace_id: "w1", focused: true, number: 1 },
+        { workspace_id: "w2", focused: false, number: 2 },
+        { workspace_id: "w3", focused: false, number: 3 },
+      ],
+      panes: [
+        { workspace_id: "w1", cwd: current, focused: true },
+        { workspace_id: "w2", cwd: previous, focused: true },
+        { workspace_id: "w3", cwd: older, focused: true },
+      ],
+    });
+
+    const result = await runPicker("\r");
+    const text = stripTerminalControls(result.stdout);
+
+    expect(text.indexOf("current")).toBeLessThan(text.indexOf("previous"));
+    expect(text.indexOf("previous")).toBeLessThan(text.indexOf("older"));
     expect(herdrCalls()).toEqual([
       ["api", "snapshot"],
       ["api", "snapshot"],
