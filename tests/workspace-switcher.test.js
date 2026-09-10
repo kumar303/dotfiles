@@ -339,6 +339,10 @@ describe("workspace-switcher plugin", () => {
 
     const result = await runPicker("\r");
 
+    expect(result.stdout).toContain("\x1b]4;1;rgb:ff/00/00\x1b\\");
+    expect(result.stdout).toContain("\x1b]4;4;rgb:00/00/ff\x1b\\");
+    expect(result.stdout).toContain("\x1b]4;2;rgb:00/ff/00\x1b\\");
+    expect(result.stdout).toContain("\x1b]4;236;rgb:12/34/56\x1b\\");
     expect(result.stdout).toContain("\x1b[44;32mToday");
     expect(result.stdout).toContain("\x1b[44;31m   > remembered");
     expect(result.stdout).toContain("\x1b[44;38;5;236m     second");

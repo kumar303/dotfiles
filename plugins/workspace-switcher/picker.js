@@ -7,10 +7,11 @@ import { basename } from "node:path";
 import { currentWorkspaceDirectories, openWorkspace, readSnapshot } from "./herdr.js";
 import { WorkspacePickerModel } from "./model.js";
 import { readWorkspaceHistory, seedWorkspaceHistory } from "./store.js";
-import { readWorkspaceSwitcherTheme } from "./theme.js";
+import { applyTerminalThemePalette, readWorkspaceSwitcherTheme } from "./theme.js";
 import { buildWorkspaceRows } from "./view.js";
 
 const theme = await readWorkspaceSwitcherTheme();
+applyTerminalThemePalette(theme);
 const KEY_LEGEND =
   "↑/↓ select  •  g/G top/bottom  •  d/u page  •  enter open  •  / search  •  esc close";
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");

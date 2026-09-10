@@ -1,5 +1,6 @@
 // @ts-check
 
+import { colors } from "@unblessed/core";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -91,6 +92,25 @@ export function resolveWorkspaceSwitcherTheme(config, appearance) {
   const modeCustom = autoSwitch && isObject(custom[mode]) ? custom[mode] : {};
 
   return applyOverrides(applyOverrides(base, custom), modeCustom);
+}
+
+/**
+ * Set the plugin terminal's ANSI palette entries to the exact Herdr theme colors.
+ * @param {PickerTheme} theme
+ * @param {{write: (value: string) => unknown}} [output]
+ */
+export function applyTerminalThemePalette(theme, output = process.stdout) {
+  const entries = new Map();
+  for (const value of Object.values(theme)) {
+    if (!/^#[0-9a-f]{6}$/i.test(value)) continue;
+    entries.set(colors.convert(value), value.slice(1));
+  }
+
+  for (const [index, value] of entries) {
+    output.write(
+      `\x1b]4;${index};rgb:${value.slice(0, 2)}/${value.slice(2, 4)}/${value.slice(4, 6)}\x1b\\`,
+    );
+  }
 }
 
 /** @returns {Promise<PickerTheme>} */
