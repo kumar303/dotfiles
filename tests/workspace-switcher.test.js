@@ -1,221 +1,192 @@
 // @ts-check
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  filterWorkspaces,
-  readWorkspaceHistory,
-  recordWorkspace,
-  seedWorkspaceHistory,
-} from "../plugins/workspace-switcher/store.js";
-import {
-  currentWorkspaceDirectories,
-  openPickerPopup,
-  openWorkspace,
-} from "../plugins/workspace-switcher/herdr.js";
-import { WorkspacePickerModel } from "../plugins/workspace-switcher/model.js";
-import {
-  readHerdrConfig,
-  resolveWorkspaceSwitcherTheme,
-} from "../plugins/workspace-switcher/theme.js";
-import { buildWorkspaceRows } from "../plugins/workspace-switcher/view.js";
+
+const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const pluginDirectory = join(repositoryRoot, "plugins", "workspace-switcher");
+const mockHerdrPath = join(repositoryRoot, "tests", "fixtures", "mock-herdr.js");
+const mockTerminalPath = join(repositoryRoot, "tests", "fixtures", "mock-terminal.js");
 
 /** @type {string} */
+let testDirectory;
+/** @type {string} */
 let stateDirectory;
+/** @type {string} */
+let herdrLogPath;
+/** @type {string} */
+let herdrStatePath;
+/** @type {string} */
+let herdrConfigPath;
+/** @type {NodeJS.ProcessEnv} */
+let pluginEnvironment;
 
 beforeEach(() => {
-  stateDirectory = mkdtempSync(join(tmpdir(), "workspace-switcher-"));
+  testDirectory = mkdtempSync(join(tmpdir(), "workspace-switcher-"));
+  stateDirectory = join(testDirectory, "plugin-state");
+  herdrLogPath = join(testDirectory, "herdr-calls.log");
+  herdrStatePath = join(testDirectory, "herdr-state.json");
+  herdrConfigPath = join(testDirectory, "config.toml");
+  mkdirSync(stateDirectory);
+  writeFileSync(herdrLogPath, "");
+  writeFileSync(join(testDirectory, "counter"), "100\n");
+  writeHerdrSnapshot({ workspaces: [], panes: [] });
+  pluginEnvironment = {
+    ...process.env,
+    COLORTERM: "truecolor",
+    HERDR_BIN_PATH: mockHerdrPath,
+    HERDR_CONFIG_PATH: herdrConfigPath,
+    HERDR_MOCK_COUNTER: join(testDirectory, "counter"),
+    HERDR_MOCK_LOG: herdrLogPath,
+    HERDR_MOCK_PANES: herdrStatePath,
+    HERDR_PLUGIN_CONTEXT_JSON: "{}",
+    HERDR_PLUGIN_STATE_DIR: stateDirectory,
+    NODE_OPTIONS: [process.env.NODE_OPTIONS, `--import=${mockTerminalPath}`]
+      .filter(Boolean)
+      .join(" "),
+    TERM: "xterm-256color",
+  };
+  writeFileSync(herdrConfigPath, '[theme]\nname = "one-light"\n');
 });
 
 afterEach(() => {
-  delete process.env.HERDR_CONFIG_PATH;
-  rmSync(stateDirectory, { recursive: true, force: true });
+  rmSync(testDirectory, { recursive: true, force: true });
 });
 
-describe("workspace history", () => {
-  it("deduplicates directories and moves a focused workspace to the top", () => {
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    recordWorkspace("/projects/checkout-web", stateDirectory, {
-      branch: "older",
-      now: yesterday.getTime(),
-    });
-    recordWorkspace("/projects/dotfiles", stateDirectory, {
-      branch: "main",
-      now: today.getTime(),
-    });
-    recordWorkspace("/projects/checkout-web", stateDirectory, {
-      branch: "newer",
-      now: today.getTime() + 1,
-    });
-
-    const history = readWorkspaceHistory(stateDirectory, today.getTime() + 2);
-    expect(history.today.map(({ dir, branch }) => [basename(dir), branch])).toEqual([
-      ["checkout-web", "newer"],
-      ["dotfiles", "main"],
-    ]);
-    expect(history.earlier).toEqual([]);
-  });
-
-  it("seeds current workspaces only when history does not exist", () => {
-    expect(
-      seedWorkspaceHistory(
-        [
-          { dir: "/projects/current", branch: "main" },
-          { dir: "/projects/other", branch: null },
-        ],
-        stateDirectory,
-        100,
-      ),
-    ).toBe(true);
-    expect(seedWorkspaceHistory([{ dir: "/projects/new" }], stateDirectory, 200)).toBe(false);
-
-    expect(readWorkspaceHistory(stateDirectory, 201).today.map(({ dir }) => basename(dir))).toEqual(
-      ["current", "other"],
-    );
-  });
-
-  it("filters by directory and branch", () => {
-    const entries = [
-      { dir: "/projects/checkout-web", branch: "feature/payment", lastFocused: 2 },
-      { dir: "/projects/dotfiles", branch: "main", lastFocused: 1 },
-    ];
-
-    expect(filterWorkspaces(entries, "payment")).toEqual([entries[0]]);
-    expect(filterWorkspaces(entries, "dot")).toEqual([entries[1]]);
-  });
-
-  it("searches with slash input and keeps the selected entry in range", () => {
-    const history = {
-      today: [
-        { dir: "/projects/checkout-web", branch: "feature/payment", lastFocused: 2 },
-        { dir: "/projects/dotfiles", branch: "main", lastFocused: 1 },
+describe("workspace-switcher plugin", () => {
+  it("records branch history, deduplicates directories, and orders by recent focus", async () => {
+    const checkout = createGitDirectory("checkout-web", "feature/payment");
+    const dotfiles = createGitDirectory("dotfiles", "main");
+    writeHerdrSnapshot({
+      workspaces: [
+        { workspace_id: "w1", focused: true, number: 1 },
+        { workspace_id: "w2", focused: false, number: 2 },
       ],
-      earlier: [],
-    };
-    const model = new WorkspacePickerModel(history);
+      panes: [
+        { workspace_id: "w1", cwd: checkout, focused: true },
+        { workspace_id: "w2", cwd: dotfiles, focused: true },
+      ],
+    });
 
-    model.startSearch();
-    model.appendSearch("payment");
-    expect(model.entries.map(({ dir }) => basename(dir))).toEqual(["checkout-web"]);
-    expect(model.searchQuery).toBe("payment");
-    model.move(1);
-    expect(model.selectedEntry()?.dir).toBe("/projects/checkout-web");
-    model.clearSearch();
-    expect(model.entries).toEqual(history.today);
+    runPlugin("record-workspace.js", { workspace_cwd: checkout });
+    runPlugin("record-workspace.js", { workspace_cwd: dotfiles });
+    runPlugin("record-workspace.js", { workspace_cwd: checkout });
+    clearHerdrCalls();
+    await runPicker("\x1b[B\r");
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["api", "snapshot"],
+      ["workspace", "focus", "w2"],
+    ]);
+    expect(historyEntries().filter((entry) => entry.dir === checkout)).toHaveLength(3);
+    expect(historyEntries().at(-1)).toMatchObject({
+      dir: checkout,
+      branch: "feature/payment",
+    });
   });
 
-  it("renders the Today and Earlier sections like brain", () => {
-    const today = { dir: "/projects/dotfiles", branch: "main", lastFocused: 2 };
-    const earlier = { dir: "/projects/checkout-web", branch: null, lastFocused: 1 };
+  it("seeds current workspaces only on the first plugin event", () => {
+    const current = createGitDirectory("current", "main");
+    const other = createGitDirectory("other", "develop");
+    const later = createGitDirectory("later", "release");
+    writeHerdrSnapshot({
+      workspaces: [
+        { workspace_id: "w1", focused: false, number: 1 },
+        { workspace_id: "w2", focused: true, number: 2 },
+      ],
+      panes: [
+        { workspace_id: "w1", cwd: other, focused: true },
+        { workspace_id: "w2", cwd: current, focused: true },
+      ],
+    });
+    runPlugin("record-workspace.js", { workspace_cwd: current });
 
-    expect(buildWorkspaceRows({ today: [today], earlier: [earlier] }, 0)).toEqual([
-      { kind: "heading", text: "Today" },
-      { entry: today, kind: "entry", selected: true, text: "   > dotfiles [main]" },
-      { kind: "spacer", text: "" },
-      { kind: "heading", text: "Earlier" },
-      { entry: earlier, kind: "entry", selected: false, text: "     checkout-web" },
+    writeHerdrSnapshot({
+      workspaces: [{ workspace_id: "w3", focused: true, number: 1 }],
+      panes: [{ workspace_id: "w3", cwd: later, focused: true }],
+    });
+    runPlugin("record-workspace.js", { workspace_cwd: current });
+
+    expect(historyEntries().map((entry) => entry.dir)).toEqual([current, other, current, current]);
+    expect(historyEntries().some((entry) => entry.dir === later)).toBe(false);
+  });
+
+  it("searches directory paths and branches before it opens a workspace", async () => {
+    const checkout = createGitDirectory("checkout-web", "feature/payment");
+    const dotfiles = createGitDirectory("dotfiles", "main");
+    writeHistory([
+      { dir: dotfiles, branch: "main", lastFocused: Date.now() },
+      { dir: checkout, branch: "feature/payment", lastFocused: Date.now() - 1 },
+    ]);
+    writeHerdrSnapshot({
+      workspaces: [
+        { workspace_id: "w1", focused: true, number: 1 },
+        { workspace_id: "w2", focused: false, number: 2 },
+      ],
+      panes: [
+        { workspace_id: "w1", cwd: dotfiles, focused: true },
+        { workspace_id: "w2", cwd: checkout, focused: true },
+      ],
+    });
+
+    await runPicker("/payment\r");
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["api", "snapshot"],
+      ["workspace", "focus", "w2"],
     ]);
   });
-});
 
-describe("workspace switcher theme", () => {
-  it("reads Herdr's configured theme", () => {
-    const configPath = join(stateDirectory, "config.toml");
-    writeFileSync(configPath, '[theme]\nname = "nord"\n\n[theme.custom]\naccent = "#123456"\n');
-    process.env.HERDR_CONFIG_PATH = configPath;
+  it("wraps upward from the first workspace to the last workspace", async () => {
+    const first = join(testDirectory, "first");
+    const last = join(testDirectory, "last");
+    writeHistory([
+      { dir: first, branch: null, lastFocused: Date.now() },
+      { dir: last, branch: null, lastFocused: Date.now() - 1 },
+    ]);
 
-    expect(readHerdrConfig()).toMatchObject({
-      theme: { name: "nord", custom: { accent: "#123456" } },
-    });
+    await runPicker("\x1b[A\r");
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["api", "snapshot"],
+      ["workspace", "create", "--cwd", last, "--focus"],
+    ]);
   });
 
-  it("resolves Herdr's built-in theme and custom colors", () => {
-    expect(
-      resolveWorkspaceSwitcherTheme({
-        theme: {
-          name: "one-light",
-          custom: { accent: "#123456", overlay0: "rgb(12, 34, 56)" },
-        },
-      }),
-    ).toEqual({
-      accent: "#123456",
-      background: "#fafafa",
-      error: "#e45649",
-      muted: "#0c2238",
-      text: "#383a42",
-    });
-  });
-
-  it("applies the active auto-switch mode after shared custom colors", () => {
-    const config = {
-      theme: {
-        auto_switch: true,
-        dark_name: "one-dark",
-        light_name: "one-light",
-        custom: {
-          text: "#111111",
-          light: { text: "#222222", accent: "#333333" },
-        },
+  it("renders Today and Earlier sections in the popup", async () => {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    writeHistory([
+      { dir: join(testDirectory, "dotfiles"), branch: "main", lastFocused: now.getTime() },
+      {
+        dir: join(testDirectory, "checkout-web"),
+        branch: null,
+        lastFocused: yesterday.getTime(),
       },
-    };
-
-    expect(resolveWorkspaceSwitcherTheme(config, "light")).toMatchObject({
-      accent: "#333333",
-      text: "#222222",
-    });
-    expect(resolveWorkspaceSwitcherTheme(config, "dark")).toMatchObject({
-      accent: "#61afef",
-      text: "#111111",
-    });
-  });
-});
-
-describe("Herdr workspaces", () => {
-  const snapshot = {
-    workspaces: [
-      { workspace_id: "w1", focused: false, number: 1 },
-      { workspace_id: "w2", focused: true, number: 2 },
-    ],
-    panes: [
-      { workspace_id: "w1", cwd: "/projects/one", focused: true },
-      { workspace_id: "w1", cwd: "/projects/one/nested", focused: false },
-      { workspace_id: "w2", cwd: "/projects/two", focused: true },
-    ],
-  };
-
-  it("lists one directory per workspace with the focused workspace first", () => {
-    expect(currentWorkspaceDirectories(snapshot)).toEqual([
-      { dir: "/projects/two", workspaceId: "w2" },
-      { dir: "/projects/one", workspaceId: "w1" },
     ]);
+
+    const result = await runPicker("\r");
+    const text = stripTerminalControls(result.stdout);
+
+    expect(text).toContain("Today");
+    expect(text).toContain("dotfiles");
+    expect(text).toContain("[main]");
+    expect(text).toContain("Earlier");
+    expect(text).toContain("checkout-web");
   });
 
-  it("focuses an existing workspace when any pane uses the directory", () => {
-    /** @type {string[][]} */
-    const calls = [];
-    openWorkspace("/projects/one/nested", snapshot, (args) => {
-      calls.push(args);
-      return {};
-    });
+  it("opens its picker through Herdr's plugin pane command", () => {
+    runPlugin("open.js");
 
-    expect(calls).toEqual([["workspace", "focus", "w1"]]);
-  });
-
-  it("opens the picker as a plugin popup", () => {
-    /** @type {string[][]} */
-    const calls = [];
-    openPickerPopup((args) => {
-      calls.push(args);
-      return {};
-    });
-
-    expect(calls).toEqual([
+    expect(herdrCalls()).toEqual([
       [
         "plugin",
         "pane",
@@ -228,14 +199,158 @@ describe("Herdr workspaces", () => {
     ]);
   });
 
-  it("creates a workspace for a remembered directory that is not open", () => {
-    /** @type {string[][]} */
-    const calls = [];
-    openWorkspace("/projects/three", snapshot, (args) => {
-      calls.push(args);
-      return {};
+  it("focuses an open workspace when a pane uses the selected directory", async () => {
+    const nested = join(testDirectory, "one", "nested");
+    writeHistory([{ dir: nested, branch: null, lastFocused: Date.now() }]);
+    writeHerdrSnapshot({
+      workspaces: [{ workspace_id: "w1", focused: true, number: 1 }],
+      panes: [{ workspace_id: "w1", cwd: nested, focused: true }],
     });
 
-    expect(calls).toEqual([["workspace", "create", "--cwd", "/projects/three", "--focus"]]);
+    await runPicker("\r");
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["api", "snapshot"],
+      ["workspace", "focus", "w1"],
+    ]);
+  });
+
+  it("creates a workspace when the selected directory is not open", async () => {
+    const remembered = join(testDirectory, "remembered");
+    writeHistory([{ dir: remembered, branch: null, lastFocused: Date.now() }]);
+
+    await runPicker("\r");
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["api", "snapshot"],
+      ["workspace", "create", "--cwd", remembered, "--focus"],
+    ]);
+  });
+
+  it("applies Herdr's built-in theme and custom color overrides", async () => {
+    const remembered = join(testDirectory, "remembered");
+    const second = join(testDirectory, "second");
+    writeHistory([
+      { dir: remembered, branch: "main", lastFocused: Date.now() },
+      { dir: second, branch: null, lastFocused: Date.now() - 1 },
+    ]);
+    writeFileSync(
+      herdrConfigPath,
+      '[theme]\nname = "one-light"\n\n[theme.custom]\naccent = "#ff0000"\npanel_bg = "#0000ff"\noverlay0 = "#00ff00"\ntext = "#123456"\n',
+    );
+
+    const result = await runPicker("\r");
+
+    expect(result.stdout).toContain("\x1b[44;32mToday");
+    expect(result.stdout).toContain("\x1b[44;31m   > remembered");
+    expect(result.stdout).toContain("\x1b[44;38;5;236m     second");
+  });
+
+  it("applies Herdr's dark auto-switch theme when the terminal reports no appearance", async () => {
+    const remembered = join(testDirectory, "remembered");
+    writeHistory([{ dir: remembered, branch: null, lastFocused: Date.now() }]);
+    writeFileSync(
+      herdrConfigPath,
+      '[theme]\nauto_switch = true\ndark_name = "one-dark"\nlight_name = "one-light"\n\n[theme.custom.dark]\naccent = "#ff00ff"\n',
+    );
+
+    const result = await runPicker("\r");
+
+    expect(result.stdout).toContain("\x1b[48;5;236;35m   > remembered");
   });
 });
+
+/**
+ * @param {string} script
+ * @param {Record<string, unknown>} [context]
+ */
+function runPlugin(script, context = {}) {
+  const result = spawnSync(process.execPath, [join(pluginDirectory, script)], {
+    cwd: pluginDirectory,
+    encoding: "utf8",
+    env: { ...pluginEnvironment, HERDR_PLUGIN_CONTEXT_JSON: JSON.stringify(context) },
+  });
+  expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+}
+
+/**
+ * @param {string} input
+ * @returns {{stdout: string, stderr: string}}
+ */
+function runPicker(input) {
+  const result = spawnSync(process.execPath, [join(pluginDirectory, "picker.js")], {
+    cwd: pluginDirectory,
+    encoding: "utf8",
+    env: pluginEnvironment,
+    input,
+    timeout: 10000,
+  });
+  expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+  return { stdout: result.stdout, stderr: result.stderr };
+}
+
+/** @param {{workspaces: unknown[], panes: unknown[]}} snapshot */
+function writeHerdrSnapshot(snapshot) {
+  writeFileSync(
+    herdrStatePath,
+    `${JSON.stringify({ result: { panes: snapshot.panes, snapshot } })}\n`,
+  );
+}
+
+/** @param {Array<{dir: string, branch: string | null, lastFocused: number}>} entries */
+function writeHistory(entries) {
+  writeFileSync(
+    join(stateDirectory, "workspaces.jsonl"),
+    entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n",
+  );
+}
+
+/** @returns {Array<{dir: string, branch: string | null, lastFocused: number}>} */
+function historyEntries() {
+  return readFileSync(join(stateDirectory, "workspaces.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+/** @returns {string[][]} */
+function herdrCalls() {
+  return readFileSync(herdrLogPath, "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+function clearHerdrCalls() {
+  writeFileSync(herdrLogPath, "");
+}
+
+/**
+ * @param {string} name
+ * @param {string} branch
+ */
+function createGitDirectory(name, branch) {
+  const directory = join(testDirectory, name);
+  mkdirSync(directory);
+  const result = spawnSync("git", ["init", "--quiet", "--initial-branch", branch], {
+    cwd: directory,
+    encoding: "utf8",
+  });
+  expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+  return directory;
+}
+
+/** @param {string} value */
+function stripTerminalControls(value) {
+  return value
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "")
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
+    .replace(/[\r\x00-\x08\x0b-\x1f\x7f]/g, "");
+}

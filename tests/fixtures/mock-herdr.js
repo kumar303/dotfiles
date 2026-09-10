@@ -9,11 +9,13 @@ const counterPath = requiredEnvironment("HERDR_MOCK_COUNTER");
 const args = process.argv.slice(2);
 appendFileSync(logPath, `${JSON.stringify(args)}\n`);
 
-/** @type {{result: {panes: Array<Record<string, unknown>>}}} */
+/** @type {{result: {panes: Array<Record<string, unknown>>, snapshot?: Record<string, unknown>}}} */
 const state = JSON.parse(readFileSync(panesPath, "utf8"));
 const [area, command] = args;
 
-if (area === "tab" && command === "create") {
+if (area === "api" && command === "snapshot") {
+  output({ result: { snapshot: state.result.snapshot } });
+} else if (area === "tab" && command === "create") {
   const next = nextId();
   const workspaceId = option(args, "--workspace") || "w1";
   const pane = {
@@ -34,7 +36,9 @@ if (area === "tab" && command === "create") {
   });
 } else if (area === "pane") {
   handlePaneCommand(command);
-} else if (area === "workspace" && command === "rename") {
+} else if (area === "workspace" && ["create", "focus", "rename"].includes(String(command))) {
+  output({ result: {} });
+} else if (area === "plugin" && command === "pane" && args[2] === "open") {
   output({ result: {} });
 } else {
   fail(`unexpected mock invocation: ${args.join(" ")}`);
