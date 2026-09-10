@@ -57,4 +57,82 @@ describe("CurrentFileSymbols", () => {
     expect(symbols.some((symbol) => symbol.includes("User"))).toBe(true);
     expect(symbols.some((symbol) => symbol.includes("loadUser"))).toBe(true);
   });
+
+  it("places a narrow symbol popup outside the source split", () => {
+    const resultPath = join(testDirectory, "popup-layout.json");
+    const result = spawnSync(
+      "vim",
+      [
+        "-Nu",
+        vimrcPath,
+        "-n",
+        "-es",
+        "-c",
+        "set columns=120 lines=40",
+        "-c",
+        "vsplit",
+        "-c",
+        "wincmd h",
+        "-c",
+        "let left = SymbolPopupLayout()",
+        "-c",
+        "wincmd l",
+        "-c",
+        "let right = SymbolPopupLayout()",
+        "-c",
+        "call writefile([json_encode({'left': left, 'right': right})], $VIM_TEST_RESULT)",
+        "-c",
+        "qa!",
+      ],
+      {
+        encoding: "utf8",
+        env: { ...process.env, VIM_TEST_RESULT: resultPath },
+      },
+    );
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const layout = JSON.parse(readFileSync(resultPath, "utf8"));
+    expect(layout.left).toMatchObject({ side: "right", triangle: "◀", width: 36 });
+    expect(layout.left.col).toBeGreaterThanOrEqual(layout.left.pane_col + layout.left.pane_width);
+    expect(layout.right).toMatchObject({ side: "left", triangle: "▶", width: 36 });
+    expect(layout.right.col + layout.right.width).toBeLessThanOrEqual(layout.right.pane_col);
+  });
+
+  it("scrolls the selected symbol within four lines of the top", () => {
+    const sourceFile = join(testDirectory, "long-file.ts");
+    const resultPath = join(testDirectory, "scroll.json");
+    writeFileSync(
+      sourceFile,
+      Array.from({ length: 100 }, (_, index) => `const line${index + 1} = ${index + 1};`).join(
+        "\n",
+      ),
+    );
+    const result = spawnSync(
+      "vim",
+      [
+        "-Nu",
+        vimrcPath,
+        "-n",
+        "-es",
+        sourceFile,
+        "-c",
+        "call PositionSymbolWindow(win_getid(), 50)",
+        "-c",
+        "call writefile([json_encode({'cursor': line('.'), 'top': line('w0')})], $VIM_TEST_RESULT)",
+        "-c",
+        "qa!",
+      ],
+      {
+        encoding: "utf8",
+        env: { ...process.env, VIM_TEST_RESULT: resultPath },
+      },
+    );
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const view = JSON.parse(readFileSync(resultPath, "utf8"));
+    expect(view.cursor).toBe(50);
+    expect(view.cursor - view.top).toBeLessThanOrEqual(4);
+  });
 });
