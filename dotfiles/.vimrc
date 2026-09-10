@@ -355,11 +355,11 @@ function! SymbolPopupLayout()
     let pane_position = win_screenpos(0)
     let pane_width = winwidth(0)
     let pane_height = winheight(0)
-    let width = min([75, &columns, max([8, float2nr(pane_width * 0.7)])])
+    let width = min([&columns, max([8, float2nr(pane_width * 0.95)])])
     let height = max([4, float2nr(pane_height * 0.8)])
     let leftmost = pane_position[1] == 1
     let side = leftmost ? 'right' : 'left'
-    let col = leftmost ? pane_position[1] + pane_width : pane_position[1] - width
+    let col = leftmost ? pane_position[1] + pane_width + 1 : pane_position[1] - width - 1
     let col = min([max([1, col]), max([1, &columns - width + 1])])
     let row = min([pane_position[0], max([1, &lines - height + 1])])
     let x_range = max([1, &columns - width])

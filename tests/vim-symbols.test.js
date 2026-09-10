@@ -94,15 +94,15 @@ describe("CurrentFileSymbols", () => {
     expect(result.status).toBe(0);
     const layout = JSON.parse(readFileSync(resultPath, "utf8"));
     expect(layout.left).toMatchObject({ side: "right", triangle: "◀" });
-    expect(layout.left.width).toBe(Math.floor(layout.left.pane_width * 0.7));
+    expect(layout.left.width).toBe(Math.floor(layout.left.pane_width * 0.95));
     expect(layout.left.width).toBeLessThan(layout.left.pane_width);
     expect(layout.left.height).toBe(Math.floor(layout.left.pane_height * 0.8));
-    expect(layout.left.col).toBeGreaterThanOrEqual(layout.left.pane_col + layout.left.pane_width);
+    expect(layout.left.col).toBe(layout.left.pane_col + layout.left.pane_width + 1);
     expect(layout.right).toMatchObject({ side: "left", triangle: "▶" });
-    expect(layout.right.width).toBe(Math.floor(layout.right.pane_width * 0.7));
+    expect(layout.right.width).toBe(Math.floor(layout.right.pane_width * 0.95));
     expect(layout.right.width).toBeLessThan(layout.right.pane_width);
     expect(layout.right.height).toBe(Math.floor(layout.right.pane_height * 0.8));
-    expect(layout.right.col + layout.right.width).toBeLessThanOrEqual(layout.right.pane_col);
+    expect(layout.right.col + layout.right.width).toBe(layout.right.pane_col - 1);
   });
 
   it("scrolls the selected symbol within four lines of the top", () => {
