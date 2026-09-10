@@ -34,6 +34,8 @@ if (area === "api" && command === "snapshot") {
       root_pane: pane,
     },
   });
+} else if (area === "tab" && ["focus", "rename"].includes(String(command))) {
+  output({ result: {} });
 } else if (area === "pane") {
   handlePaneCommand(command);
 } else if (area === "workspace" && ["create", "focus", "rename"].includes(String(command))) {

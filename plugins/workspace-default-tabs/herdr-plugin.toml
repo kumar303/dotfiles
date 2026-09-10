@@ -1,0 +1,10 @@
+id = "kumar303.workspace-default-tabs"
+name = "Workspace Default Tabs"
+version = "0.1.0"
+min_herdr_version = "0.8.2"
+description = "Create agent and shell tabs in new workspaces"
+platforms = ["linux", "macos"]
+
+[[events]]
+on = "workspace.created"
+command = ["node", "workspace-default-tabs.js"]
