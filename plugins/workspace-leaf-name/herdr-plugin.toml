@@ -1,10 +1,14 @@
 id = "kumar303.workspace-leaf-name"
 name = "Workspace Leaf Name"
-version = "0.1.0"
+version = "0.1.1"
 min_herdr_version = "0.8.2"
-description = "Name new workspaces after their working directory"
+description = "Name workspaces after their first pane directory"
 platforms = ["linux", "macos"]
 
 [[events]]
 on = "workspace.created"
+command = ["node", "workspace-leaf-name.js"]
+
+[[events]]
+on = "workspace.focused"
 command = ["node", "workspace-leaf-name.js"]

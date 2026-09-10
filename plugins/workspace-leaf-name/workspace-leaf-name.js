@@ -4,20 +4,29 @@
 import { execFileSync } from "node:child_process";
 import { basename } from "node:path";
 
-/** @typedef {{workspace_id?: unknown, workspace_cwd?: unknown}} PluginContext */
+/** @typedef {{workspace_id?: unknown, workspace_label?: unknown}} PluginContext */
 
 const context = parseContext(requiredEnvironment("HERDR_PLUGIN_CONTEXT_JSON"));
 const workspaceId = requiredContextString(context, "workspace_id");
-const workspaceCwd = requiredContextString(context, "workspace_cwd");
-const workspaceName = basename(workspaceCwd);
+const herdrPath = requiredEnvironment("HERDR_BIN_PATH");
+const response = JSON.parse(
+  execFileSync(herdrPath, ["pane", "list", "--workspace", workspaceId], {
+    encoding: "utf8",
+  }),
+);
+const firstPane = response?.result?.panes?.[0];
+if (typeof firstPane?.cwd !== "string" || !firstPane.cwd) {
+  throw new Error("workspace has no pane working directory");
+}
 
+const workspaceName = basename(firstPane.cwd);
 if (!workspaceName) throw new Error("workspace directory has no leaf name");
 
-execFileSync(
-  requiredEnvironment("HERDR_BIN_PATH"),
-  ["workspace", "rename", workspaceId, workspaceName],
-  { stdio: "inherit" },
-);
+if (context.workspace_label !== workspaceName) {
+  execFileSync(herdrPath, ["workspace", "rename", workspaceId, workspaceName], {
+    stdio: "inherit",
+  });
+}
 
 /**
  * @param {string} value

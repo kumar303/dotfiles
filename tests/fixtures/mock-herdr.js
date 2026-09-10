@@ -47,9 +47,14 @@ if (area === "api" && command === "snapshot") {
 /** @param {string | undefined} command */
 function handlePaneCommand(command) {
   switch (command) {
-    case "list":
-      output(state);
+    case "list": {
+      const workspaceId = option(args, "--workspace");
+      const panes = workspaceId
+        ? state.result.panes.filter((pane) => pane.workspace_id === workspaceId)
+        : state.result.panes;
+      output({ result: { panes } });
       break;
+    }
     case "current":
       process.exitCode = 1;
       break;
