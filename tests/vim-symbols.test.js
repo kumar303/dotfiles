@@ -58,7 +58,7 @@ describe("CurrentFileSymbols", () => {
     expect(symbols.some((symbol) => symbol.includes("loadUser"))).toBe(true);
   });
 
-  it("places a narrow symbol popup outside the source split", () => {
+  it("places a wide symbol popup toward the outside of the source split", () => {
     const resultPath = join(testDirectory, "popup-layout.json");
     const result = spawnSync(
       "vim",
@@ -68,7 +68,7 @@ describe("CurrentFileSymbols", () => {
         "-n",
         "-es",
         "-c",
-        "set columns=120 lines=40",
+        "set columns=180 lines=40",
         "-c",
         "vsplit",
         "-c",
@@ -93,10 +93,12 @@ describe("CurrentFileSymbols", () => {
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     const layout = JSON.parse(readFileSync(resultPath, "utf8"));
-    expect(layout.left).toMatchObject({ side: "right", triangle: "◀", width: 36 });
-    expect(layout.left.col).toBeGreaterThanOrEqual(layout.left.pane_col + layout.left.pane_width);
-    expect(layout.right).toMatchObject({ side: "left", triangle: "▶", width: 36 });
-    expect(layout.right.col + layout.right.width).toBeLessThanOrEqual(layout.right.pane_col);
+    expect(layout.left).toMatchObject({ side: "right", triangle: "◀", width: 75 });
+    expect(layout.left.height).toBe(Math.floor(layout.left.pane_height * 0.8));
+    expect(layout.left.col).toBeGreaterThan(layout.left.pane_col);
+    expect(layout.right).toMatchObject({ side: "left", triangle: "▶", width: 75 });
+    expect(layout.right.height).toBe(Math.floor(layout.right.pane_height * 0.8));
+    expect(layout.right.col).toBeLessThan(layout.right.pane_col);
   });
 
   it("scrolls the selected symbol within four lines of the top", () => {
