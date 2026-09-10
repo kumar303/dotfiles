@@ -224,7 +224,7 @@ describe("workspace-switcher plugin", () => {
     const result = await runPicker("\r");
 
     expect(stripTerminalControls(result.stdout)).toContain(
-      "↑/↓ select  enter open  / search  esc close",
+      "↑/↓ select  g/G top/bottom  d/u page  enter open  / search  esc close",
     );
   });
 
