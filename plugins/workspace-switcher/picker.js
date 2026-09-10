@@ -11,7 +11,8 @@ import { readWorkspaceSwitcherTheme } from "./theme.js";
 import { buildWorkspaceRows } from "./view.js";
 
 const theme = await readWorkspaceSwitcherTheme();
-const KEY_LEGEND = "↑/↓ select  g/G top/bottom  d/u page  enter open  / search  esc close";
+const KEY_LEGEND =
+  "↑/↓ select  •  g/G top/bottom  •  d/u page  •  enter open  •  / search  •  esc close";
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const initialSnapshot = readSnapshot();
 seedWorkspaceHistory(currentWorkspaceDirectories(initialSnapshot), stateDirectory);
