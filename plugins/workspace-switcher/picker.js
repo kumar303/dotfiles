@@ -7,13 +7,10 @@ import { basename } from "node:path";
 import { currentWorkspaceDirectories, openWorkspace, readSnapshot } from "./herdr.js";
 import { WorkspacePickerModel } from "./model.js";
 import { readWorkspaceHistory, seedWorkspaceHistory } from "./store.js";
+import { readWorkspaceSwitcherTheme } from "./theme.js";
 import { buildWorkspaceRows } from "./view.js";
 
-const ACCENT = "#0c696e";
-const BACKGROUND = "#fbfbfb";
-const MUTED = "#777777";
-const TEXT = "#201f2d";
-
+const theme = await readWorkspaceSwitcherTheme();
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const initialSnapshot = readSnapshot();
 seedWorkspaceHistory(currentWorkspaceDirectories(initialSnapshot), stateDirectory);
@@ -31,7 +28,7 @@ const content = new Box({
   tags: true,
   scrollable: true,
   alwaysScroll: true,
-  style: { bg: BACKGROUND, fg: TEXT },
+  style: { bg: theme.background, fg: theme.text },
 });
 const status = new Box({
   parent: screen,
@@ -40,7 +37,7 @@ const status = new Box({
   bottom: 0,
   height: 1,
   tags: true,
-  style: { bg: BACKGROUND, fg: MUTED },
+  style: { bg: theme.background, fg: theme.muted },
 });
 
 screen.on("keypress", handleKeypress);
@@ -118,9 +115,9 @@ function render() {
   content.scrollTo?.(scrollOffset);
 
   if (errorMessage) {
-    status.setContent(`{#bc5454-fg} ${escape(errorMessage)}{/}`);
+    status.setContent(`{${theme.error}-fg} ${escape(errorMessage)}{/}`);
   } else if (model.searchMode) {
-    status.setContent(`{${MUTED}-fg} / ${escape(model.searchQuery)}_{/}`);
+    status.setContent(`{${theme.muted}-fg} / ${escape(model.searchQuery)}_{/}`);
   } else {
     status.setContent("");
   }
@@ -129,12 +126,12 @@ function render() {
 
 /** @param {import("./view.js").WorkspaceRow} row */
 function renderRow(row) {
-  if (row.kind === "heading") return `{${MUTED}-fg}${row.text}{/}`;
+  if (row.kind === "heading") return `{${theme.muted}-fg}${row.text}{/}`;
   if (row.kind === "spacer") return "";
 
   const prefix = row.selected ? "   > " : "     ";
-  const color = row.selected ? ACCENT : TEXT;
-  const branch = row.entry.branch ? `{${MUTED}-fg} [${escape(row.entry.branch)}]{/}` : "";
+  const color = row.selected ? theme.accent : theme.text;
+  const branch = row.entry.branch ? `{${theme.muted}-fg} [${escape(row.entry.branch)}]{/}` : "";
   return `{${color}-fg}${prefix}${escape(basename(row.entry.dir))}{/}${branch}`;
 }
 

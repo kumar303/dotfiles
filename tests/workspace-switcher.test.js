@@ -1,6 +1,6 @@
 // @ts-check
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -16,6 +16,10 @@ import {
   openWorkspace,
 } from "../plugins/workspace-switcher/herdr.js";
 import { WorkspacePickerModel } from "../plugins/workspace-switcher/model.js";
+import {
+  readHerdrConfig,
+  resolveWorkspaceSwitcherTheme,
+} from "../plugins/workspace-switcher/theme.js";
 import { buildWorkspaceRows } from "../plugins/workspace-switcher/view.js";
 
 /** @type {string} */
@@ -26,6 +30,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  delete process.env.HERDR_CONFIG_PATH;
   rmSync(stateDirectory, { recursive: true, force: true });
 });
 
@@ -116,6 +121,58 @@ describe("workspace history", () => {
       { kind: "heading", text: "Earlier" },
       { entry: earlier, kind: "entry", selected: false, text: "     checkout-web" },
     ]);
+  });
+});
+
+describe("workspace switcher theme", () => {
+  it("reads Herdr's configured theme", () => {
+    const configPath = join(stateDirectory, "config.toml");
+    writeFileSync(configPath, '[theme]\nname = "nord"\n\n[theme.custom]\naccent = "#123456"\n');
+    process.env.HERDR_CONFIG_PATH = configPath;
+
+    expect(readHerdrConfig()).toMatchObject({
+      theme: { name: "nord", custom: { accent: "#123456" } },
+    });
+  });
+
+  it("resolves Herdr's built-in theme and custom colors", () => {
+    expect(
+      resolveWorkspaceSwitcherTheme({
+        theme: {
+          name: "one-light",
+          custom: { accent: "#123456", overlay0: "rgb(12, 34, 56)" },
+        },
+      }),
+    ).toEqual({
+      accent: "#123456",
+      background: "#fafafa",
+      error: "#e45649",
+      muted: "#0c2238",
+      text: "#383a42",
+    });
+  });
+
+  it("applies the active auto-switch mode after shared custom colors", () => {
+    const config = {
+      theme: {
+        auto_switch: true,
+        dark_name: "one-dark",
+        light_name: "one-light",
+        custom: {
+          text: "#111111",
+          light: { text: "#222222", accent: "#333333" },
+        },
+      },
+    };
+
+    expect(resolveWorkspaceSwitcherTheme(config, "light")).toMatchObject({
+      accent: "#333333",
+      text: "#222222",
+    });
+    expect(resolveWorkspaceSwitcherTheme(config, "dark")).toMatchObject({
+      accent: "#61afef",
+      text: "#111111",
+    });
   });
 });
 
