@@ -83,6 +83,8 @@ let g:fzf_file_picker_root = getcwd()
 let g:fzf_picker_options = [
     \ '--layout=reverse',
     \ '--info=inline',
+    \ '--no-scrollbar',
+    \ '--no-separator',
     \ '--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97'
     \ ]
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
@@ -446,8 +448,6 @@ function! Symbols()
         \ '--prompt=Symbol> ',
         \ '--bind=load:pos(' . position . ')',
         \ '--bind=focus:execute-silent(' . focus_command . ')',
-        \ '--no-scrollbar',
-        \ '--no-separator',
         \ ]
     let popup_window = {
         \ 'border': layout.border,
