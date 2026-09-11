@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+file="$1"
+start="$2"
+line_count="$3"
+
+awk -v start="$start" -v line_count="$line_count" '
+  NR >= start {
+    printf "%6d  %s\n", NR, $0
+    shown++
+    if (shown >= line_count) exit
+  }
+' "$file"

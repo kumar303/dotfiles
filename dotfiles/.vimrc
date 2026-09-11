@@ -128,8 +128,17 @@ function! OpenRipgrepResults(lines)
 endfunction
 
 function! RunRipgrep(name, command)
-    let options = g:fzf_open_options + ['--delimiter=:', '--nth=1,4..', '--prompt=Search> ']
-    call fzf#run(fzf#wrap(a:name, {'dir': g:fzf_file_picker_root, 'source': a:command, 'sink*': function('OpenRipgrepResults'), 'options': options}))
+    let preview_script = g:vim_dotfiles_directory . '/.vim/bin/ripgrep-preview'
+    let preview_command = shellescape(preview_script) . ' {1} {2} "$FZF_PREVIEW_LINES"'
+    let options = g:fzf_open_options + [
+        \ '--delimiter=:',
+        \ '--nth=1,4..',
+        \ '--preview=' . preview_command,
+        \ '--preview-window=down,50%,nowrap,border-top',
+        \ '--prompt=Search> ',
+        \ ]
+    let window = {'width': 0.9, 'height': 0.9}
+    call fzf#run(fzf#wrap(a:name, {'dir': g:fzf_file_picker_root, 'source': a:command, 'sink*': function('OpenRipgrepResults'), 'options': options, 'window': window}))
 endfunction
 
 function! Ripgrep(args)
