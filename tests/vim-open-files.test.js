@@ -62,7 +62,7 @@ qa!
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     const state = JSON.parse(readFileSync(resultPath, "utf8"));
-    expect(state.selected).toContain("first.ts");
+    expect(state.selected).toMatch(/^\d+\t.*first\.ts$/);
     expect(state.focused).toBe("first.ts");
     expect(state.toggled).toContain("second.ts");
     expect(state.files).toEqual(["second.ts"]);

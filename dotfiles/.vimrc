@@ -125,7 +125,7 @@ function! OpenFileSwitcherState()
         if empty(file) || !filereadable(file)
             continue
         endif
-        call add(entries, printf('%d\t%s', window.winid, fnamemodify(file, ':~:.')))
+        call add(entries, printf("%d\t%s", window.winid, fnamemodify(file, ':~:.')))
         if window.winid == previous_window
             let previous_position = len(entries)
         elseif window.winid == current_window
@@ -175,7 +175,7 @@ function! OpenFileSwitcher()
         \ 'options': options,
         \ 'sink*': function('OpenFileSwitcherResults'),
         \ 'source': state.entries,
-        \ 'window': {'width': 0.8, 'height': 0.8},
+        \ 'window': {'width': 0.8, 'height': min([9, len(state.entries) + 4])},
         \ }))
 endfunction
 command! OpenFiles call OpenFileSwitcher()
