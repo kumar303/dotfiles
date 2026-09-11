@@ -294,6 +294,9 @@ function! CurrentFileSymbols()
     if file =~# '\.js$'
         let test_regex = '--regex-JavaScript=/^[ \t]*(describe|it|test)(\.(only|skip|todo))?[ \t]*\([ \t]*["'']([^"'']+)/\4/t,test/'
         let command .= ' ' . shellescape(test_regex)
+    elseif file =~# '\.tsx\?$'
+        let method_regex = '--regex-TypeScript=/^  (async[ \t]+)?(#?[A-Za-z_$][A-Za-z0-9_$#]*)[ \t]*\([^)]*\)[ \t]*:[^{]+\{/\2/m,method/'
+        let command .= ' ' . shellescape(method_regex)
     endif
     let output = systemlist(command . ' ' . shellescape(file))
     if v:shell_error
@@ -302,6 +305,7 @@ function! CurrentFileSymbols()
     endif
 
     let symbols = []
+    let seen = {}
     for line in output
         try
             let tag = json_decode(line)
@@ -309,7 +313,9 @@ function! CurrentFileSymbols()
             continue
         endtry
         let kind = get(tag, 'kind', '')
-        if get(tag, '_type', '') ==# 'tag' && has_key(tag, 'line') && index(['alias', 'constant', 'property', 'variable'], kind) == -1
+        let key = printf('%d:%s:%s', get(tag, 'line', 0), kind, get(tag, 'name', ''))
+        if get(tag, '_type', '') ==# 'tag' && has_key(tag, 'line') && index(['alias', 'constant', 'property', 'variable'], kind) == -1 && !has_key(seen, key)
+            let seen[key] = 1
             call add(symbols, printf('%6d  %-12s %s', tag.line, kind, tag.name))
         endif
     endfor
