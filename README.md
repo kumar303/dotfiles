@@ -89,11 +89,12 @@ In the workspace switcher, use `up/down` to navigate, `/` to search, `enter` to 
 
 Install [fzf](https://github.com/junegunn/fzf),
 [fd](https://github.com/sharkdp/fd),
-[ripgrep](https://github.com/BurntSushi/ripgrep), and
+[ripgrep](https://github.com/BurntSushi/ripgrep),
+[Bat](https://github.com/sharkdp/bat), and
 [Universal Ctags](https://github.com/universal-ctags/ctags):
 
 ```sh
-brew install fzf fd ripgrep universal-ctags jq
+brew install fzf fd ripgrep bat universal-ctags jq
 ```
 
 In `ctrl+p` and `ctrl+r` results, `enter` opens a right split when the current

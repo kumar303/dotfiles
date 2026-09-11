@@ -24,12 +24,20 @@ afterEach(() => {
 describe("ripgrep-preview", () => {
   it("prints a bounded snippet starting at the matching line", () => {
     const sourceFile = join(testDirectory, "source.ts");
-    writeFileSync(sourceFile, "one\ntwo\nthree\nfour\n");
+    writeFileSync(
+      sourceFile,
+      "const one = 1;\nconst two = 2;\nconst three = 3;\nconst four = 4;\n",
+    );
 
-    const result = spawnSync(previewPath, [sourceFile, "2", "2"], { encoding: "utf8" });
+    const result = spawnSync(previewPath, [sourceFile, "2", "2", "80"], { encoding: "utf8" });
 
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe("     2  two\n     3  three\n");
+    expect(result.stdout).toContain("\x1b[38;2");
+    const plainOutput = result.stdout.replace(/\x1b\[[0-9;]*m/g, "");
+    expect(plainOutput).toContain("2 const two = 2;");
+    expect(plainOutput).toContain("3 const three = 3;");
+    expect(plainOutput).not.toContain("const one");
+    expect(plainOutput).not.toContain("const four");
   });
 });

@@ -129,7 +129,7 @@ endfunction
 
 function! RunRipgrep(name, command)
     let preview_script = g:vim_dotfiles_directory . '/.vim/bin/ripgrep-preview'
-    let preview_command = shellescape(preview_script) . ' {1} {2} "$FZF_PREVIEW_LINES"'
+    let preview_command = shellescape(preview_script) . ' {1} {2} "$FZF_PREVIEW_LINES" "$FZF_PREVIEW_COLUMNS"'
     let options = g:fzf_open_options + [
         \ '--delimiter=:',
         \ '--nth=1,4..',
