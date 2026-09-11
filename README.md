@@ -58,13 +58,14 @@ In the workspace switcher, use `up/down` to navigate, `/` to search, `enter` to 
 
 ### File navigation
 
-| Scope | Key      | Action                           |
-| ----- | -------- | -------------------------------- |
-| Vim   | `ctrl+p` | Open a file finder palette       |
-| Vim   | `ctrl+l` | List code symbols in the file    |
-| Vim   | `ctrl+g` | Open the line on GitHub's `main` |
-| Vim   | `ctrl+j` | Open the import under the cursor |
-| Vim   | `ctrl+s` | Save the file                    |
+| Scope | Key        | Action                           |
+| ----- | ---------- | -------------------------------- |
+| Vim   | `ctrl+p`   | Open a file finder palette       |
+| Vim   | `ctrl+tab` | Switch between open files        |
+| Vim   | `ctrl+l`   | List code symbols in the file    |
+| Vim   | `ctrl+g`   | Open the line on GitHub's `main` |
+| Vim   | `ctrl+j`   | Open the import under the cursor |
+| Vim   | `ctrl+s`   | Save the file                    |
 
 ### Panes
 
@@ -99,6 +100,8 @@ brew install fzf fd ripgrep bat universal-ctags jq
 
 In `ctrl+p` and `ctrl+r` results, `enter` opens a right split when the current
 split has a file. `ctrl+enter` reuses the current split.
+
+In the `ctrl+tab` switcher, `enter` focuses a file and `x` closes it.
 
 Select text with `v`, then press `ctrl+r` to use it as the search term.
 `ctrl+r` and `ctrl+f` can also pass any ripgrep option. Example of searching for
