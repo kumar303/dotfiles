@@ -118,6 +118,35 @@ qa!
     ]);
   });
 
+  it("places the fzf overlay beside the source pane like the symbol overlay", () => {
+    const resultPath = join(testDirectory, "popup-layout.json");
+
+    runVim(
+      `set columns=180 lines=40
+let single = {'actual': AgentPromptPopupWindow(), 'expected': SymbolPopupLayout()}
+vsplit
+wincmd h
+let left = {'actual': AgentPromptPopupWindow(), 'expected': SymbolPopupLayout()}
+wincmd l
+let right = {'actual': AgentPromptPopupWindow(), 'expected': SymbolPopupLayout()}
+call writefile([json_encode({'single': single, 'left': left, 'right': right})], $VIM_TEST_RESULT)
+qa!
+`,
+      { VIM_TEST_RESULT: resultPath },
+    );
+
+    const layouts = JSON.parse(readFileSync(resultPath, "utf8"));
+    for (const layout of [layouts.single, layouts.left, layouts.right]) {
+      expect(layout.actual).toEqual({
+        border: layout.expected.border,
+        height: layout.expected.height,
+        width: layout.expected.width,
+        xoffset: layout.expected.xoffset,
+        yoffset: layout.expected.yoffset,
+      });
+    }
+  });
+
   it("auto-selects the sole agent and sends context plus typed text", () => {
     writeHerdrState([agent("w1:p1", "w1", "pi")]);
     const sourcePath = join(testDirectory, "example.ts");
