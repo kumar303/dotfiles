@@ -8,44 +8,34 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const promptScriptPath = join(repositoryRoot, "dotfiles", ".vim", "bin", "agent-prompt.js");
 const vimrcPath = join(repositoryRoot, "dotfiles", ".vimrc");
 const mockHerdrPath = join(repositoryRoot, "tests", "fixtures", "mock-herdr.js");
-const mockTerminalPath = join(repositoryRoot, "tests", "fixtures", "mock-terminal.js");
 
 /** @type {string} */
 let testDirectory;
-/** @type {string} */
-let stateDirectory;
 /** @type {string} */
 let herdrLogPath;
 /** @type {string} */
 let herdrStatePath;
 /** @type {NodeJS.ProcessEnv} */
-let pluginEnvironment;
+let vimEnvironment;
 
 beforeEach(() => {
   testDirectory = mkdtempSync(join(tmpdir(), "agent-prompt-"));
-  stateDirectory = join(testDirectory, "plugin-state");
   herdrLogPath = join(testDirectory, "herdr-calls.log");
   herdrStatePath = join(testDirectory, "herdr-state.json");
-  mkdirSync(stateDirectory);
   writeFileSync(herdrLogPath, "");
   writeFileSync(join(testDirectory, "counter"), "100\n");
-  writeHerdrState({ agents: [], panes: [], processName: "zsh" });
-  pluginEnvironment = {
+  writeHerdrState([]);
+  vimEnvironment = {
     ...process.env,
     HERDR_BIN_PATH: mockHerdrPath,
-    HERDR_PROMPT_WORKSPACE_ID: "w1",
     HERDR_MOCK_COUNTER: join(testDirectory, "counter"),
     HERDR_MOCK_LOG: herdrLogPath,
     HERDR_MOCK_PANES: herdrStatePath,
-    HERDR_PLUGIN_CONTEXT_JSON: "{}",
-    HERDR_PLUGIN_STATE_DIR: stateDirectory,
-    NODE_OPTIONS: [process.env.NODE_OPTIONS, `--import=${mockTerminalPath}`]
-      .filter(Boolean)
-      .join(" "),
-    TERM: "xterm-256color",
+    HERDR_PANE_ID: "w1:p2",
+    HERDR_TAB_ID: "w1:t1",
+    HERDR_WORKSPACE_ID: "w1",
   };
 });
 
@@ -54,151 +44,110 @@ afterEach(() => {
 });
 
 describe("Vim agent prompt", () => {
-  it("captures a relative Vim location and optional visual selection", () => {
+  it("captures the full visual selection with a relative location", () => {
     const sourceDirectory = join(testDirectory, "src");
     const sourcePath = join(sourceDirectory, "example.ts");
-    const normalContextPath = join(testDirectory, "normal-context.json");
-    const visualContextPath = join(testDirectory, "visual-context.json");
-    const scriptPath = join(testDirectory, "capture.vim");
+    const resultPath = join(testDirectory, "context.json");
     mkdirSync(sourceDirectory);
     writeFileSync(sourcePath, "alpha\nbeta value\ngamma\n");
-    writeFileSync(
-      scriptPath,
+
+    runVim(
       `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
-normal! 3G
-let context_path = CaptureAgentPromptContext(0)
-call writefile(readfile(context_path), $VIM_TEST_NORMAL_CONTEXT)
-normal! 2G0v4l
-let context_path = CaptureAgentPromptContext(1)
-call writefile(readfile(context_path), $VIM_TEST_VISUAL_CONTEXT)
+normal! 2G0vG4l
+execute "normal! \\<Esc>"
+call cursor(2, 1)
+call writefile([json_encode(CaptureAgentPromptContext(1))], $VIM_TEST_RESULT)
 qa!
 `,
-    );
-
-    const result = spawnSync("vim", ["-Nu", vimrcPath, "-n", "-es", "-S", scriptPath], {
-      cwd: testDirectory,
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        HERDR_PANE_ID: "w1:p2",
-        VIM_TEST_NORMAL_CONTEXT: normalContextPath,
-        VIM_TEST_SOURCE: sourcePath,
-        VIM_TEST_VISUAL_CONTEXT: visualContextPath,
-      },
-    });
-
-    expect(result.stderr).toBe("");
-    expect(result.status).toBe(0);
-    const context = JSON.parse(readFileSync(visualContextPath, "utf8"));
-    expect(JSON.parse(readFileSync(normalContextPath, "utf8"))).toEqual({
-      file: "src/example.ts",
-      line: 3,
-      selection: "",
-    });
-    expect(context).toEqual({
-      file: "src/example.ts",
-      line: 2,
-      selection: "beta ",
-    });
-  });
-
-  it("opens a terminal popup from Vim with the captured context", () => {
-    const sourcePath = join(testDirectory, "example.ts");
-    const resultPath = join(testDirectory, "popup.json");
-    const scriptPath = join(testDirectory, "open.vim");
-    writeFileSync(sourcePath, "alpha\nbeta\n");
-    writeFileSync(
-      scriptPath,
-      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
-normal! 2G
-let g:agent_prompt_command = ['sh', '-c', 'sleep 1']
-let popup = OpenAgentPrompt(0)
-call writefile([json_encode({'mapping': maparg('<C-a>', 'n'), 'popup': popup_getpos(popup)})], $VIM_TEST_RESULT)
-call popup_close(popup)
-qa!
-`,
-    );
-
-    const result = spawnSync("vim", ["-Nu", vimrcPath, "-n", "-es", "-S", scriptPath], {
-      cwd: testDirectory,
-      encoding: "utf8",
-      env: {
-        ...pluginEnvironment,
-        HERDR_PANE_ID: "w1:p2",
-        HERDR_TAB_ID: "w1:t1",
-        HERDR_WORKSPACE_ID: "w1",
+      {
         VIM_TEST_RESULT: resultPath,
         VIM_TEST_SOURCE: sourcePath,
       },
-    });
+    );
 
-    expect(result.stderr).toBe("");
-    expect(result.status).toBe(0);
-    const state = JSON.parse(readFileSync(resultPath, "utf8"));
-    expect(state.mapping).toContain("OpenAgentPrompt(0)");
-    expect(state.popup.visible).toBe(1);
-    expect(state.popup.width).toBeGreaterThan(0);
-    expect(state.popup.height).toBeGreaterThan(0);
-    expect(herdrCalls()).toEqual([]);
-  });
-
-  it("auto-selects the sole workspace agent and sends the completed prompt", () => {
-    writeHerdrState({
-      agents: [agent("w1:p1", "w1", "pi")],
-      panes: [],
-      processName: "zsh",
-    });
-    writeContext({
+    expect(JSON.parse(readFileSync(resultPath, "utf8"))).toEqual({
       file: "src/example.ts",
-      line: 7,
-      selection: "const answer = 42;",
+      line: 2,
+      selection: "beta value\ngamma",
     });
-
-    const result = runPrompt("Explain this\r");
-
-    const text = stripTerminalControls(result.stdout);
-    expect(text).toContain("src/example.ts:7");
-    expect(text).toContain("> const answer = 42;");
-    expect(herdrCalls()).toEqual([
-      ["agent", "list"],
-      ["agent", "prompt", "w1:p1", "src/example.ts:7\n> const answer = 42;\n\nExplain this"],
-    ]);
   });
 
-  it("uses Up and Down to select among workspace agents", () => {
-    writeHerdrState({
-      agents: [
-        agent("w1:p1", "w1", "planner"),
-        agent("w1:p3", "w1", "reviewer"),
-        agent("w2:p1", "w2", "other"),
-      ],
-      panes: [],
-      processName: "zsh",
-    });
-
-    const result = runPrompt("\x1b[BReview this\r");
-    const text = stripTerminalControls(result.stdout);
-
-    expect(text).toContain("planner");
-    expect(text).toContain("reviewer");
-    expect(text).not.toContain("other");
-    expect(text).toMatch(/↑\/↓.*agent.*•.*enter.*send.*•.*esc.*close/s);
-    expect(herdrCalls()).toEqual([
-      ["agent", "list"],
-      ["agent", "prompt", "w1:p3", "Review this"],
+  it("builds a clean fzf overlay with the shared light-theme options", () => {
+    writeHerdrState([
+      agent("w1:p1", "w1", "planner"),
+      agent("w1:p3", "w1", "reviewer"),
+      agent("w2:p1", "w2", "other"),
     ]);
-  });
+    const sourcePath = join(testDirectory, "example.ts");
+    const resultPath = join(testDirectory, "state.json");
+    writeFileSync(sourcePath, "alpha\n");
 
-  it("closes on Escape without sending a prompt", () => {
-    writeHerdrState({
-      agents: [agent("w1:p1", "w1", "pi")],
-      panes: [],
-      processName: "zsh",
-    });
+    runVim(
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+let state = AgentPromptState(0)
+call writefile([json_encode({'mapping': maparg('<C-a>', 'n'), 'options': AgentPromptOptions(state), 'state': state})], $VIM_TEST_RESULT)
+qa!
+`,
+      {
+        VIM_TEST_RESULT: resultPath,
+        VIM_TEST_SOURCE: sourcePath,
+      },
+    );
 
-    runPrompt("Do not send\x1b");
-
+    const result = JSON.parse(readFileSync(resultPath, "utf8"));
+    expect(result.mapping).toContain("OpenAgentPrompt(0)");
+    expect(result.state.entries).toEqual(["w1:p1\tplanner  idle", "w1:p3\treviewer  idle"]);
+    expect(result.options).toContain("--phony");
+    expect(result.options).toContain("--print-query");
+    expect(result.options).toContain("--footer=↑/↓ agent  •  enter send  •  esc close");
+    expect(result.options).toContain(
+      "--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97",
+    );
     expect(herdrCalls()).toEqual([["agent", "list"]]);
+  });
+
+  it("auto-selects the sole agent and sends context plus typed text", () => {
+    writeHerdrState([agent("w1:p1", "w1", "pi")]);
+    const sourcePath = join(testDirectory, "example.ts");
+    writeFileSync(sourcePath, "alpha\nbeta\n");
+
+    runVim(
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+normal! 2G
+let g:agent_prompt_context = AgentPromptContext(CaptureAgentPromptContext(0))
+call AgentPromptResults(['Explain this', "w1:p1\tpi  idle"])
+qa!
+`,
+      { VIM_TEST_SOURCE: sourcePath },
+    );
+
+    expect(herdrCalls()).toEqual([["agent", "prompt", "w1:p1", "example.ts:2\n\nExplain this"]]);
+  });
+
+  it("sends to the agent selected with fzf navigation", () => {
+    const sourcePath = join(testDirectory, "example.ts");
+    writeFileSync(sourcePath, "alpha\n");
+
+    runVim(
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+let g:agent_prompt_context = "example.ts:1\\n> alpha"
+call AgentPromptResults(['Review this', "w1:p3\treviewer  idle"])
+qa!
+`,
+      { VIM_TEST_SOURCE: sourcePath },
+    );
+
+    expect(herdrCalls()).toEqual([
+      ["agent", "prompt", "w1:p3", "example.ts:1\n> alpha\n\nReview this"],
+    ]);
+  });
+
+  it("does not send when fzf closes without a selection", () => {
+    runVim(`call AgentPromptResults([])
+qa!
+`);
+
+    expect(herdrCalls()).toEqual([]);
   });
 });
 
@@ -217,39 +166,31 @@ function agent(paneId, workspaceId, name) {
   };
 }
 
-/** @param {{file: string, line: number, selection: string}} context */
-function writeContext(context) {
-  const path = join(stateDirectory, "context-w1_p2.json");
-  writeFileSync(path, `${JSON.stringify(context)}\n`);
-  pluginEnvironment.HERDR_PROMPT_CONTEXT_FILE = path;
-}
-
-/** @param {string} input */
-function runPrompt(input) {
-  const result = spawnSync(process.execPath, [promptScriptPath], {
+/**
+ * @param {string} script
+ * @param {NodeJS.ProcessEnv} [environment]
+ */
+function runVim(script, environment = {}) {
+  const scriptPath = join(testDirectory, `test-${Math.random()}.vim`);
+  writeFileSync(scriptPath, script);
+  const result = spawnSync("vim", ["-Nu", vimrcPath, "-n", "-es", "-S", scriptPath], {
     cwd: testDirectory,
     encoding: "utf8",
-    env: pluginEnvironment,
-    input,
-    timeout: 10000,
+    env: { ...vimEnvironment, ...environment },
   });
   expect(result.stderr).toBe("");
   expect(result.status).toBe(0);
-  return { stdout: result.stdout, stderr: result.stderr };
 }
 
-/**
- * @param {{agents: unknown[], panes: unknown[], processName: string}} state
- */
-function writeHerdrState(state) {
+/** @param {unknown[]} agents */
+function writeHerdrState(agents) {
   writeFileSync(
     herdrStatePath,
     `${JSON.stringify({
       result: {
-        agents: state.agents,
-        panes: state.panes,
-        process_name: state.processName,
-        snapshot: { panes: state.panes, workspaces: [] },
+        agents,
+        panes: [],
+        snapshot: { panes: [], workspaces: [] },
       },
     })}\n`,
   );
@@ -262,12 +203,4 @@ function herdrCalls() {
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line));
-}
-
-/** @param {string} value */
-function stripTerminalControls(value) {
-  return value
-    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "")
-    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
-    .replace(/[\r\x00-\x08\x0b-\x1f\x7f]/g, "");
 }

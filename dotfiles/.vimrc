@@ -556,22 +556,18 @@ endfunction
 command! Symbols call Symbols()
 
 function! CaptureAgentPromptContext(include_selection)
-    if empty($HERDR_PANE_ID)
-        return ''
-    endif
-
     let file = expand('%:p')
     if !filereadable(file)
-        return ''
+        return {}
     endif
 
     let start = getpos('.')
     let finish = start
     let selection = ''
     if a:include_selection
-        let start = getpos('v')
-        let finish = getpos('.')
-        let selection = join(getregion(start, finish), "\n")
+        let start = getpos("'<")
+        let finish = getpos("'>")
+        let selection = join(getregion(start, finish, {'type': visualmode()}), "\n")
     endif
 
     let root = resolve(get(g:, 'fzf_file_picker_root', getcwd()))
@@ -579,57 +575,93 @@ function! CaptureAgentPromptContext(include_selection)
     let relative_file = stridx(resolved_file, root . '/') == 0
         \ ? strpart(resolved_file, strlen(root) + 1)
         \ : fnamemodify(file, ':.')
-    let context_path = tempname() . '.json'
-    let context = {
+    return {
         \ 'file': relative_file,
         \ 'line': min([start[1], finish[1]]),
         \ 'selection': selection,
         \ }
-    call writefile([json_encode(context)], context_path)
-    call setfperm(context_path, 'rw-------')
-    return context_path
+endfunction
+
+function! AgentPromptContext(context)
+    let context = a:context.file . ':' . a:context.line
+    if empty(a:context.selection)
+        return context
+    endif
+    let quote = map(split(a:context.selection, "\n", 1), '" > " . v:val')
+    return context . "\n" . join(quote, "\n")
+endfunction
+
+function! AgentPromptCommand(arguments)
+    let node = exepath('node')
+    let herdr = empty($HERDR_BIN_PATH) ? exepath('herdr') : $HERDR_BIN_PATH
+    if empty(node) || empty(herdr)
+        return ''
+    endif
+    let command = [node, g:vim_dotfiles_directory . '/.vim/bin/agent-prompt.js'] + a:arguments
+    let environment = 'HERDR_BIN_PATH=' . shellescape(herdr) . ' '
+    return system(environment . join(map(command, 'shellescape(v:val)'), ' '))
+endfunction
+
+function! AgentPromptState(include_selection)
+    let context = CaptureAgentPromptContext(a:include_selection)
+    if empty(context)
+        return {'context': '', 'entries': []}
+    endif
+    let output = AgentPromptCommand(['list', $HERDR_WORKSPACE_ID])
+    if v:shell_error || empty(output)
+        echoerr empty(output) ? 'Cannot list Herdr agents' : trim(output)
+        return {'context': '', 'entries': []}
+    endif
+    let agents = json_decode(output)
+    let entries = map(agents, 'printf("%s\t%s  %s", v:val.paneId, v:val.label, v:val.status)')
+    return {'context': AgentPromptContext(context), 'entries': entries}
+endfunction
+
+function! AgentPromptOptions(state)
+    return g:fzf_picker_options + [
+        \ '--delimiter=\t',
+        \ '--footer=↑/↓ agent  •  enter send  •  esc close',
+        \ '--footer-border=none',
+        \ '--header=' . a:state.context,
+        \ '--header-border=bottom',
+        \ '--no-sort',
+        \ '--phony',
+        \ '--print-query',
+        \ '--prompt=Prompt> ',
+        \ '--with-nth=2..',
+        \ ]
+endfunction
+
+function! AgentPromptResults(lines)
+    if len(a:lines) < 2
+        return
+    endif
+    let target = matchstr(a:lines[1], '^[^\t]\+')
+    let query = a:lines[0]
+    let prompt = g:agent_prompt_context . (empty(query) ? '' : "\n\n" . query)
+    let prompt_path = tempname()
+    call writefile(split(prompt, "\n", 1), prompt_path)
+    call setfperm(prompt_path, 'rw-------')
+    let output = AgentPromptCommand(['send', target, prompt_path])
+    if v:shell_error
+        echoerr empty(output) ? 'Cannot prompt the Herdr agent' : trim(output)
+    endif
+    unlet! g:agent_prompt_context
 endfunction
 
 function! OpenAgentPrompt(include_selection)
-    let context_path = CaptureAgentPromptContext(a:include_selection)
-    if empty(context_path)
-        return 0
+    let state = AgentPromptState(a:include_selection)
+    if empty(state.entries)
+        echo 'No agents in this workspace'
+        return
     endif
-
-    let herdr = empty($HERDR_BIN_PATH) ? exepath('herdr') : $HERDR_BIN_PATH
-    if empty(herdr)
-        echoerr 'Cannot find Herdr'
-        return 0
-    endif
-
-    let command = get(g:, 'agent_prompt_command', [
-        \ exepath('node'),
-        \ g:vim_dotfiles_directory . '/.vim/bin/agent-prompt.js',
-        \ ])
-    let buffer = term_start(command, {
-        \ 'hidden': 1,
-        \ 'term_finish': 'close',
-        \ 'env': {
-        \     'HERDR_BIN_PATH': herdr,
-        \     'HERDR_PROMPT_CONTEXT_FILE': context_path,
-        \     'HERDR_PROMPT_WORKSPACE_ID': $HERDR_WORKSPACE_ID,
-        \ },
-        \ })
-    if buffer <= 0
-        echoerr 'Cannot start the agent prompt'
-        return 0
-    endif
-
-    let width = max([20, float2nr(&columns * 0.8)])
-    let height = max([8, float2nr((&lines - &cmdheight) * 0.6)])
-    return popup_create(buffer, {
-        \ 'border': [],
-        \ 'maxheight': height,
-        \ 'maxwidth': width,
-        \ 'minheight': height,
-        \ 'minwidth': width,
-        \ 'padding': [0, 1, 0, 1],
-        \ })
+    let g:agent_prompt_context = state.context
+    call fzf#run(fzf#wrap('agent-prompt', {
+        \ 'options': AgentPromptOptions(state),
+        \ 'sink*': function('AgentPromptResults'),
+        \ 'source': state.entries,
+        \ 'window': {'width': 0.8, 'height': 0.6},
+        \ }))
 endfunction
 
 nnoremap <silent> <C-a> :call OpenAgentPrompt(0)<CR>
