@@ -444,7 +444,7 @@ function! SymbolPosition(symbols, cursor_line)
     return position
 endfunction
 
-function! SymbolPopupLayout()
+function! FileToolLayout()
     let pane_position = win_screenpos(0)
     let pane_width = winnr('$') == 1 ? max([1, float2nr((winwidth(0) - 1) / 2)]) : winwidth(0)
     let pane_height = winheight(0)
@@ -509,7 +509,7 @@ function! Symbols()
     endif
 
     let position = SymbolPosition(symbols, cursor_line)
-    let layout = SymbolPopupLayout()
+    let layout = FileToolLayout()
     let preview_file = tempname()
     let source_window = win_getid()
     call writefile([matchstr(symbols[position - 1], '^\s*\zs\d\+')], preview_file)
@@ -683,7 +683,7 @@ function! AgentPromptResults(lines)
 endfunction
 
 function! AgentPromptPopupWindow(state)
-    let layout = SymbolPopupLayout()
+    let layout = FileToolLayout()
     let content_height = len(split(a:state.context, "\n", 1)) + len(a:state.entries) + 5
     return {
         \ 'border': layout.border,
