@@ -680,7 +680,7 @@ endfunction
 
 function! AgentPromptPopupWindow(state)
     let layout = SymbolPopupLayout()
-    let content_height = len(split(a:state.context, "\n", 1)) + len(a:state.entries) + 4
+    let content_height = len(split(a:state.context, "\n", 1)) + len(a:state.entries) + 5
     return {
         \ 'border': layout.border,
         \ 'height': min([layout.height, content_height]),

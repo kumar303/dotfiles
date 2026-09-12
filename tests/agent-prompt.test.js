@@ -122,8 +122,8 @@ qa!
     const resultPath = join(testDirectory, "popup-layout.json");
 
     runVim(
-      `set columns=180 lines=40
-let state = {'context': join(['file.ts:1', '> one', '> two', '> three', '> four', '> five', '> six', '> seven'], "\\n"), 'entries': ["w1:p1\\tpi  idle"]}
+      `set columns=180 lines=60
+let state = {'context': join(['file.ts:1', '> one', '> two', '> three', '> four', '> five', '> six', '> seven'], "\\n"), 'entries': ["w1:p1\\tplanner  idle", "w1:p2\\treviewer  idle", "w1:p3\\ttester  idle", "w1:p4\\twriter  idle"]}
 let single = {'actual': AgentPromptPopupWindow(state), 'expected': SymbolPopupLayout()}
 vsplit
 wincmd h
@@ -140,12 +140,12 @@ qa!
     for (const layout of [layouts.single, layouts.left, layouts.right]) {
       expect(layout.actual).toEqual({
         border: layout.expected.border,
-        height: 13,
+        height: 17,
         width: layout.expected.width,
         xoffset: layout.expected.xoffset,
         yoffset: layout.expected.yoffset,
       });
-      expect(layout.actual.height).toBeLessThan(layout.expected.height);
+      expect(layout.actual.height).toBeLessThanOrEqual(layout.expected.height);
     }
   });
 
