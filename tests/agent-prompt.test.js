@@ -115,10 +115,10 @@ qa!
     expect(result.termBackward).toBe("<C-Q>");
     expect(result.termForward).toBe("<C-X>");
     expect(result.options).not.toContain(
-      "--footer=↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close",
+      "--footer=↑/↓ agent • enter steer • opt+enter follow-up • esc close",
     );
     expect(result.options).toContain(
-      '--preview=printf "\\n%s" "↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close"',
+      '--preview=printf "\\n%s" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
     );
     expect(result.options).toContain("--preview-window=down,3,border-none,wrap,noinfo");
     expect(result.options).toContain(
