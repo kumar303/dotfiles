@@ -39,8 +39,8 @@ function git(command) {
 
 /** @param {string} body */
 function runVim(body) {
-  const resultPath = join(testDirectory, "vim-result.json");
-  const scriptPath = join(testDirectory, "test.vim");
+  const resultPath = join(stateDirectory, "vim-result.json");
+  const scriptPath = join(stateDirectory, "test.vim");
   writeFileSync(scriptPath, `${body}\nqa!\n`);
   const result = spawnSync("vim", ["-Nu", vimrcPath, "-n", "-es", "-S", scriptPath], {
     cwd: testDirectory,
@@ -83,6 +83,20 @@ call writefile([json_encode({'file': expand('%:t'), 'text': getline('.')})], $VI
 `);
 
     expect(result).toEqual({ file: "other.js", text: "changed other" });
+  });
+
+  it("clears an Explore buffer before it refreshes an active diff", () => {
+    const result = runVim(`
+call ViewDiffCommand(['start', g:fzf_file_picker_root, 'branch'])
+Explore
+let before = {'file': expand('%:p'), 'filetype': &filetype}
+call OpenDiffView()
+call writefile([json_encode({'after': {'file': expand('%:p'), 'filetype': &filetype}, 'before': before})], $VIM_TEST_RESULT)
+`);
+
+    expect(result.before.file).not.toBe("");
+    expect(result.before.filetype).toBe("netrw");
+    expect(result.after).toEqual({ file: "", filetype: "" });
   });
 
   it("opens an unopened changed file in a right-hand split", () => {

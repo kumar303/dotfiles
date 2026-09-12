@@ -640,6 +640,9 @@ function! OpenDiffChoices()
 endfunction
 
 function! OpenDiffView()
+    if !filereadable(expand('%:p'))
+        enew
+    endif
     let output = ViewDiffCommand(['refresh', g:fzf_file_picker_root, expand('%:p'), line('.')])
     if v:shell_error || empty(output)
         echoerr empty(output) ? 'Cannot refresh the Vim diff view' : trim(output)
