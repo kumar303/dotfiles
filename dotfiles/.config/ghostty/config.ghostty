@@ -3,7 +3,6 @@ font-feature = -calt
 mouse-hide-while-typing = true
 keybind = alt+backspace=text:\x17
 keybind = ctrl+enter=text:\x0f
-keybind = ctrl+shift+p=text:\x1b[25~
 keybind = ctrl+tab=text:\x1b[9;5u
 keybind = ctrl+super+arrow_left=text:\x1b[1;7D
 keybind = ctrl+super+arrow_right=text:\x1b[1;7C
