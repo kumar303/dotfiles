@@ -60,14 +60,17 @@ Press `ctrl+a` from Vim to include the current file and line. Select text first 
 
 ### File navigation
 
-| Scope | Key        | Action                           |
-| ----- | ---------- | -------------------------------- |
-| Vim   | `ctrl+p`   | Open a file finder palette       |
-| Vim   | `ctrl+tab` | Switch between open files        |
-| Vim   | `ctrl+l`   | List code symbols in the file    |
-| Vim   | `ctrl+g`   | Open the line on GitHub's `main` |
-| Vim   | `ctrl+j`   | Open the import under the cursor |
-| Vim   | `ctrl+s`   | Save the file                    |
+| Scope | Key          | Action                           |
+| ----- | ------------ | -------------------------------- |
+| Vim   | `ctrl+p`     | Open a file finder palette       |
+| Vim   | `ctrl+tab`   | Switch between open files        |
+| Vim   | `ctrl+l`     | List code symbols in the file    |
+| Vim   | `ctrl+g`     | Open the line on GitHub's `main` |
+| Vim   | `ctrl+j`     | Open the import under the cursor |
+| Vim   | `ctrl+s`     | Save the file                    |
+| Vim   | `ctrl+opt+d` | View changed Git locations       |
+
+Press `ctrl+opt+d` again to list changed locations. Press `X` in the list to exit diff mode.
 
 ### Panes
 
