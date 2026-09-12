@@ -91,7 +91,7 @@ qa!
     runVim(
       `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
 let state = AgentPromptState(0)
-call writefile([json_encode({'mapping': maparg('<C-a>', 'n'), 'options': AgentPromptOptions(state), 'state': state})], $VIM_TEST_RESULT)
+call writefile([json_encode({'mapping': maparg('<C-a>', 'n'), 'options': AgentPromptOptions(state), 'state': state, 'termMapping': maparg('<M-CR>', 't')})], $VIM_TEST_RESULT)
 qa!
 `,
       {
@@ -108,7 +108,8 @@ qa!
     ]);
     expect(result.options).toContain("--phony");
     expect(result.options).toContain("--print-query");
-    expect(result.options).toContain("--expect=alt-enter");
+    expect(result.options).toContain("--expect=ctrl-y");
+    expect(result.termMapping).toBe("<C-Y>");
     expect(result.options).toContain(
       "--footer=↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close",
     );
@@ -200,7 +201,7 @@ qa!
     runVim(
       `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
 let g:agent_prompt_context = "example.ts:1\\n> alpha"
-call AgentPromptResults(['Check this next', 'alt-enter', "w1:p3\treviewer  working"])
+call AgentPromptResults(['Check this next', 'ctrl-y', "w1:p3\treviewer  working"])
 qa!
 `,
       { VIM_TEST_SOURCE: sourcePath },
