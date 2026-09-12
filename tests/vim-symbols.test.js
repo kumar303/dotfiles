@@ -58,6 +58,49 @@ describe("CurrentFileSymbols", () => {
     expect(symbols.some((symbol) => symbol.includes("loadUser"))).toBe(true);
   });
 
+  it("finds TypeScript test cases", () => {
+    const sourceFile = join(testDirectory, "example.test.ts");
+    const resultPath = join(testDirectory, "symbols.json");
+    writeFileSync(
+      sourceFile,
+      `describe("bookmark", () => {
+  it("stores the last response", async () => {});
+  test.skip("ignores missing responses", () => {});
+});
+`,
+    );
+
+    const result = spawnSync(
+      "vim",
+      [
+        "-Nu",
+        vimrcPath,
+        "-n",
+        "-es",
+        sourceFile,
+        "-c",
+        "call writefile([json_encode(CurrentFileSymbols())], $VIM_TEST_RESULT)",
+        "-c",
+        "qa!",
+      ],
+      {
+        encoding: "utf8",
+        env: { ...process.env, VIM_TEST_RESULT: resultPath },
+      },
+    );
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const symbols = /** @type {string[]} */ (JSON.parse(readFileSync(resultPath, "utf8")));
+    expect(symbols.some((symbol) => symbol.includes("test         bookmark"))).toBe(true);
+    expect(symbols.some((symbol) => symbol.includes("test         stores the last response"))).toBe(
+      true,
+    );
+    expect(
+      symbols.some((symbol) => symbol.includes("test         ignores missing responses")),
+    ).toBe(true);
+  });
+
   it("finds methods after a constructor with a typed destructured parameter", () => {
     const sourceFile = join(testDirectory, "emitter.ts");
     const resultPath = join(testDirectory, "symbols.json");

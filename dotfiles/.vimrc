@@ -373,12 +373,13 @@ function! CurrentFileSymbols()
         return []
     endif
     let command = 'ctags --output-format=json --fields=+nK --extras=-F --excmd=number --sort=no -f -'
-    if file =~# '\.js$'
+    if file =~# '\.jsx\?$'
         let test_regex = '--regex-JavaScript=/^[ \t]*(describe|it|test)(\.(only|skip|todo))?[ \t]*\([ \t]*["'']([^"'']+)/\4/t,test/'
         let command .= ' ' . shellescape(test_regex)
     elseif file =~# '\.tsx\?$'
+        let test_regex = '--regex-TypeScript=/^[ \t]*(describe|it|test)(\.(only|skip|todo))?[ \t]*\([ \t]*["'']([^"'']+)/\4/t,test/'
         let method_regex = '--regex-TypeScript=/^  (async[ \t]+)?(#?[A-Za-z_$][A-Za-z0-9_$#]*)[ \t]*\([^)]*\)[ \t]*:[^{]+\{/\2/m,method/'
-        let command .= ' ' . shellescape(method_regex)
+        let command .= ' ' . shellescape(test_regex) . ' ' . shellescape(method_regex)
     endif
     let output = systemlist(command . ' ' . shellescape(file))
     if v:shell_error
