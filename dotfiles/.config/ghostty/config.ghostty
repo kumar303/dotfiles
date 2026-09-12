@@ -2,6 +2,7 @@ theme = Atom One Light
 font-feature = -calt
 mouse-hide-while-typing = true
 keybind = alt+backspace=text:\x17
+keybind = alt+enter=text:\x1b\x0d
 keybind = ctrl+enter=text:\x0f
 keybind = ctrl+tab=text:\x1b[9;5u
 keybind = ctrl+super+arrow_left=text:\x1b[1;7D

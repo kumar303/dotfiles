@@ -26,7 +26,7 @@ if (area === "api" && command === "snapshot") {
   output({ result: { snapshot: state.result.snapshot } });
 } else if (area === "agent" && command === "list") {
   output({ result: { agents: state.result.agents ?? [] } });
-} else if (area === "agent" && command === "prompt") {
+} else if (area === "agent" && ["prompt", "send-keys"].includes(String(command))) {
   output({ result: {} });
 } else if (area === "tab" && command === "list") {
   output({ result: { tabs: state.result.tabs ?? [] } });

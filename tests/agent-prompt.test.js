@@ -108,7 +108,10 @@ qa!
     ]);
     expect(result.options).toContain("--phony");
     expect(result.options).toContain("--print-query");
-    expect(result.options).toContain("--footer=↑/↓ agent  •  enter send  •  esc close");
+    expect(result.options).toContain("--expect=alt-enter");
+    expect(result.options).toContain(
+      "--footer=↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close",
+    );
     expect(result.options).toContain(
       "--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97",
     );
@@ -181,13 +184,32 @@ qa!
       `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
 normal! 2G
 let g:agent_prompt_context = AgentPromptContext(CaptureAgentPromptContext(0))
-call AgentPromptResults(['Explain this', "w1:p1\tpi  idle"])
+call AgentPromptResults(['Explain this', '', "w1:p1\tpi  idle"])
 qa!
 `,
       { VIM_TEST_SOURCE: sourcePath },
     );
 
     expect(herdrCalls()).toEqual([["agent", "prompt", "w1:p1", "example.ts:2\n\nExplain this"]]);
+  });
+
+  it("sends option-enter as a follow-up", () => {
+    const sourcePath = join(testDirectory, "example.ts");
+    writeFileSync(sourcePath, "alpha\n");
+
+    runVim(
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+let g:agent_prompt_context = "example.ts:1\\n> alpha"
+call AgentPromptResults(['Check this next', 'alt-enter', "w1:p3\treviewer  working"])
+qa!
+`,
+      { VIM_TEST_SOURCE: sourcePath },
+    );
+
+    expect(herdrCalls()).toEqual([
+      ["pane", "send-text", "w1:p3", "example.ts:1\n> alpha\n\nCheck this next"],
+      ["agent", "send-keys", "w1:p3", "alt+enter"],
+    ]);
   });
 
   it("sends to the agent selected with fzf navigation", () => {
@@ -197,7 +219,7 @@ qa!
     runVim(
       `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
 let g:agent_prompt_context = "example.ts:1\\n> alpha"
-call AgentPromptResults(['Review this', "w1:p3\treviewer  idle"])
+call AgentPromptResults(['Review this', '', "w1:p3\treviewer  idle"])
 qa!
 `,
       { VIM_TEST_SOURCE: sourcePath },

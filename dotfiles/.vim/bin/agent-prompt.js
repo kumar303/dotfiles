@@ -2,7 +2,7 @@
 // @ts-check
 
 import { readFileSync, rmSync } from "node:fs";
-import { listWorkspaceAgents, promptAgent } from "./herdr-agent.js";
+import { followUpAgent, listWorkspaceAgents, promptAgent } from "./herdr-agent.js";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -11,10 +11,14 @@ if (command === "list") {
   if (!workspaceId) throw new Error("usage: agent-prompt.js list WORKSPACE_ID");
   process.stdout.write(`${JSON.stringify(listWorkspaceAgents(workspaceId))}\n`);
 } else if (command === "send") {
-  const [target, promptPath] = args;
-  if (!target || !promptPath) throw new Error("usage: agent-prompt.js send TARGET PROMPT_FILE");
+  const [target, promptPath, mode = "steer"] = args;
+  if (!target || !promptPath || !["steer", "follow-up"].includes(mode)) {
+    throw new Error("usage: agent-prompt.js send TARGET PROMPT_FILE [steer|follow-up]");
+  }
   try {
-    promptAgent(target, readFileSync(promptPath, "utf8").replace(/\n$/, ""));
+    const prompt = readFileSync(promptPath, "utf8").replace(/\n$/, "");
+    if (mode === "follow-up") followUpAgent(target, prompt);
+    else promptAgent(target, prompt);
   } finally {
     rmSync(promptPath, { force: true });
   }

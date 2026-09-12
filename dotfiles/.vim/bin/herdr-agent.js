@@ -62,6 +62,16 @@ export function promptAgent(paneId, prompt, run = runHerdr) {
 }
 
 /**
+ * @param {string} paneId
+ * @param {string} prompt
+ * @param {HerdrRunner} [run]
+ */
+export function followUpAgent(paneId, prompt, run = runHerdr) {
+  run(["pane", "send-text", paneId, prompt]);
+  run(["agent", "send-keys", paneId, "alt+enter"]);
+}
+
+/**
  * @param {string[]} args
  * @returns {unknown}
  */

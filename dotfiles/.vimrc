@@ -620,7 +620,8 @@ endfunction
 function! AgentPromptOptions(state)
     return g:fzf_picker_options + [
         \ '--delimiter=\t',
-        \ '--footer=↑/↓ agent  •  enter send  •  esc close',
+        \ '--expect=alt-enter',
+        \ '--footer=↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close',
         \ '--footer-border=none',
         \ '--header=' . a:state.context,
         \ '--header-border=bottom',
@@ -662,16 +663,17 @@ function! AgentPromptExit(code)
 endfunction
 
 function! AgentPromptResults(lines)
-    if len(a:lines) < 2
+    if len(a:lines) < 3
         return
     endif
-    let target = matchstr(a:lines[1], '^[^\t]\+')
+    let mode = a:lines[1] ==# 'alt-enter' ? 'follow-up' : 'steer'
+    let target = matchstr(a:lines[2], '^[^\t]\+')
     let query = a:lines[0]
     let prompt = g:agent_prompt_context . (empty(query) ? '' : "\n\n" . query)
     let prompt_path = tempname()
     call writefile(split(prompt, "\n", 1), prompt_path)
     call setfperm(prompt_path, 'rw-------')
-    let output = AgentPromptCommand(['send', target, prompt_path])
+    let output = AgentPromptCommand(['send', target, prompt_path, mode])
     if v:shell_error
         echoerr empty(output) ? 'Cannot prompt the Herdr agent' : trim(output)
     endif
