@@ -118,9 +118,9 @@ qa!
       "--footer=↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close",
     );
     expect(result.options).toContain(
-      '--preview=printf "↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close"',
+      '--preview=printf "\\n%s" "↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close"',
     );
-    expect(result.options).toContain("--preview-window=down,1,border-none,wrap");
+    expect(result.options).toContain("--preview-window=down,3,border-none,wrap,noinfo");
     expect(result.options).toContain(
       "--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97",
     );
@@ -135,7 +135,7 @@ qa!
 
     runVim(
       `set columns=180 lines=60
-let state = {'context': join(['file.ts:1', '> one', '> two', '> three', '> four', '> five', '> six', '> seven'], "\\n"), 'entries': ["w1:p1\\tplanner  idle", "w1:p2\\treviewer  idle", "w1:p3\\ttester  idle", "w1:p4\\twriter  idle"]}
+let state = {'context': 'file.ts:1', 'entries': ["w1:p1\\tplanner  idle", "w1:p2\\treviewer  idle", "w1:p3\\ttester  idle", "w1:p4\\twriter  idle"]}
 let single = {'actual': AgentPromptPopupWindow(state), 'expected': FileToolLayout()}
 vsplit
 wincmd h
@@ -152,7 +152,7 @@ qa!
     for (const layout of [layouts.single, layouts.left, layouts.right]) {
       expect(layout.actual).toEqual({
         border: layout.expected.border,
-        height: 17,
+        height: 12,
         width: layout.expected.width,
         xoffset: layout.expected.xoffset,
         yoffset: layout.expected.yoffset,
