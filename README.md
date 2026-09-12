@@ -51,13 +51,13 @@ Add this `[include]` section to `.gitconfig`:
 | Herdr | `cmd+opt+backtick`  | Create a terminal tab             |
 | Herdr | `ctrl+cmd+backtick` | Select the next terminal tab      |
 | Herdr | `ctrl+shift+enter`  | Select a workspace                |
-| Herdr | `ctrl+shift+p`      | Prompt an agent in the workspace  |
+| Herdr | `ctrl+opt+p`        | Prompt an agent in the workspace  |
 | Herdr | `cmd+shift+k`       | Close the terminal tab            |
 | Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane |
 
 In the workspace switcher, use `up/down` to navigate, `/` to search, `enter` to select, and `esc` to close.
 
-Press `ctrl+shift+p` from Vim to include the current file and line. Select text first to include it as quoted context.
+Press `ctrl+opt+p` from Vim to include the current file and line. Select text first to include it as quoted context.
 
 ### File navigation
 
