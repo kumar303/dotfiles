@@ -557,12 +557,12 @@ command! Symbols call Symbols()
 
 function! CaptureAgentPromptContext(include_selection)
     if empty($HERDR_PANE_ID)
-        return
+        return ''
     endif
 
     let file = expand('%:p')
     if !filereadable(file)
-        return
+        return ''
     endif
 
     let start = getpos('.')
@@ -591,10 +591,43 @@ function! CaptureAgentPromptContext(include_selection)
     call mkdir(state_dir, 'p', 0700)
     call writefile([json_encode(context)], context_path)
     call setfperm(context_path, 'rw-------')
+    return context_path
+endfunction
+
+function! OpenAgentPrompt(include_selection)
+    let context_path = CaptureAgentPromptContext(a:include_selection)
+    if empty(context_path)
+        return
+    endif
+
+    let herdr = empty($HERDR_BIN_PATH) ? exepath('herdr') : $HERDR_BIN_PATH
+    if empty(herdr)
+        echoerr 'Cannot find Herdr'
+        return
+    endif
+
+    let cwd = get(g:, 'fzf_file_picker_root', getcwd())
+    let args = [
+        \ herdr,
+        \ 'plugin', 'pane', 'open',
+        \ '--plugin', 'kumar303.agent-prompt',
+        \ '--entrypoint', 'prompt',
+        \ '--placement', 'overlay',
+        \ '--workspace', $HERDR_WORKSPACE_ID,
+        \ '--target-pane', $HERDR_PANE_ID,
+        \ '--cwd', cwd,
+        \ '--env', 'HERDR_PROMPT_CONTEXT_FILE=' . context_path,
+        \ ]
+    let output = system(join(map(args, 'shellescape(v:val)'), ' '))
+    if v:shell_error
+        echoerr trim(output)
+    endif
 endfunction
 
 nnoremap <silent> <F13> :call CaptureAgentPromptContext(0)<CR>
 xnoremap <silent> <F13> :<C-u>call CaptureAgentPromptContext(1)<CR>
+nnoremap <silent> <C-a> :call OpenAgentPrompt(0)<CR>
+xnoremap <silent> <C-a> :<C-u>call OpenAgentPrompt(1)<CR>
 
 nnoremap <silent> <C-g> :call OpenCurrentFileOnGitHub()<CR>
 nnoremap <silent> <C-l> :Symbols<CR>

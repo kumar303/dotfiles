@@ -47,11 +47,6 @@ type = "plugin_action"
 command = "kumar303.workspace-switcher.open"
 
 [[keys.command]]
-key = "ctrl+a"
-type = "plugin_action"
-command = "kumar303.agent-prompt.open"
-
-[[keys.command]]
 key = "cmd+alt+backtick"
 type = "shell"
 command = "herdr tab create --workspace \"$HERDR_ACTIVE_WORKSPACE_ID\" --cwd \"$HERDR_ACTIVE_PANE_CWD\" --focus"

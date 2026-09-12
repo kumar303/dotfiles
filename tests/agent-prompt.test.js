@@ -1,7 +1,7 @@
 // @ts-check
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -113,6 +113,68 @@ qa!
       line: 2,
       selection: "beta ",
     });
+  });
+
+  it("opens the prompt overlay from Vim with the captured context", () => {
+    const sourcePath = join(testDirectory, "example.ts");
+    const mappingPath = join(testDirectory, "mapping.txt");
+    const scriptPath = join(testDirectory, "open.vim");
+    const stateRoot = join(testDirectory, "state");
+    writeFileSync(sourcePath, "alpha\nbeta\n");
+    writeFileSync(
+      scriptPath,
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+normal! 2G
+call writefile([maparg('<C-a>', 'n')], $VIM_TEST_MAPPING)
+call OpenAgentPrompt(0)
+qa!
+`,
+    );
+
+    const result = spawnSync("vim", ["-Nu", vimrcPath, "-n", "-es", "-S", scriptPath], {
+      cwd: testDirectory,
+      encoding: "utf8",
+      env: {
+        ...pluginEnvironment,
+        HERDR_PANE_ID: "w1:p2",
+        HERDR_TAB_ID: "w1:t1",
+        HERDR_WORKSPACE_ID: "w1",
+        VIM_TEST_MAPPING: mappingPath,
+        VIM_TEST_SOURCE: sourcePath,
+        XDG_STATE_HOME: stateRoot,
+      },
+    });
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(readFileSync(mappingPath, "utf8")).toContain("OpenAgentPrompt(0)");
+    expect(herdrCalls()).toEqual([
+      [
+        "plugin",
+        "pane",
+        "open",
+        "--plugin",
+        "kumar303.agent-prompt",
+        "--entrypoint",
+        "prompt",
+        "--placement",
+        "overlay",
+        "--workspace",
+        "w1",
+        "--target-pane",
+        "w1:p2",
+        "--cwd",
+        realpathSync(testDirectory),
+        "--env",
+        `HERDR_PROMPT_CONTEXT_FILE=${join(
+          stateRoot,
+          "herdr",
+          "plugins",
+          "kumar303.agent-prompt",
+          "context-w1_p2.json",
+        )}`,
+      ],
+    ]);
   });
 
   it("asks Vim for context before it opens an overlay", () => {
