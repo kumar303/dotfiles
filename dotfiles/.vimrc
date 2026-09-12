@@ -632,6 +632,35 @@ function! AgentPromptOptions(state)
         \ ]
 endfunction
 
+function! AgentPromptMarkerPath()
+    if !empty($HERDR_SPLIT_VIM_PROMPT_MARKER)
+        return $HERDR_SPLIT_VIM_PROMPT_MARKER
+    endif
+    let state_directory = empty($HERDR_SPLIT_VIM_STATE_DIR)
+        \ ? (empty($XDG_STATE_HOME) ? expand('~/.local/state') : $XDG_STATE_HOME) . '/herdr/plugins/kumar303.split-vim-above'
+        \ : $HERDR_SPLIT_VIM_STATE_DIR
+    let workspace = substitute($HERDR_WORKSPACE_ID, '[^A-Za-z0-9_.-]', '_', 'g')
+    let tab = substitute($HERDR_TAB_ID, '[^A-Za-z0-9_.-]', '_', 'g')
+    return state_directory . '/agent-prompts/' . workspace . '__' . tab
+endfunction
+
+function! ActivateAgentPrompt()
+    let g:agent_prompt_marker = AgentPromptMarkerPath()
+    call mkdir(fnamemodify(g:agent_prompt_marker, ':h'), 'p', 0700)
+    call writefile(['active'], g:agent_prompt_marker)
+endfunction
+
+function! RemoveAgentPromptMarker(timer)
+    if exists('g:agent_prompt_marker')
+        call delete(g:agent_prompt_marker)
+        unlet g:agent_prompt_marker
+    endif
+endfunction
+
+function! AgentPromptExit(code)
+    call timer_start(0, function('RemoveAgentPromptMarker'))
+endfunction
+
 function! AgentPromptResults(lines)
     if len(a:lines) < 2
         return
@@ -668,7 +697,9 @@ function! OpenAgentPrompt(include_selection)
         return
     endif
     let g:agent_prompt_context = state.context
+    call ActivateAgentPrompt()
     call fzf#run(fzf#wrap('agent-prompt', {
+        \ 'exit': function('AgentPromptExit'),
         \ 'options': AgentPromptOptions(state),
         \ 'sink*': function('AgentPromptResults'),
         \ 'source': state.entries,

@@ -58,6 +58,10 @@ describe("split-vim-above", () => {
       "/tmp/a dir",
       "--label",
       "vim",
+      "--env",
+      `HERDR_SPLIT_VIM_STATE_DIR=${stateDirectory}`,
+      "--env",
+      `HERDR_SPLIT_VIM_PROMPT_MARKER=${join(stateDirectory, "agent-prompts", "w1__w1_t1")}`,
       "--no-focus",
     ]);
     expect(herdrCalls()).toContainEqual(["pane", "run", "w1:p101", "vim", "/tmp/a dir"]);
@@ -101,28 +105,25 @@ describe("split-vim-above", () => {
 
   it("waits for an open fzf prompt to abort before it sends the layout command", () => {
     const vimState = layoutState([[11, "/tmp/project/a.js"]]);
+    const agentPromptMarker = join(stateDirectory, "agent-prompts", "w1__w1_t1");
+    mkdirSync(dirname(agentPromptMarker), { recursive: true });
+    writeFileSync(agentPromptMarker, "active\n");
     setPanes([sourcePane({ cwd: "/tmp/project" })]);
     runScript();
-    setProcessNames(["fzf", "vim"]);
     clearHerdrCalls();
 
-    runScript({ vimState });
+    runScript({ vimState, agentPromptMarker });
 
     const calls = herdrCalls();
     const escapeIndex = calls.findIndex(
       (args) => args[0] === "pane" && args[1] === "send-keys" && args[3] === "esc",
     );
-    const processIndexes = calls.flatMap((args, index) =>
-      args[0] === "pane" && args[1] === "process-info" ? [index] : [],
-    );
     const captureIndex = calls.findIndex(
       (args) =>
         args[0] === "pane" && args[1] === "send-text" && args[3]?.startsWith(":call writefile("),
     );
-    expect(processIndexes).toHaveLength(2);
-    expect(escapeIndex).toBeLessThan(processIndexes[0]);
-    expect(processIndexes[0]).toBeLessThan(processIndexes[1]);
-    expect(processIndexes[1]).toBeLessThan(captureIndex);
+    expect(escapeIndex).toBeLessThan(captureIndex);
+    expect(herdrCommandCalls("process-info")).toHaveLength(0);
   });
 
   it("starts a new Vim process with the remembered split files and layout", () => {
@@ -438,15 +439,8 @@ function setPanes(panes) {
   writeFileSync(panesPath, `${JSON.stringify({ result: { panes, process_name: "vim" } })}\n`);
 }
 
-/** @param {string[]} processNames */
-function setProcessNames(processNames) {
-  const state = JSON.parse(readFileSync(panesPath, "utf8"));
-  state.result.process_names = processNames;
-  writeFileSync(panesPath, `${JSON.stringify(state)}\n`);
-}
-
 /**
- * @param {{paneId?: string, filePath?: string, vimState?: VimState}} [options]
+ * @param {{paneId?: string, filePath?: string, vimState?: VimState, agentPromptMarker?: string}} [options]
  */
 function runScript(options = {}) {
   const args = options.filePath ? ["--file", options.filePath] : [];
@@ -460,6 +454,7 @@ function runScript(options = {}) {
       HERDR_MOCK_COUNTER: counterPath,
       HERDR_MOCK_LOG: herdrLogPath,
       HERDR_MOCK_PANES: panesPath,
+      HERDR_MOCK_AGENT_PROMPT_MARKER: options.agentPromptMarker ?? "",
       HERDR_MOCK_VIM_LAYOUT: options.vimState ? JSON.stringify(options.vimState) : "",
       HOME: testDirectory,
     },

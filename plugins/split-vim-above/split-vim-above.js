@@ -27,7 +27,6 @@ import { join, resolve } from "node:path";
 /** @typedef {{result: {pane: Pane}}} PaneResponse */
 /** @typedef {{result: {root_pane: Pane}}} TabCreateResponse */
 /** @typedef {{result: {move_result: {pane: Pane}}}} PaneMoveResponse */
-/** @typedef {{result: {process_info: {foreground_processes: Array<{name?: string, argv0?: string}>}}}} PaneProcessInfoResponse */
 /** @typedef {{pane_id: string, terminal_id: string}} PaneMarker */
 /** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
 /** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
@@ -141,6 +140,17 @@ function acquireLock(lockDirectory) {
 function vimLayoutPath(workspaceId) {
   const id = createHash("sha256").update(workspaceId).digest("hex").slice(0, 16);
   return join(vimLayoutDirectory, `${id}.json`);
+}
+
+/** @param {string} value */
+function safeStateName(value) {
+  return value.replace(/[^A-Za-z0-9_.-]/g, "_");
+}
+
+/** @param {Pane} pane */
+function agentPromptMarkerPath(pane) {
+  const scope = `${safeStateName(pane.workspace_id)}__${safeStateName(pane.tab_id)}`;
+  return join(pluginStateDirectory, "agent-prompts", scope);
 }
 
 /** @param {Pane} pane */
@@ -330,6 +340,10 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
       sourcePane.cwd,
       "--label",
       "vim",
+      "--env",
+      `HERDR_SPLIT_VIM_STATE_DIR=${pluginStateDirectory}`,
+      "--env",
+      `HERDR_SPLIT_VIM_PROMPT_MARKER=${agentPromptMarkerPath(sourcePane)}`,
       "--no-focus",
     ])
   );
@@ -359,28 +373,15 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
   }
 }
 
-/** @param {string} paneId */
-function waitForVimInput(paneId) {
+/** @param {string} path */
+function waitForRemoval(path) {
   const waiter = new Int32Array(new SharedArrayBuffer(4));
   const deadline = Date.now() + 2_000;
   while (Date.now() < deadline) {
-    const response = /** @type {PaneProcessInfoResponse | null} */ (
-      runHerdr(["pane", "process-info", "--pane", paneId], { allowFailure: true })
-    );
-    const processes = response?.result?.process_info?.foreground_processes;
-    if (
-      Array.isArray(processes) &&
-      processes.some((process) =>
-        [process.name, process.argv0].some(
-          (name) => typeof name === "string" && name.split("/").at(-1)?.toLowerCase() === "vim",
-        ),
-      )
-    ) {
-      return;
-    }
+    if (!existsSync(path)) return;
     Atomics.wait(waiter, 0, 0, 25);
   }
-  throw new Error("Vim did not regain terminal input after Escape; the pane remains open");
+  throw new Error("The Vim agent prompt did not close after Escape; the pane remains open");
 }
 
 /** @param {Pane} pane @param {string} layoutPath */
@@ -388,8 +389,10 @@ function saveLayoutAndClose(pane, layoutPath) {
   const capturePath = `${layoutPath}.capture.${process.pid}`;
   rmSync(capturePath, { force: true });
   const command = `:call writefile([json_encode({'layout': winlayout(), 'focused': win_getid(), 'windows': map(getwininfo(), '{"id": v:val.winid, "file": fnamemodify(bufname(v:val.bufnr), ":p"), "view": {"lnum": getcurpos(v:val.winid)[1], "col": getcurpos(v:val.winid)[2] - 1, "topline": v:val.topline, "leftcol": v:val.leftcol}}')})], '${vimSingleQuoted(capturePath)}')`;
+  const agentPromptMarker = agentPromptMarkerPath(pane);
+  const agentPromptActive = existsSync(agentPromptMarker);
   runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
-  waitForVimInput(pane.pane_id);
+  if (agentPromptActive) waitForRemoval(agentPromptMarker);
   runHerdr(["pane", "send-text", pane.pane_id, command]);
   runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
 

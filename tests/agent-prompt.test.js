@@ -149,6 +149,29 @@ qa!
     }
   });
 
+  it("marks an active overlay until fzf exits", () => {
+    const resultPath = join(testDirectory, "active-marker.json");
+
+    runVim(
+      `let $HERDR_SPLIT_VIM_STATE_DIR = $VIM_TEST_STATE
+call ActivateAgentPrompt()
+let marker = g:agent_prompt_marker
+let active = filereadable(marker)
+call AgentPromptExit(130)
+sleep 10m
+call writefile([json_encode({'active': active, 'closed': !filereadable(marker), 'marker': marker})], $VIM_TEST_RESULT)
+qa!
+`,
+      { VIM_TEST_RESULT: resultPath, VIM_TEST_STATE: join(testDirectory, "state") },
+    );
+
+    expect(JSON.parse(readFileSync(resultPath, "utf8"))).toEqual({
+      active: 1,
+      closed: 1,
+      marker: join(testDirectory, "state", "agent-prompts", "w1__w1_t1"),
+    });
+  });
+
   it("auto-selects the sole agent and sends context plus typed text", () => {
     writeHerdrState([agent("w1:p1", "w1", "pi")]);
     const sourcePath = join(testDirectory, "example.ts");

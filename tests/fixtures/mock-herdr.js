@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // @ts-check
 
-import { appendFileSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 
 const logPath = requiredEnvironment("HERDR_MOCK_LOG");
 const panesPath = requiredEnvironment("HERDR_MOCK_PANES");
@@ -14,7 +15,6 @@ appendFileSync(logPath, `${JSON.stringify(args)}\n`);
  *   agents?: Array<Record<string, unknown>>,
  *   panes: Array<Record<string, unknown>>,
  *   process_name?: string,
- *   process_names?: string[],
  *   snapshot?: Record<string, unknown>,
  *   tabs?: Array<Record<string, unknown>>
  * }}}
@@ -81,18 +81,15 @@ function handlePaneCommand(command) {
     case "current":
       process.exitCode = 1;
       break;
-    case "process-info": {
-      const processName = state.result.process_names?.shift() ?? state.result.process_name ?? "zsh";
-      if (state.result.process_names) saveState(state);
+    case "process-info":
       output({
         result: {
           process_info: {
-            foreground_processes: [{ name: processName }],
+            foreground_processes: [{ name: state.result.process_name ?? "zsh" }],
           },
         },
       });
       break;
-    }
     case "split": {
       const sourcePaneId = option(args, "--pane");
       const cwd = option(args, "--cwd");
@@ -149,6 +146,10 @@ function handlePaneCommand(command) {
       break;
     }
     case "send-text": {
+      const agentPromptMarker = process.env.HERDR_MOCK_AGENT_PROMPT_MARKER;
+      if (agentPromptMarker && existsSync(agentPromptMarker)) {
+        fail("sent text before the agent prompt closed");
+      }
       const layout = process.env.HERDR_MOCK_VIM_LAYOUT;
       const statePath = String(args[3]).match(/\], '((?:''|[^'])+)'\)$/)?.[1];
       if (layout && statePath) writeFileSync(statePath.replaceAll("''", "'"), `${layout}\n`);
@@ -159,6 +160,19 @@ function handlePaneCommand(command) {
       const context = process.env.HERDR_MOCK_VIM_CONTEXT;
       const stateDirectory = process.env.HERDR_PLUGIN_STATE_DIR;
       const paneId = args[2];
+      const agentPromptMarker = process.env.HERDR_MOCK_AGENT_PROMPT_MARKER;
+      if (agentPromptMarker && args[3] === "esc") {
+        const remover = spawn(
+          process.execPath,
+          [
+            "-e",
+            "setTimeout(() => require('node:fs').rmSync(process.argv[1], {force: true}), 200)",
+            agentPromptMarker,
+          ],
+          { detached: true, stdio: "ignore" },
+        );
+        remover.unref();
+      }
       if (context && stateDirectory && paneId && args[3] === "f13") {
         const safePaneId = paneId.replace(/[^A-Za-z0-9_.-]/g, "_");
         writeFileSync(`${stateDirectory}/context-${safePaneId}.json`, `${context}\n`);
