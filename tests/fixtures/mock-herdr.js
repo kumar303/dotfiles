@@ -9,12 +9,23 @@ const counterPath = requiredEnvironment("HERDR_MOCK_COUNTER");
 const args = process.argv.slice(2);
 appendFileSync(logPath, `${JSON.stringify(args)}\n`);
 
-/** @type {{result: {panes: Array<Record<string, unknown>>, snapshot?: Record<string, unknown>}}} */
+/**
+ * @type {{result: {
+ *   agents?: Array<Record<string, unknown>>,
+ *   panes: Array<Record<string, unknown>>,
+ *   process_name?: string,
+ *   snapshot?: Record<string, unknown>
+ * }}}
+ */
 const state = JSON.parse(readFileSync(panesPath, "utf8"));
 const [area, command] = args;
 
 if (area === "api" && command === "snapshot") {
   output({ result: { snapshot: state.result.snapshot } });
+} else if (area === "agent" && command === "list") {
+  output({ result: { agents: state.result.agents ?? [] } });
+} else if (area === "agent" && command === "prompt") {
+  output({ result: {} });
 } else if (area === "tab" && command === "create") {
   const next = nextId();
   const workspaceId = option(args, "--workspace") || "w1";
@@ -59,6 +70,15 @@ function handlePaneCommand(command) {
     }
     case "current":
       process.exitCode = 1;
+      break;
+    case "process-info":
+      output({
+        result: {
+          process_info: {
+            foreground_processes: [{ name: state.result.process_name ?? "zsh" }],
+          },
+        },
+      });
       break;
     case "split": {
       const sourcePaneId = option(args, "--pane");
@@ -122,8 +142,18 @@ function handlePaneCommand(command) {
       output({ result: {} });
       break;
     }
+    case "send-keys": {
+      const context = process.env.HERDR_MOCK_VIM_CONTEXT;
+      const stateDirectory = process.env.HERDR_PLUGIN_STATE_DIR;
+      const paneId = args[2];
+      if (context && stateDirectory && paneId && args[3] === "f13") {
+        const safePaneId = paneId.replace(/[^A-Za-z0-9_.-]/g, "_");
+        writeFileSync(`${stateDirectory}/context-${safePaneId}.json`, `${context}\n`);
+      }
+      output({ result: {} });
+      break;
+    }
     case "focus":
-    case "send-keys":
     case "swap":
     case "run":
       output({ result: {} });

@@ -555,6 +555,47 @@ function! Symbols()
 endfunction
 command! Symbols call Symbols()
 
+function! CaptureAgentPromptContext(include_selection)
+    if empty($HERDR_PANE_ID)
+        return
+    endif
+
+    let file = expand('%:p')
+    if !filereadable(file)
+        return
+    endif
+
+    let start = getpos('.')
+    let finish = start
+    let selection = ''
+    if a:include_selection
+        let start = getpos('v')
+        let finish = getpos('.')
+        let selection = join(getregion(start, finish), "\n")
+    endif
+
+    let root = resolve(get(g:, 'fzf_file_picker_root', getcwd()))
+    let resolved_file = resolve(file)
+    let relative_file = stridx(resolved_file, root . '/') == 0
+        \ ? strpart(resolved_file, strlen(root) + 1)
+        \ : fnamemodify(file, ':.')
+    let state_root = empty($XDG_STATE_HOME) ? expand('~/.local/state') : $XDG_STATE_HOME
+    let state_dir = state_root . '/herdr/plugins/kumar303.agent-prompt'
+    let pane_id = substitute($HERDR_PANE_ID, '[^A-Za-z0-9_.-]', '_', 'g')
+    let context_path = state_dir . '/context-' . pane_id . '.json'
+    let context = {
+        \ 'file': relative_file,
+        \ 'line': min([start[1], finish[1]]),
+        \ 'selection': selection,
+        \ }
+    call mkdir(state_dir, 'p', 0700)
+    call writefile([json_encode(context)], context_path)
+    call setfperm(context_path, 'rw-------')
+endfunction
+
+nnoremap <silent> <F13> :call CaptureAgentPromptContext(0)<CR>
+xnoremap <silent> <F13> :<C-u>call CaptureAgentPromptContext(1)<CR>
+
 nnoremap <silent> <C-g> :call OpenCurrentFileOnGitHub()<CR>
 nnoremap <silent> <C-l> :Symbols<CR>
 nnoremap <silent> <C-p> :Files<CR>

@@ -1,0 +1,20 @@
+id = "kumar303.agent-prompt"
+name = "Agent Prompt"
+version = "0.1.0"
+min_herdr_version = "0.8.2"
+description = "Prompt an agent in the current workspace"
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "open"
+title = "Prompt workspace agent"
+contexts = ["pane"]
+command = ["node", "open.js"]
+
+[[panes]]
+id = "prompt"
+title = "Prompt Agent"
+placement = "popup"
+width = "80%"
+height = "60%"
+command = ["node", "prompt.js"]
