@@ -118,7 +118,7 @@ qa!
       "--footer=↑/↓ agent • enter steer • opt+enter follow-up • esc close",
     );
     expect(result.options).toContain(
-      '--preview=printf "\\n%s" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
+      '--preview=printf "\\n\\n%s" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
     );
     expect(result.options).toContain("--preview-window=down,3,border-none,wrap,noinfo");
     expect(result.options).toContain(

@@ -630,7 +630,7 @@ function! AgentPromptOptions(state)
         \ '--header-border=bottom',
         \ '--no-sort',
         \ '--phony',
-        \ '--preview=printf "\n%s" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
+        \ '--preview=printf "\n\n%s" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
         \ '--preview-window=down,3,border-none,wrap,noinfo',
         \ '--print-query',
         \ '--prompt=Prompt> ',
