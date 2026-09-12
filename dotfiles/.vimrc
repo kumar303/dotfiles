@@ -579,16 +579,12 @@ function! CaptureAgentPromptContext(include_selection)
     let relative_file = stridx(resolved_file, root . '/') == 0
         \ ? strpart(resolved_file, strlen(root) + 1)
         \ : fnamemodify(file, ':.')
-    let state_root = empty($XDG_STATE_HOME) ? expand('~/.local/state') : $XDG_STATE_HOME
-    let state_dir = state_root . '/herdr/plugins/kumar303.agent-prompt'
-    let pane_id = substitute($HERDR_PANE_ID, '[^A-Za-z0-9_.-]', '_', 'g')
-    let context_path = state_dir . '/context-' . pane_id . '.json'
+    let context_path = tempname() . '.json'
     let context = {
         \ 'file': relative_file,
         \ 'line': min([start[1], finish[1]]),
         \ 'selection': selection,
         \ }
-    call mkdir(state_dir, 'p', 0700)
     call writefile([json_encode(context)], context_path)
     call setfperm(context_path, 'rw-------')
     return context_path
@@ -597,33 +593,45 @@ endfunction
 function! OpenAgentPrompt(include_selection)
     let context_path = CaptureAgentPromptContext(a:include_selection)
     if empty(context_path)
-        return
+        return 0
     endif
 
     let herdr = empty($HERDR_BIN_PATH) ? exepath('herdr') : $HERDR_BIN_PATH
     if empty(herdr)
         echoerr 'Cannot find Herdr'
-        return
+        return 0
     endif
 
-    let cwd = get(g:, 'fzf_file_picker_root', getcwd())
-    let args = [
-        \ herdr,
-        \ 'plugin', 'pane', 'open',
-        \ '--plugin', 'kumar303.agent-prompt',
-        \ '--entrypoint', 'prompt',
-        \ '--placement', 'overlay',
-        \ '--cwd', cwd,
-        \ '--env', 'HERDR_PROMPT_CONTEXT_FILE=' . context_path,
-        \ ]
-    let output = system(join(map(args, 'shellescape(v:val)'), ' '))
-    if v:shell_error
-        echoerr trim(output)
+    let command = get(g:, 'agent_prompt_command', [
+        \ exepath('node'),
+        \ g:vim_dotfiles_directory . '/.vim/bin/agent-prompt.js',
+        \ ])
+    let buffer = term_start(command, {
+        \ 'hidden': 1,
+        \ 'term_finish': 'close',
+        \ 'env': {
+        \     'HERDR_BIN_PATH': herdr,
+        \     'HERDR_PROMPT_CONTEXT_FILE': context_path,
+        \     'HERDR_PROMPT_WORKSPACE_ID': $HERDR_WORKSPACE_ID,
+        \ },
+        \ })
+    if buffer <= 0
+        echoerr 'Cannot start the agent prompt'
+        return 0
     endif
+
+    let width = max([20, float2nr(&columns * 0.8)])
+    let height = max([8, float2nr((&lines - &cmdheight) * 0.6)])
+    return popup_create(buffer, {
+        \ 'border': [],
+        \ 'maxheight': height,
+        \ 'maxwidth': width,
+        \ 'minheight': height,
+        \ 'minwidth': width,
+        \ 'padding': [0, 1, 0, 1],
+        \ })
 endfunction
 
-nnoremap <silent> <F13> :call CaptureAgentPromptContext(0)<CR>
-xnoremap <silent> <F13> :<C-u>call CaptureAgentPromptContext(1)<CR>
 nnoremap <silent> <C-a> :call OpenAgentPrompt(0)<CR>
 xnoremap <silent> <C-a> :<C-u>call OpenAgentPrompt(1)<CR>
 

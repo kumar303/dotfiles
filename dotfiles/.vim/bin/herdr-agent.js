@@ -7,7 +7,6 @@ import { execFileSync } from "node:child_process";
 /**
  * @typedef {object} AgentInfo
  * @property {string} paneId
- * @property {string} workspaceId
  * @property {string} label
  * @property {string} status
  */
@@ -23,17 +22,12 @@ export function listWorkspaceAgents(workspaceId, run = runHerdr) {
   if (!Array.isArray(agents)) throw new Error("Herdr agent list lacks agents");
 
   return agents.flatMap((agent) => {
-    if (
-      agent?.workspace_id !== workspaceId ||
-      typeof agent?.pane_id !== "string" ||
-      typeof agent?.workspace_id !== "string"
-    ) {
+    if (agent?.workspace_id !== workspaceId || typeof agent?.pane_id !== "string") {
       return [];
     }
     return [
       {
         paneId: agent.pane_id,
-        workspaceId: agent.workspace_id,
         label: firstString(agent.name, agent.display_agent, agent.agent, agent.pane_id),
         status: typeof agent.agent_status === "string" ? agent.agent_status : "unknown",
       },
@@ -48,55 +42,6 @@ export function listWorkspaceAgents(workspaceId, run = runHerdr) {
  */
 export function promptAgent(paneId, prompt, run = runHerdr) {
   run(["agent", "prompt", paneId, prompt]);
-}
-
-/**
- * @param {string} paneId
- * @param {HerdrRunner} [run]
- * @returns {boolean}
- */
-export function paneRunsVim(paneId, run = runHerdr) {
-  const response = /** @type {any} */ (run(["pane", "process-info", "--pane", paneId]));
-  const processes = response?.result?.process_info?.foreground_processes;
-  return (
-    Array.isArray(processes) &&
-    processes.some(
-      (process) =>
-        typeof process?.name === "string" && /^(?:g?vim|nvim)(?:diff)?$/i.test(process.name),
-    )
-  );
-}
-
-/**
- * @param {string} paneId
- * @param {HerdrRunner} [run]
- */
-export function requestVimContext(paneId, run = runHerdr) {
-  run(["pane", "send-keys", paneId, "f13"]);
-}
-
-/**
- * @param {{cwd: string, contextFile?: string}} options
- * @param {HerdrRunner} [run]
- */
-export function openPromptOverlay(options, run = runHerdr) {
-  const args = [
-    "plugin",
-    "pane",
-    "open",
-    "--plugin",
-    "kumar303.agent-prompt",
-    "--entrypoint",
-    "prompt",
-    "--placement",
-    "overlay",
-    "--cwd",
-    options.cwd,
-  ];
-  if (options.contextFile) {
-    args.push("--env", `HERDR_PROMPT_CONTEXT_FILE=${options.contextFile}`);
-  }
-  run(args);
 }
 
 /**

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // @ts-check
 
-import "./runtime.js";
+import "./unblessed-runtime.js";
 import { Box, Screen, escape } from "@unblessed/core";
 import { readFileSync, rmSync } from "node:fs";
-import { listWorkspaceAgents, promptAgent } from "./herdr.js";
+import { listWorkspaceAgents, promptAgent } from "./herdr-agent.js";
 
 /**
  * @typedef {object} PromptContext
@@ -14,7 +14,7 @@ import { listWorkspaceAgents, promptAgent } from "./herdr.js";
  */
 
 const KEY_LEGEND = "↑/↓ agent  •  enter send  •  esc close";
-const workspaceId = requiredEnvironment("HERDR_ACTIVE_WORKSPACE_ID");
+const workspaceId = requiredEnvironment("HERDR_PROMPT_WORKSPACE_ID");
 const agents = listWorkspaceAgents(workspaceId);
 const initialPrompt = readInitialPrompt();
 let prompt = initialPrompt ? `${initialPrompt}\n\n` : "";

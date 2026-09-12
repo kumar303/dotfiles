@@ -1,14 +1,14 @@
 // @ts-check
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const pluginDirectory = join(repositoryRoot, "plugins", "agent-prompt");
+const promptScriptPath = join(repositoryRoot, "dotfiles", ".vim", "bin", "agent-prompt.js");
 const vimrcPath = join(repositoryRoot, "dotfiles", ".vimrc");
 const mockHerdrPath = join(repositoryRoot, "tests", "fixtures", "mock-herdr.js");
 const mockTerminalPath = join(repositoryRoot, "tests", "fixtures", "mock-terminal.js");
@@ -35,10 +35,8 @@ beforeEach(() => {
   writeHerdrState({ agents: [], panes: [], processName: "zsh" });
   pluginEnvironment = {
     ...process.env,
-    HERDR_ACTIVE_PANE_CWD: testDirectory,
-    HERDR_ACTIVE_PANE_ID: "w1:p2",
-    HERDR_ACTIVE_WORKSPACE_ID: "w1",
     HERDR_BIN_PATH: mockHerdrPath,
+    HERDR_PROMPT_WORKSPACE_ID: "w1",
     HERDR_MOCK_COUNTER: join(testDirectory, "counter"),
     HERDR_MOCK_LOG: herdrLogPath,
     HERDR_MOCK_PANES: herdrStatePath,
@@ -55,11 +53,12 @@ afterEach(() => {
   rmSync(testDirectory, { recursive: true, force: true });
 });
 
-describe("agent-prompt plugin", () => {
+describe("Vim agent prompt", () => {
   it("captures a relative Vim location and optional visual selection", () => {
     const sourceDirectory = join(testDirectory, "src");
     const sourcePath = join(sourceDirectory, "example.ts");
     const normalContextPath = join(testDirectory, "normal-context.json");
+    const visualContextPath = join(testDirectory, "visual-context.json");
     const scriptPath = join(testDirectory, "capture.vim");
     mkdirSync(sourceDirectory);
     writeFileSync(sourcePath, "alpha\nbeta value\ngamma\n");
@@ -67,11 +66,11 @@ describe("agent-prompt plugin", () => {
       scriptPath,
       `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
 normal! 3G
-call CaptureAgentPromptContext(0)
-let context_path = $XDG_STATE_HOME . '/herdr/plugins/kumar303.agent-prompt/context-w1_p2.json'
+let context_path = CaptureAgentPromptContext(0)
 call writefile(readfile(context_path), $VIM_TEST_NORMAL_CONTEXT)
 normal! 2G0v4l
-call CaptureAgentPromptContext(1)
+let context_path = CaptureAgentPromptContext(1)
+call writefile(readfile(context_path), $VIM_TEST_VISUAL_CONTEXT)
 qa!
 `,
     );
@@ -84,25 +83,13 @@ qa!
         HERDR_PANE_ID: "w1:p2",
         VIM_TEST_NORMAL_CONTEXT: normalContextPath,
         VIM_TEST_SOURCE: sourcePath,
-        XDG_STATE_HOME: join(testDirectory, "state"),
+        VIM_TEST_VISUAL_CONTEXT: visualContextPath,
       },
     });
 
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    const context = JSON.parse(
-      readFileSync(
-        join(
-          testDirectory,
-          "state",
-          "herdr",
-          "plugins",
-          "kumar303.agent-prompt",
-          "context-w1_p2.json",
-        ),
-        "utf8",
-      ),
-    );
+    const context = JSON.parse(readFileSync(visualContextPath, "utf8"));
     expect(JSON.parse(readFileSync(normalContextPath, "utf8"))).toEqual({
       file: "src/example.ts",
       line: 3,
@@ -115,18 +102,19 @@ qa!
     });
   });
 
-  it("opens the prompt overlay from Vim with the captured context", () => {
+  it("opens a terminal popup from Vim with the captured context", () => {
     const sourcePath = join(testDirectory, "example.ts");
-    const mappingPath = join(testDirectory, "mapping.txt");
+    const resultPath = join(testDirectory, "popup.json");
     const scriptPath = join(testDirectory, "open.vim");
-    const stateRoot = join(testDirectory, "state");
     writeFileSync(sourcePath, "alpha\nbeta\n");
     writeFileSync(
       scriptPath,
       `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
 normal! 2G
-call writefile([maparg('<C-a>', 'n')], $VIM_TEST_MAPPING)
-call OpenAgentPrompt(0)
+let g:agent_prompt_command = ['sh', '-c', 'sleep 1']
+let popup = OpenAgentPrompt(0)
+call writefile([json_encode({'mapping': maparg('<C-a>', 'n'), 'popup': popup_getpos(popup)})], $VIM_TEST_RESULT)
+call popup_close(popup)
 qa!
 `,
     );
@@ -139,69 +127,19 @@ qa!
         HERDR_PANE_ID: "w1:p2",
         HERDR_TAB_ID: "w1:t1",
         HERDR_WORKSPACE_ID: "w1",
-        VIM_TEST_MAPPING: mappingPath,
+        VIM_TEST_RESULT: resultPath,
         VIM_TEST_SOURCE: sourcePath,
-        XDG_STATE_HOME: stateRoot,
       },
     });
 
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(readFileSync(mappingPath, "utf8")).toContain("OpenAgentPrompt(0)");
-    expect(herdrCalls()).toEqual([
-      [
-        "plugin",
-        "pane",
-        "open",
-        "--plugin",
-        "kumar303.agent-prompt",
-        "--entrypoint",
-        "prompt",
-        "--placement",
-        "overlay",
-        "--cwd",
-        realpathSync(testDirectory),
-        "--env",
-        `HERDR_PROMPT_CONTEXT_FILE=${join(
-          stateRoot,
-          "herdr",
-          "plugins",
-          "kumar303.agent-prompt",
-          "context-w1_p2.json",
-        )}`,
-      ],
-    ]);
-  });
-
-  it("asks Vim for context before it opens an overlay", () => {
-    writeHerdrState({ agents: [], panes: [], processName: "vim" });
-    pluginEnvironment.HERDR_MOCK_VIM_CONTEXT = JSON.stringify({
-      file: "src/example.ts",
-      line: 2,
-      selection: "beta",
-    });
-
-    runPlugin("open.js");
-
-    expect(herdrCalls()).toEqual([
-      ["pane", "process-info", "--pane", "w1:p2"],
-      ["pane", "send-keys", "w1:p2", "f13"],
-      [
-        "plugin",
-        "pane",
-        "open",
-        "--plugin",
-        "kumar303.agent-prompt",
-        "--entrypoint",
-        "prompt",
-        "--placement",
-        "overlay",
-        "--cwd",
-        testDirectory,
-        "--env",
-        `HERDR_PROMPT_CONTEXT_FILE=${join(stateDirectory, "context-w1_p2.json")}`,
-      ],
-    ]);
+    const state = JSON.parse(readFileSync(resultPath, "utf8"));
+    expect(state.mapping).toContain("OpenAgentPrompt(0)");
+    expect(state.popup.visible).toBe(1);
+    expect(state.popup.width).toBeGreaterThan(0);
+    expect(state.popup.height).toBeGreaterThan(0);
+    expect(herdrCalls()).toEqual([]);
   });
 
   it("auto-selects the sole workspace agent and sends the completed prompt", () => {
@@ -286,21 +224,10 @@ function writeContext(context) {
   pluginEnvironment.HERDR_PROMPT_CONTEXT_FILE = path;
 }
 
-/** @param {string} script */
-function runPlugin(script) {
-  const result = spawnSync(process.execPath, [join(pluginDirectory, script)], {
-    cwd: pluginDirectory,
-    encoding: "utf8",
-    env: pluginEnvironment,
-  });
-  expect(result.stderr).toBe("");
-  expect(result.status).toBe(0);
-}
-
 /** @param {string} input */
 function runPrompt(input) {
-  const result = spawnSync(process.execPath, [join(pluginDirectory, "prompt.js")], {
-    cwd: pluginDirectory,
+  const result = spawnSync(process.execPath, [promptScriptPath], {
+    cwd: testDirectory,
     encoding: "utf8",
     env: pluginEnvironment,
     input,
