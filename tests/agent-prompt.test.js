@@ -91,7 +91,7 @@ qa!
     runVim(
       `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
 let state = AgentPromptState(0)
-call writefile([json_encode({'mapping': maparg('<C-a>', 'n'), 'options': AgentPromptOptions(state), 'state': state, 'termLeft': maparg('<M-Left>', 't'), 'termMapping': maparg('<M-CR>', 't'), 'termRight': maparg('<M-Right>', 't')})], $VIM_TEST_RESULT)
+call writefile([json_encode({'mapping': maparg('<C-a>', 'n'), 'options': AgentPromptOptions(state), 'state': state, 'termBackward': maparg('<M-b>', 't'), 'termForward': maparg('<M-f>', 't'), 'termMapping': maparg('<M-CR>', 't')})], $VIM_TEST_RESULT)
 qa!
 `,
       {
@@ -109,9 +109,10 @@ qa!
     expect(result.options).toContain("--phony");
     expect(result.options).toContain("--print-query");
     expect(result.options).toContain("--expect=ctrl-y");
+    expect(result.options).toContain("--bind=ctrl-q:backward-word,ctrl-x:forward-word");
     expect(result.termMapping).toBe("<C-Y>");
-    expect(result.termLeft).toBe("<Esc>b");
-    expect(result.termRight).toBe("<Esc>f");
+    expect(result.termBackward).toBe("<C-Q>");
+    expect(result.termForward).toBe("<C-X>");
     expect(result.options).toContain(
       "--footer=↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close",
     );

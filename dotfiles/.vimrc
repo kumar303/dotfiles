@@ -6,8 +6,8 @@ if exists('+keyprotocol')
 endif
 
 tnoremap <M-CR> <C-y>
-tnoremap <M-Left> <Esc>b
-tnoremap <M-Right> <Esc>f
+tnoremap <M-b> <C-q>
+tnoremap <M-f> <C-x>
 
 set cursorline
 
@@ -623,6 +623,7 @@ endfunction
 
 function! AgentPromptOptions(state)
     return g:fzf_picker_options + [
+        \ '--bind=ctrl-q:backward-word,ctrl-x:forward-word',
         \ '--delimiter=\t',
         \ '--expect=ctrl-y',
         \ '--footer=↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close',
