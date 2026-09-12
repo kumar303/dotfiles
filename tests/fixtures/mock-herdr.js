@@ -153,7 +153,6 @@ function handlePaneCommand(command) {
       const layout = process.env.HERDR_MOCK_VIM_LAYOUT;
       const statePath = String(args[3]).match(/\], '((?:''|[^'])+)'\)$/)?.[1];
       if (layout && statePath) writeFileSync(statePath.replaceAll("''", "'"), `${layout}\n`);
-      output({ result: {} });
       break;
     }
     case "send-keys": {

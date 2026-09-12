@@ -80,8 +80,8 @@ export function runHerdr(args) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: 10000,
-  });
-  return JSON.parse(output);
+  }).trim();
+  return output ? JSON.parse(output) : {};
 }
 
 /** @param {...unknown} values */
