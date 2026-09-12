@@ -6,6 +6,8 @@ if exists('+keyprotocol')
 endif
 
 tnoremap <M-CR> <C-y>
+tnoremap <M-Left> <Esc>b
+tnoremap <M-Right> <Esc>f
 
 set cursorline
 
