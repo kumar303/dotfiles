@@ -613,8 +613,6 @@ function! OpenAgentPrompt(include_selection)
         \ '--plugin', 'kumar303.agent-prompt',
         \ '--entrypoint', 'prompt',
         \ '--placement', 'overlay',
-        \ '--workspace', $HERDR_WORKSPACE_ID,
-        \ '--target-pane', $HERDR_PANE_ID,
         \ '--cwd', cwd,
         \ '--env', 'HERDR_PROMPT_CONTEXT_FILE=' . context_path,
         \ ]

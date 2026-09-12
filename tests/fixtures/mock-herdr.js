@@ -52,6 +52,12 @@ if (area === "api" && command === "snapshot") {
 } else if (area === "workspace" && ["create", "focus", "rename"].includes(String(command))) {
   output({ result: {} });
 } else if (area === "plugin" && command === "pane" && args[2] === "open") {
+  if (
+    ["overlay", "popup"].includes(String(option(args, "--placement"))) &&
+    (args.includes("--workspace") || args.includes("--target-pane"))
+  ) {
+    fail("overlay and popup plugin panes target the active pane");
+  }
   output({ result: {} });
 } else {
   fail(`unexpected mock invocation: ${args.join(" ")}`);

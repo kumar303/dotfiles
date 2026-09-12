@@ -76,7 +76,7 @@ export function requestVimContext(paneId, run = runHerdr) {
 }
 
 /**
- * @param {{cwd: string, paneId: string, workspaceId: string, contextFile?: string}} options
+ * @param {{cwd: string, contextFile?: string}} options
  * @param {HerdrRunner} [run]
  */
 export function openPromptOverlay(options, run = runHerdr) {
@@ -90,10 +90,6 @@ export function openPromptOverlay(options, run = runHerdr) {
     "prompt",
     "--placement",
     "overlay",
-    "--workspace",
-    options.workspaceId,
-    "--target-pane",
-    options.paneId,
     "--cwd",
     options.cwd,
   ];

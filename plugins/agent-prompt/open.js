@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { openPromptOverlay, paneRunsVim, requestVimContext } from "./herdr.js";
 
 const paneId = requiredEnvironment("HERDR_ACTIVE_PANE_ID");
-const workspaceId = requiredEnvironment("HERDR_ACTIVE_WORKSPACE_ID");
 const cwd = requiredEnvironment("HERDR_ACTIVE_PANE_CWD");
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const contextFile = join(stateDirectory, `context-${safeId(paneId)}.json`);
@@ -19,8 +18,6 @@ if (paneRunsVim(paneId)) {
 
 openPromptOverlay({
   cwd,
-  paneId,
-  workspaceId,
   contextFile: existsSync(contextFile) ? contextFile : undefined,
 });
 
