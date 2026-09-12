@@ -62,7 +62,6 @@ Press `ctrl+a` from Vim to include the current file and line. Select text first 
 
 | Scope | Key        | Action                           |
 | ----- | ---------- | -------------------------------- |
-| Vim   | `ctrl+a`   | Prompt an agent in the workspace |
 | Vim   | `ctrl+p`   | Open a file finder palette       |
 | Vim   | `ctrl+tab` | Switch between open files        |
 | Vim   | `ctrl+l`   | List code symbols in the file    |
@@ -74,6 +73,7 @@ Press `ctrl+a` from Vim to include the current file and line. Select text first 
 
 | Scope | Key                   | Action                             |
 | ----- | --------------------- | ---------------------------------- |
+| Vim   | `ctrl+a`              | Prompt an agent in the workspace   |
 | Vim   | `ctrl+w`, `v/s`       | Open a vertical / horizontal split |
 | Vim   | `ctrl+w`, `c`         | Close the split                    |
 | Vim   | `ctrl+w`, `h/j/k/l`   | Focus the left/down/up/right split |
