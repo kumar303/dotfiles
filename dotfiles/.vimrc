@@ -635,6 +635,7 @@ function! AgentPromptOptions(state)
         \ '--print-query',
         \ '--prompt=Prompt> ',
         \ '--with-nth=2..',
+        \ '--layout=reverse-list',
         \ ]
 endfunction
 

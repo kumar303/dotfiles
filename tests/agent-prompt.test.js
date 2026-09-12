@@ -108,6 +108,7 @@ qa!
     ]);
     expect(result.options).toContain("--phony");
     expect(result.options).toContain("--print-query");
+    expect(result.options.at(-1)).toBe("--layout=reverse-list");
     expect(result.options).toContain("--expect=ctrl-y");
     expect(result.options).toContain("--bind=ctrl-q:backward-word,ctrl-x:forward-word");
     expect(result.termMapping).toBe("<C-Y>");
