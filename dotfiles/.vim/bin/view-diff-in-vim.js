@@ -3,7 +3,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -205,19 +205,22 @@ function parseDiff(diff, root) {
   const signs = [];
   let path = "";
   let oldPath = "";
+  let deletedFile = false;
 
   for (const diffLine of diff.split("\n")) {
     if (diffLine.startsWith("--- ")) {
       oldPath = diffLine.slice(4);
+      deletedFile = false;
       continue;
     }
     if (diffLine.startsWith("+++ ")) {
       path = diffLine.slice(4);
-      if (path === "/dev/null") path = oldPath;
+      deletedFile = path === "/dev/null";
+      if (deletedFile) path = oldPath;
       continue;
     }
     const match = diffLine.match(/^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
-    if (!match || !path || path === "/dev/null") continue;
+    if (!match || !path || deletedFile) continue;
     const oldCount = match[1] === undefined ? 1 : Number(match[1]);
     const newStart = Number(match[2]);
     const newCount = match[3] === undefined ? 1 : Number(match[3]);
@@ -290,6 +293,24 @@ function calculate(root, mode) {
 }
 
 /**
+ * @param {{base?: BranchBase, locations: Location[], signs: Sign[]}} result
+ * @param {string} repository
+ * @param {string} workspace
+ */
+function makeWorkspaceRelative(result, repository, workspace) {
+  /** @param {string} path */
+  const rebase = (path) => relative(workspace, resolve(repository, path));
+  return {
+    ...(result.base ? { base: result.base } : {}),
+    locations: result.locations.map((location) => ({
+      ...location,
+      path: rebase(location.path),
+    })),
+    signs: result.signs.map((sign) => ({ ...sign, path: rebase(sign.path) })),
+  };
+}
+
+/**
  * @param {Location[]} locations
  * @param {string} root
  * @param {string} currentFile
@@ -297,7 +318,10 @@ function calculate(root, mode) {
  */
 function nextPosition(locations, root, currentFile, currentLine) {
   if (locations.length === 0) return 0;
-  const absoluteFile = isAbsolute(currentFile) ? resolve(currentFile) : resolve(root, currentFile);
+  const unresolvedFile = isAbsolute(currentFile)
+    ? resolve(currentFile)
+    : resolve(root, currentFile);
+  const absoluteFile = existsSync(unresolvedFile) ? realpathSync(unresolvedFile) : unresolvedFile;
   const path = relative(root, absoluteFile);
   const after = locations.findIndex(
     (location) => location.path === path && location.line > currentLine,
@@ -321,13 +345,16 @@ function nextPosition(locations, root, currentFile, currentLine) {
  * @returns {View}
  */
 function buildView(workspace, mode, currentFile = "", currentLine = 0) {
-  const root = repositoryRoot(workspace);
-  const result = calculate(root, mode);
+  const workspaceRoot = realpathSync(workspace);
+  const root = repositoryRoot(workspaceRoot);
+  const result = makeWorkspaceRelative(calculate(root, mode), root, workspaceRoot);
   return {
     active: true,
     ...result,
     mode,
-    position: currentFile ? nextPosition(result.locations, root, currentFile, currentLine) : 1,
+    position: currentFile
+      ? nextPosition(result.locations, workspaceRoot, currentFile, currentLine)
+      : 1,
   };
 }
 

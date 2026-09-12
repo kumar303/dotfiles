@@ -1,7 +1,7 @@
 // @ts-check
 
 import { execSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,13 +37,13 @@ function git(command) {
   return execSync(`git ${command}`, { cwd: testDirectory, encoding: "utf8" }).trim();
 }
 
-/** @param {string} body */
-function runVim(body) {
+/** @param {string} body @param {string} [workspace] */
+function runVim(body, workspace = testDirectory) {
   const resultPath = join(stateDirectory, "vim-result.json");
   const scriptPath = join(stateDirectory, "test.vim");
   writeFileSync(scriptPath, `${body}\nqa!\n`);
   const result = spawnSync("vim", ["-Nu", vimrcPath, "-n", "-es", "-S", scriptPath], {
-    cwd: testDirectory,
+    cwd: workspace,
     encoding: "utf8",
     env: {
       ...process.env,
@@ -70,6 +70,29 @@ call writefile([json_encode({'file': expand('%:t'), 'line': line('.'), 'text': g
     expect(result).toMatchObject({ file: "example.js", line: 2, text: "changed" });
     expect(result.line - result.top).toBeLessThanOrEqual(1);
     expect(result.signs).toEqual([expect.objectContaining({ lnum: 2, name: "ViewDiffChange" })]);
+  });
+
+  it("marks files from a workspace nested below the repository root", () => {
+    const workspace = join(testDirectory, "packages", "app");
+    mkdirSync(workspace, { recursive: true });
+    writeFileSync(join(workspace, "nested.js"), "before\n");
+    git("add packages/app/nested.js");
+    git("commit -m nested");
+    writeFileSync(join(workspace, "nested.js"), "after\n");
+
+    const result = runVim(
+      `
+let view = json_decode(ViewDiffCommand(['start', g:fzf_file_picker_root, 'working']))
+call ApplyDiffView(view)
+let placed = sign_getplaced(bufnr(), {'group': 'view-diff-in-vim'})[0].signs
+call writefile([json_encode({'entry': DiffViewEntries(view)[0], 'file': expand('%:t'), 'path': view.locations[0].path, 'signs': placed})], $VIM_TEST_RESULT)
+`,
+      workspace,
+    );
+
+    expect(result).toMatchObject({ file: "nested.js", path: "nested.js" });
+    expect(result.entry.split("\t").at(-1)).toBe("nested.js:1  after");
+    expect(result.signs).toEqual([expect.objectContaining({ lnum: 1, name: "ViewDiffChange" })]);
   });
 
   it("opens the first changed file that still has working-tree contents", () => {

@@ -101,6 +101,25 @@ describe("view-diff-in-vim entrypoint", () => {
     expect(view.position).toBe(2);
   });
 
+  it("reports paths relative to a nested workspace", () => {
+    const workspace = join(testDirectory, "packages", "app");
+    mkdirSync(workspace, { recursive: true });
+    writeFileSync(join(workspace, "nested.js"), "before\n");
+    git("add packages/app/nested.js");
+    git("commit -m nested");
+    writeFileSync(join(workspace, "nested.js"), "after\n");
+
+    const view = run(["start", workspace, "working"]);
+
+    expect(view.locations).toContainEqual({
+      kind: "change",
+      line: 1,
+      path: "nested.js",
+      text: "after",
+    });
+    expect(view.signs).toContainEqual({ kind: "change", line: 1, path: "nested.js" });
+  });
+
   it("uses GitStream state to compare the branch with its branch point", () => {
     const base = git("rev-parse HEAD");
     git("checkout -b feature");
@@ -129,6 +148,22 @@ describe("view-diff-in-vim entrypoint", () => {
     expect(view.locations).toEqual([
       { kind: "change", line: 2, path: "example.js", text: "working branch" },
     ]);
+  });
+
+  it("omits files deleted by a branch diff", () => {
+    writeFileSync(join(testDirectory, "kept.js"), "before\n");
+    git("add kept.js");
+    git("commit -m kept");
+    git("checkout -b feature");
+    git("rm example.js");
+    writeFileSync(join(testDirectory, "kept.js"), "after\n");
+    git("add kept.js");
+    git("commit -m changes");
+
+    const view = run(["start", testDirectory, "branch"]);
+
+    expect(view.locations).toEqual([{ kind: "change", line: 1, path: "kept.js", text: "after" }]);
+    expect(view.signs).toEqual([{ kind: "change", line: 1, path: "kept.js" }]);
   });
 
   it("clears only the state for the selected workspace", () => {
