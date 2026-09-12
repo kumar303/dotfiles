@@ -444,7 +444,7 @@ endfunction
 
 function! SymbolPopupLayout()
     let pane_position = win_screenpos(0)
-    let pane_width = winwidth(0)
+    let pane_width = winnr('$') == 1 ? max([1, float2nr((winwidth(0) - 1) / 2)]) : winwidth(0)
     let pane_height = winheight(0)
     let width = min([&columns, max([8, float2nr(pane_width * 0.95)])])
     let height = max([4, float2nr(pane_height * 0.8)])

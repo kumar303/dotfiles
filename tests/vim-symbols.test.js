@@ -151,6 +151,8 @@ describe("CurrentFileSymbols", () => {
         "-n",
         "-es",
         "-c",
+        "let single = SymbolPopupLayout()",
+        "-c",
         "set columns=180 lines=40",
         "-c",
         "vsplit",
@@ -163,7 +165,7 @@ describe("CurrentFileSymbols", () => {
         "-c",
         "let right = SymbolPopupLayout()",
         "-c",
-        "call writefile([json_encode({'left': left, 'right': right})], $VIM_TEST_RESULT)",
+        "call writefile([json_encode({'single': single, 'left': left, 'right': right})], $VIM_TEST_RESULT)",
         "-c",
         "qa!",
       ],
@@ -176,6 +178,9 @@ describe("CurrentFileSymbols", () => {
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     const layout = JSON.parse(readFileSync(resultPath, "utf8"));
+    expect(layout.single).toMatchObject({ side: "right", triangle: "◀" });
+    expect(layout.single.width).toBe(Math.floor(layout.single.pane_width * 0.95));
+    expect(layout.single.col).toBe(layout.single.pane_col + layout.single.pane_width + 1);
     expect(layout.left).toMatchObject({ side: "right", triangle: "◀" });
     expect(layout.left.width).toBe(Math.floor(layout.left.pane_width * 0.95));
     expect(layout.left.width).toBeLessThan(layout.left.pane_width);
