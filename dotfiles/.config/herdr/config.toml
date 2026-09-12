@@ -47,7 +47,7 @@ type = "plugin_action"
 command = "kumar303.workspace-switcher.open"
 
 [[keys.command]]
-key = "ctrl+alt+p"
+key = "f13"
 type = "plugin_action"
 command = "kumar303.agent-prompt.open"
 
