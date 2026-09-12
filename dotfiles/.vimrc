@@ -479,7 +479,6 @@ endfunction
 
 sign define ViewDiffAdd text=+ texthl=DiffAdd
 sign define ViewDiffChange text=~ texthl=DiffChange
-sign define ViewDiffDelete text=- texthl=DiffDelete
 
 function! ViewDiffCommand(arguments)
     let node = exepath('node')
@@ -562,7 +561,7 @@ function! ApplyDiffSigns(view)
         endif
         let buffer = bufadd(file)
         call bufload(buffer)
-        let name = sign.kind ==# 'add' ? 'ViewDiffAdd' : sign.kind ==# 'delete' ? 'ViewDiffDelete' : 'ViewDiffChange'
+        let name = sign.kind ==# 'add' ? 'ViewDiffAdd' : 'ViewDiffChange'
         call sign_place(sign_id, 'view-diff-in-vim', name, buffer, {'lnum': sign.line, 'priority': 10})
         let sign_id += 1
     endfor

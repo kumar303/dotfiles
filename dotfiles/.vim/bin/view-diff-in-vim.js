@@ -9,7 +9,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** @typedef {"working" | "branch"} DiffMode */
-/** @typedef {"add" | "change" | "delete"} ChangeKind */
+/** @typedef {"add" | "change"} ChangeKind */
 /** @typedef {{commit: string, name: string}} BranchBase */
 /** @typedef {{kind: ChangeKind, line: number, path: string}} Sign */
 /** @typedef {Sign & {text: string}} Location */
@@ -224,8 +224,9 @@ function parseDiff(diff, root) {
     const oldCount = match[1] === undefined ? 1 : Number(match[1]);
     const newStart = Number(match[2]);
     const newCount = match[3] === undefined ? 1 : Number(match[3]);
+    if (newCount === 0) continue;
     /** @type {ChangeKind} */
-    const kind = newCount === 0 ? "delete" : oldCount === 0 ? "add" : "change";
+    const kind = oldCount === 0 ? "add" : "change";
     const line = Math.max(1, newStart);
     locations.push({ kind, line, path, text: lineText(root, path, line).trim() });
     const signCount = Math.max(1, newCount);

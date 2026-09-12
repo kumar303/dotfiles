@@ -101,6 +101,15 @@ describe("view-diff-in-vim entrypoint", () => {
     expect(view.position).toBe(2);
   });
 
+  it("omits deleted lines from files that still exist", () => {
+    writeFileSync(join(testDirectory, "example.js"), "one\nthree\n");
+
+    const view = run(["start", testDirectory, "working"]);
+
+    expect(view.locations).toEqual([]);
+    expect(view.signs).toEqual([]);
+  });
+
   it("reports paths relative to a nested workspace", () => {
     const workspace = join(testDirectory, "packages", "app");
     mkdirSync(workspace, { recursive: true });
