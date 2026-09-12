@@ -114,9 +114,13 @@ qa!
     expect(result.termMapping).toBe("<C-Y>");
     expect(result.termBackward).toBe("<C-Q>");
     expect(result.termForward).toBe("<C-X>");
-    expect(result.options).toContain(
+    expect(result.options).not.toContain(
       "--footer=↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close",
     );
+    expect(result.options).toContain(
+      '--preview=printf "↑/↓ agent  •  enter steer  •  opt+enter follow-up  •  esc close"',
+    );
+    expect(result.options).toContain("--preview-window=down,1,border-none,wrap");
     expect(result.options).toContain(
       "--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97",
     );
