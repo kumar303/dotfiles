@@ -14,6 +14,7 @@ appendFileSync(logPath, `${JSON.stringify(args)}\n`);
  *   agents?: Array<Record<string, unknown>>,
  *   panes: Array<Record<string, unknown>>,
  *   process_name?: string,
+ *   process_names?: string[],
  *   snapshot?: Record<string, unknown>,
  *   tabs?: Array<Record<string, unknown>>
  * }}}
@@ -80,15 +81,18 @@ function handlePaneCommand(command) {
     case "current":
       process.exitCode = 1;
       break;
-    case "process-info":
+    case "process-info": {
+      const processName = state.result.process_names?.shift() ?? state.result.process_name ?? "zsh";
+      if (state.result.process_names) saveState(state);
       output({
         result: {
           process_info: {
-            foreground_processes: [{ name: state.result.process_name ?? "zsh" }],
+            foreground_processes: [{ name: processName }],
           },
         },
       });
       break;
+    }
     case "split": {
       const sourcePaneId = option(args, "--pane");
       const cwd = option(args, "--cwd");

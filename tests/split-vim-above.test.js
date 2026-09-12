@@ -99,6 +99,32 @@ describe("split-vim-above", () => {
     expect(readLayoutState("w1")).toEqual(vimState);
   });
 
+  it("waits for an open fzf prompt to abort before it sends the layout command", () => {
+    const vimState = layoutState([[11, "/tmp/project/a.js"]]);
+    setPanes([sourcePane({ cwd: "/tmp/project" })]);
+    runScript();
+    setProcessNames(["fzf", "vim"]);
+    clearHerdrCalls();
+
+    runScript({ vimState });
+
+    const calls = herdrCalls();
+    const escapeIndex = calls.findIndex(
+      (args) => args[0] === "pane" && args[1] === "send-keys" && args[3] === "esc",
+    );
+    const processIndexes = calls.flatMap((args, index) =>
+      args[0] === "pane" && args[1] === "process-info" ? [index] : [],
+    );
+    const captureIndex = calls.findIndex(
+      (args) =>
+        args[0] === "pane" && args[1] === "send-text" && args[3]?.startsWith(":call writefile("),
+    );
+    expect(processIndexes).toHaveLength(2);
+    expect(escapeIndex).toBeLessThan(processIndexes[0]);
+    expect(processIndexes[0]).toBeLessThan(processIndexes[1]);
+    expect(processIndexes[1]).toBeLessThan(captureIndex);
+  });
+
   it("starts a new Vim process with the remembered split files and layout", () => {
     const a = createFile("project/a.js");
     const b = createFile("project/b.js");
@@ -409,7 +435,14 @@ function sourcePane(overrides = {}) {
 
 /** @param {Pane[]} panes */
 function setPanes(panes) {
-  writeFileSync(panesPath, `${JSON.stringify({ result: { panes } })}\n`);
+  writeFileSync(panesPath, `${JSON.stringify({ result: { panes, process_name: "vim" } })}\n`);
+}
+
+/** @param {string[]} processNames */
+function setProcessNames(processNames) {
+  const state = JSON.parse(readFileSync(panesPath, "utf8"));
+  state.result.process_names = processNames;
+  writeFileSync(panesPath, `${JSON.stringify(state)}\n`);
 }
 
 /**

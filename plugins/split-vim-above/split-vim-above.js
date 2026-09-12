@@ -27,6 +27,7 @@ import { join, resolve } from "node:path";
 /** @typedef {{result: {pane: Pane}}} PaneResponse */
 /** @typedef {{result: {root_pane: Pane}}} TabCreateResponse */
 /** @typedef {{result: {move_result: {pane: Pane}}}} PaneMoveResponse */
+/** @typedef {{result: {process_info: {foreground_processes: Array<{name?: string, argv0?: string}>}}}} PaneProcessInfoResponse */
 /** @typedef {{pane_id: string, terminal_id: string}} PaneMarker */
 /** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
 /** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
@@ -358,12 +359,37 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
   }
 }
 
+/** @param {string} paneId */
+function waitForVimInput(paneId) {
+  const waiter = new Int32Array(new SharedArrayBuffer(4));
+  const deadline = Date.now() + 2_000;
+  while (Date.now() < deadline) {
+    const response = /** @type {PaneProcessInfoResponse | null} */ (
+      runHerdr(["pane", "process-info", "--pane", paneId], { allowFailure: true })
+    );
+    const processes = response?.result?.process_info?.foreground_processes;
+    if (
+      Array.isArray(processes) &&
+      processes.some((process) =>
+        [process.name, process.argv0].some(
+          (name) => typeof name === "string" && name.split("/").at(-1)?.toLowerCase() === "vim",
+        ),
+      )
+    ) {
+      return;
+    }
+    Atomics.wait(waiter, 0, 0, 25);
+  }
+  throw new Error("Vim did not regain terminal input after Escape; the pane remains open");
+}
+
 /** @param {Pane} pane @param {string} layoutPath */
 function saveLayoutAndClose(pane, layoutPath) {
   const capturePath = `${layoutPath}.capture.${process.pid}`;
   rmSync(capturePath, { force: true });
   const command = `:call writefile([json_encode({'layout': winlayout(), 'focused': win_getid(), 'windows': map(getwininfo(), '{"id": v:val.winid, "file": fnamemodify(bufname(v:val.bufnr), ":p"), "view": {"lnum": getcurpos(v:val.winid)[1], "col": getcurpos(v:val.winid)[2] - 1, "topline": v:val.topline, "leftcol": v:val.leftcol}}')})], '${vimSingleQuoted(capturePath)}')`;
   runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
+  waitForVimInput(pane.pane_id);
   runHerdr(["pane", "send-text", pane.pane_id, command]);
   runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
 
