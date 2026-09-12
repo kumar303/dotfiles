@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
  * @property {string} paneId
  * @property {string} label
  * @property {string} status
+ * @property {string} tabLabel
  */
 
 /**
@@ -21,18 +22,34 @@ export function listWorkspaceAgents(workspaceId, run = runHerdr) {
   const agents = response?.result?.agents;
   if (!Array.isArray(agents)) throw new Error("Herdr agent list lacks agents");
 
-  return agents.flatMap((agent) => {
-    if (agent?.workspace_id !== workspaceId || typeof agent?.pane_id !== "string") {
-      return [];
-    }
-    return [
-      {
-        paneId: agent.pane_id,
-        label: firstString(agent.name, agent.display_agent, agent.agent, agent.pane_id),
-        status: typeof agent.agent_status === "string" ? agent.agent_status : "unknown",
-      },
-    ];
-  });
+  const workspaceAgents = agents.filter(
+    (agent) =>
+      agent?.workspace_id === workspaceId &&
+      typeof agent?.pane_id === "string" &&
+      typeof agent?.tab_id === "string",
+  );
+  if (workspaceAgents.length === 0) return [];
+
+  const tabsResponse = /** @type {any} */ (run(["tab", "list", "--workspace", workspaceId]));
+  const tabs = tabsResponse?.result?.tabs;
+  if (!Array.isArray(tabs)) throw new Error("Herdr tab list lacks tabs");
+  const tabLabels = new Map(
+    tabs.flatMap((tab) => {
+      if (typeof tab?.tab_id !== "string") return [];
+      const label =
+        typeof tab.label === "string" && tab.label.length > 0
+          ? tab.label
+          : String(tab.number ?? tab.tab_id);
+      return [[tab.tab_id, label]];
+    }),
+  );
+
+  return workspaceAgents.map((agent) => ({
+    paneId: agent.pane_id,
+    label: firstString(agent.name, agent.display_agent, agent.agent, agent.pane_id),
+    status: typeof agent.agent_status === "string" ? agent.agent_status : "unknown",
+    tabLabel: tabLabels.get(agent.tab_id) ?? agent.tab_id,
+  }));
 }
 
 /**

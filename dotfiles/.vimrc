@@ -613,7 +613,7 @@ function! AgentPromptState(include_selection)
         return {'context': '', 'entries': []}
     endif
     let agents = json_decode(output)
-    let entries = map(agents, 'printf("%s\t%s  %s", v:val.paneId, v:val.label, v:val.status)')
+    let entries = map(agents, 'printf("%s\t%s  %s  tab:%s", v:val.paneId, v:val.label, v:val.status, v:val.tabLabel)')
     return {'context': AgentPromptContext(context), 'entries': entries}
 endfunction
 

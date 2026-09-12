@@ -14,7 +14,8 @@ appendFileSync(logPath, `${JSON.stringify(args)}\n`);
  *   agents?: Array<Record<string, unknown>>,
  *   panes: Array<Record<string, unknown>>,
  *   process_name?: string,
- *   snapshot?: Record<string, unknown>
+ *   snapshot?: Record<string, unknown>,
+ *   tabs?: Array<Record<string, unknown>>
  * }}}
  */
 const state = JSON.parse(readFileSync(panesPath, "utf8"));
@@ -26,6 +27,8 @@ if (area === "api" && command === "snapshot") {
   output({ result: { agents: state.result.agents ?? [] } });
 } else if (area === "agent" && command === "prompt") {
   output({ result: {} });
+} else if (area === "tab" && command === "list") {
+  output({ result: { tabs: state.result.tabs ?? [] } });
 } else if (area === "tab" && command === "create") {
   const next = nextId();
   const workspaceId = option(args, "--workspace") || "w1";

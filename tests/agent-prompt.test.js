@@ -73,11 +73,17 @@ qa!
   });
 
   it("builds a clean fzf overlay with the shared light-theme options", () => {
-    writeHerdrState([
-      agent("w1:p1", "w1", "planner"),
-      agent("w1:p3", "w1", "reviewer"),
-      agent("w2:p1", "w2", "other"),
-    ]);
+    writeHerdrState(
+      [
+        agent("w1:p1", "w1", "planner", "w1:t1"),
+        agent("w1:p3", "w1", "reviewer", "w1:t2"),
+        agent("w2:p1", "w2", "other", "w2:t1"),
+      ],
+      [
+        { label: "agent", number: 1, tab_id: "w1:t1" },
+        { number: 2, tab_id: "w1:t2" },
+      ],
+    );
     const sourcePath = join(testDirectory, "example.ts");
     const resultPath = join(testDirectory, "state.json");
     writeFileSync(sourcePath, "alpha\n");
@@ -96,14 +102,20 @@ qa!
 
     const result = JSON.parse(readFileSync(resultPath, "utf8"));
     expect(result.mapping).toContain("OpenAgentPrompt(0)");
-    expect(result.state.entries).toEqual(["w1:p1\tplanner  idle", "w1:p3\treviewer  idle"]);
+    expect(result.state.entries).toEqual([
+      "w1:p1\tplanner  idle  tab:agent",
+      "w1:p3\treviewer  idle  tab:2",
+    ]);
     expect(result.options).toContain("--phony");
     expect(result.options).toContain("--print-query");
     expect(result.options).toContain("--footer=↑/↓ agent  •  enter send  •  esc close");
     expect(result.options).toContain(
       "--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97",
     );
-    expect(herdrCalls()).toEqual([["agent", "list"]]);
+    expect(herdrCalls()).toEqual([
+      ["agent", "list"],
+      ["tab", "list", "--workspace", "w1"],
+    ]);
   });
 
   it("auto-selects the sole agent and sends context plus typed text", () => {
@@ -155,13 +167,15 @@ qa!
  * @param {string} paneId
  * @param {string} workspaceId
  * @param {string} name
+ * @param {string} [tabId]
  */
-function agent(paneId, workspaceId, name) {
+function agent(paneId, workspaceId, name, tabId = `${workspaceId}:t1`) {
   return {
     agent: "pi",
     agent_status: "idle",
     name,
     pane_id: paneId,
+    tab_id: tabId,
     workspace_id: workspaceId,
   };
 }
@@ -182,8 +196,11 @@ function runVim(script, environment = {}) {
   expect(result.status).toBe(0);
 }
 
-/** @param {unknown[]} agents */
-function writeHerdrState(agents) {
+/**
+ * @param {unknown[]} agents
+ * @param {unknown[]} [tabs]
+ */
+function writeHerdrState(agents, tabs = []) {
   writeFileSync(
     herdrStatePath,
     `${JSON.stringify({
@@ -191,6 +208,7 @@ function writeHerdrState(agents) {
         agents,
         panes: [],
         snapshot: { panes: [], workspaces: [] },
+        tabs,
       },
     })}\n`,
   );
