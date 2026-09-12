@@ -123,12 +123,13 @@ qa!
 
     runVim(
       `set columns=180 lines=40
-let single = {'actual': AgentPromptPopupWindow(), 'expected': SymbolPopupLayout()}
+let state = {'context': join(['file.ts:1', '> one', '> two', '> three', '> four', '> five', '> six', '> seven'], "\\n"), 'entries': ["w1:p1\\tpi  idle"]}
+let single = {'actual': AgentPromptPopupWindow(state), 'expected': SymbolPopupLayout()}
 vsplit
 wincmd h
-let left = {'actual': AgentPromptPopupWindow(), 'expected': SymbolPopupLayout()}
+let left = {'actual': AgentPromptPopupWindow(state), 'expected': SymbolPopupLayout()}
 wincmd l
-let right = {'actual': AgentPromptPopupWindow(), 'expected': SymbolPopupLayout()}
+let right = {'actual': AgentPromptPopupWindow(state), 'expected': SymbolPopupLayout()}
 call writefile([json_encode({'single': single, 'left': left, 'right': right})], $VIM_TEST_RESULT)
 qa!
 `,
@@ -139,11 +140,12 @@ qa!
     for (const layout of [layouts.single, layouts.left, layouts.right]) {
       expect(layout.actual).toEqual({
         border: layout.expected.border,
-        height: layout.expected.height,
+        height: 13,
         width: layout.expected.width,
         xoffset: layout.expected.xoffset,
         yoffset: layout.expected.yoffset,
       });
+      expect(layout.actual.height).toBeLessThan(layout.expected.height);
     }
   });
 

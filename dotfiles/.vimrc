@@ -649,11 +649,12 @@ function! AgentPromptResults(lines)
     unlet! g:agent_prompt_context
 endfunction
 
-function! AgentPromptPopupWindow()
+function! AgentPromptPopupWindow(state)
     let layout = SymbolPopupLayout()
+    let content_height = len(split(a:state.context, "\n", 1)) + len(a:state.entries) + 4
     return {
         \ 'border': layout.border,
-        \ 'height': layout.height,
+        \ 'height': min([layout.height, content_height]),
         \ 'width': layout.width,
         \ 'xoffset': layout.xoffset,
         \ 'yoffset': layout.yoffset,
@@ -671,7 +672,7 @@ function! OpenAgentPrompt(include_selection)
         \ 'options': AgentPromptOptions(state),
         \ 'sink*': function('AgentPromptResults'),
         \ 'source': state.entries,
-        \ 'window': AgentPromptPopupWindow(),
+        \ 'window': AgentPromptPopupWindow(state),
         \ }))
 endfunction
 
