@@ -65,11 +65,13 @@ function! MoveCurrentFileWindow(direction)
     endif
 
     let source_buffer = bufnr()
+    let source_view = winsaveview()
     call win_gotoid(target_window)
     execute 'hide buffer ' . source_buffer
     call win_gotoid(source_window)
     close
     call win_gotoid(target_window)
+    call winrestview(source_view)
 endfunction
 
 nnoremap <silent> <C-M-Left> :call MoveCurrentFileWindow('h')<CR>

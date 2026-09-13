@@ -22,6 +22,50 @@ afterEach(() => {
 });
 
 describe("MoveCurrentFileWindow", () => {
+  it("preserves the cursor and scroll position", () => {
+    const sourceFile = join(testDirectory, "source.ts");
+    const targetFile = join(testDirectory, "target.ts");
+    const resultPath = join(testDirectory, "view.json");
+    const scriptPath = join(testDirectory, "view.vim");
+    writeFileSync(
+      sourceFile,
+      Array.from({ length: 200 }, (_, index) => `line ${index + 1}`).join("\n"),
+    );
+    writeFileSync(targetFile, "target\n");
+    writeFileSync(
+      scriptPath,
+      `set lines=30 columns=120
+execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+execute 'vsplit ' . fnameescape($VIM_TEST_TARGET)
+wincmd h
+call cursor(150, 1)
+normal! zt
+let before = winsaveview()
+call MoveCurrentFileWindow('l')
+let after = winsaveview()
+call writefile([json_encode({'before': before, 'after': after})], $VIM_TEST_RESULT)
+qa!
+`,
+    );
+
+    const result = spawnSync("vim", ["-Nu", vimrcPath, "-n", "-es", "-S", scriptPath], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        VIM_TEST_RESULT: resultPath,
+        VIM_TEST_SOURCE: sourceFile,
+        VIM_TEST_TARGET: targetFile,
+      },
+    });
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const views = JSON.parse(readFileSync(resultPath, "utf8"));
+    expect(views.after.lnum).toBe(views.before.lnum);
+    expect(views.after.topline).toBe(views.before.topline);
+    expect(views.after.leftcol).toBe(views.before.leftcol);
+  });
+
   it.each([
     ["C.ts", "h", ["A.ts", "C.ts"]],
     ["A.ts", "l", ["A.ts", "C.ts"]],
