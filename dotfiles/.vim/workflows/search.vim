@@ -33,14 +33,14 @@ function! RunRipgrep(name, command)
 endfunction
 
 function! Ripgrep(args)
-    let command = 'rg --hidden --glob ' . shellescape('!.git') . ' --column --line-number --with-filename --no-heading --color=never --smart-case ' . a:args
+    let command = 'rg --column --line-number --with-filename --no-heading --color=never --smart-case ' . a:args
     call RunRipgrep('rg', command)
 endfunction
 command! -nargs=+ -complete=file Rg call Ripgrep(<q-args>)
 
 function! VisualRipgrepMapping()
     let term = join(getregion(getpos('v'), getpos('.')), ' ')
-    return ":\<C-u>Rg -g'!**/*test*' " . term
+    return ":\<C-u>Rg --hidden -g'!**/*test*' " . term
 endfunction
 
 function! RipgrepFile(args)
@@ -55,8 +55,8 @@ endfunction
 command! -nargs=+ RgFile call RipgrepFile(<q-args>)
 
 nnoremap <C-f> :RgFile<Space>
-nnoremap <C-r> :Rg -g'!**/*test*'<Space>
+nnoremap <C-r> :Rg --hidden -g'!**/*test*'<Space>
 xnoremap <expr> <C-r> VisualRipgrepMapping()
 
 " Leave netrw before opening fzf to avoid conflicts when fzf returns.
-autocmd FileType netrw nnoremap <buffer> <C-r> :enew<CR>:Rg -g'!**/*test*'<Space>
+autocmd FileType netrw nnoremap <buffer> <C-r> :enew<CR>:Rg --hidden -g'!**/*test*'<Space>
