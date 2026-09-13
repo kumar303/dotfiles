@@ -65,16 +65,16 @@ function! AgentPromptState(include_selection)
 endfunction
 
 function! AgentPromptOptions(state)
+    let preview_command = shellescape(g:vim_dotfiles_directory . '/.vim/bin/agent-prompt-preview')
     return g:fzf_picker_options + [
         \ '--bind=ctrl-q:backward-word,ctrl-x:forward-word,change:refresh-preview',
         \ '--delimiter=\t',
         \ '--expect=ctrl-y',
-        \ '--footer=↑/↓ agent • enter steer • opt+enter follow-up • esc close',
         \ '--header=' . a:state.context,
         \ '--header-border=bottom',
         \ '--no-sort',
         \ '--phony',
-        \ '--preview=printf "%s" "$FZF_QUERY"',
+        \ '--preview=' . preview_command,
         \ '--preview-window=down,6,border-none,wrap,noinfo',
         \ '--print-query',
         \ '--prompt=Prompt> ',

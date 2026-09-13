@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -eu
+
+legend='↑/↓ agent • enter steer • opt+enter follow-up • esc close'
+width=${FZF_PREVIEW_COLUMNS:-80}
+height=${FZF_PREVIEW_LINES:-6}
+
+if ! [[ $width =~ ^[1-9][0-9]*$ && $height =~ ^[1-9][0-9]*$ ]]; then
+    printf '%s' "$legend"
+    exit
+fi
+
+available_lines=$((height - 1))
+if ((available_lines == 0)); then
+    printf '%s' "$legend"
+    exit
+fi
+
+wrapped_query=$(printf '%s\n' "${FZF_QUERY:-}" | fold -s -w "$width" | sed 's/[[:space:]]*$//' | tail -n "$available_lines")
+query_lines=$(printf '%s\n' "$wrapped_query" | wc -l | tr -d ' ')
+padding_lines=$((available_lines - query_lines))
+
+printf '%s\n' "$wrapped_query"
+while ((padding_lines > 0)); do
+    printf '\n'
+    padding_lines=$((padding_lines - 1))
+done
+printf '%s' "$legend"

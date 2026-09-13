@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const vimrcPath = join(repositoryRoot, "dotfiles", ".vimrc");
 const mockHerdrPath = join(repositoryRoot, "tests", "fixtures", "mock-herdr.js");
+const previewPath = join(repositoryRoot, "dotfiles", ".vim", "bin", "agent-prompt-preview");
 
 /** @type {string} */
 let testDirectory;
@@ -116,10 +117,13 @@ qa!
     expect(result.termMapping).toBe("<C-Y>");
     expect(result.termBackward).toBe("<C-Q>");
     expect(result.termForward).toBe("<C-X>");
-    expect(result.options).toContain(
+    expect(result.options).not.toContain(
       "--footer=↑/↓ agent • enter steer • opt+enter follow-up • esc close",
     );
-    expect(result.options).toContain('--preview=printf "%s" "$FZF_QUERY"');
+    const options = /** @type {string[]} */ (result.options);
+    expect(options.find((option) => option.startsWith("--preview="))).toContain(
+      "agent-prompt-preview",
+    );
     expect(result.options).toContain("--preview-window=down,6,border-none,wrap,noinfo");
     expect(result.options).toContain(
       "--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97",
@@ -128,6 +132,25 @@ qa!
       ["agent", "list"],
       ["tab", "list", "--workspace", "w1"],
     ]);
+  });
+
+  it("places the wrapped prompt above a legend on the last preview line", () => {
+    const result = spawnSync(previewPath, [], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        FZF_PREVIEW_COLUMNS: "20",
+        FZF_PREVIEW_LINES: "6",
+        FZF_QUERY: "A prompt long enough to wrap onto several lines",
+      },
+    });
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const lines = result.stdout.split("\n");
+    expect(lines).toHaveLength(6);
+    expect(lines.slice(0, -1).join(" ")).toContain("prompt long enough");
+    expect(lines.at(-1)).toBe("↑/↓ agent • enter steer • opt+enter follow-up • esc close");
   });
 
   it("places the fzf overlay beside the source pane like the symbol overlay", () => {
