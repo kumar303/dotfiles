@@ -33,7 +33,7 @@ function! RunRipgrep(name, command)
 endfunction
 
 function! Ripgrep(args)
-    let command = 'rg --column --line-number --with-filename --no-heading --color=never --smart-case ' . a:args
+    let command = 'rg --hidden --glob ' . shellescape('!.git') . ' --column --line-number --with-filename --no-heading --color=never --smart-case ' . a:args
     call RunRipgrep('rg', command)
 endfunction
 command! -nargs=+ -complete=file Rg call Ripgrep(<q-args>)
