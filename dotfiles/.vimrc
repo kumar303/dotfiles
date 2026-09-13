@@ -73,21 +73,16 @@ let g:fzf_picker_options = [
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
 let g:fzf_open_options = g:fzf_picker_options + ['--expect=enter,ctrl-o']
 
-for s:workflow in [
-    \ 'save',
-    \ 'panes',
-    \ 'file-picker',
-    \ 'open-files',
-    \ 'search',
-    \ 'github',
-    \ 'import-jump',
-    \ 'list-symbols',
-    \ 'agent-prompt',
-    \ 'diff-view',
-    \ ]
-    execute 'source ' . fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/' . s:workflow . '.vim')
-endfor
-unlet s:workflow
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/save.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/panes.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/file-picker.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/open-files.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/search.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/github.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/import-jump.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/list-symbols.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/agent-prompt.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/diff-view.vim')
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e
