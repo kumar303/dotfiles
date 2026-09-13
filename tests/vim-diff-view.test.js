@@ -134,11 +134,11 @@ call writefile([json_encode({'count': winnr('$'), 'first_count': first_count, 'f
     expect(result).toEqual({ count: 2, first_count: 2, file: "other.js" });
   });
 
-  it("uses FileToolLayout and binds ctrl+opt+d", () => {
+  it("uses the shared file-tool layout and binds ctrl+opt+d", () => {
     const result = runVim(`
 set columns=180 lines=40
 let window = DiffViewPopupWindow(6)
-call writefile([json_encode({'mapping': maparg('<C-M-d>', 'n'), 'window': window, 'layout': FileToolLayout(), 'options': DiffViewLocationOptions(2)})], $VIM_TEST_RESULT)
+call writefile([json_encode({'mapping': maparg('<C-M-d>', 'n'), 'window': window, 'layout': dotfiles#fzf#file_tool_layout(), 'options': DiffViewLocationOptions(2)})], $VIM_TEST_RESULT)
 `);
 
     expect(result.mapping).toContain("OpenDiffView");

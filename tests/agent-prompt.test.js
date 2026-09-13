@@ -136,12 +136,12 @@ qa!
     runVim(
       `set columns=180 lines=60
 let state = {'context': 'file.ts:1', 'entries': ["w1:p1\\tplanner  idle", "w1:p2\\treviewer  idle", "w1:p3\\ttester  idle", "w1:p4\\twriter  idle"]}
-let single = {'actual': AgentPromptPopupWindow(state), 'expected': FileToolLayout()}
+let single = {'actual': AgentPromptPopupWindow(state), 'expected': dotfiles#fzf#file_tool_layout()}
 vsplit
 wincmd h
-let left = {'actual': AgentPromptPopupWindow(state), 'expected': FileToolLayout()}
+let left = {'actual': AgentPromptPopupWindow(state), 'expected': dotfiles#fzf#file_tool_layout()}
 wincmd l
-let right = {'actual': AgentPromptPopupWindow(state), 'expected': FileToolLayout()}
+let right = {'actual': AgentPromptPopupWindow(state), 'expected': dotfiles#fzf#file_tool_layout()}
 call writefile([json_encode({'single': single, 'left': left, 'right': right})], $VIM_TEST_RESULT)
 qa!
 `,
