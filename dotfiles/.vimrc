@@ -6,6 +6,9 @@ if exists('+keyprotocol')
     set keyprotocol=xterm:kitty
 endif
 
+cnoremap <M-b> <S-Left>
+cnoremap <M-f> <S-Right>
+cnoremap <M-BS> <C-W>
 
 set cursorline
 
