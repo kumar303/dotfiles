@@ -38,9 +38,11 @@ function! Ripgrep(args)
 endfunction
 command! -nargs=+ -complete=file Rg call Ripgrep(<q-args>)
 
+let s:project_ripgrep_options = "--hidden -g'!**/*test*'"
+
 function! VisualRipgrepMapping()
     let term = join(getregion(getpos('v'), getpos('.')), ' ')
-    return ":\<C-u>Rg --hidden -g'!**/*test*' " . term
+    return ":\<C-u>Rg " . s:project_ripgrep_options . ' ' . term
 endfunction
 
 function! RipgrepFile(args)
@@ -55,8 +57,8 @@ endfunction
 command! -nargs=+ RgFile call RipgrepFile(<q-args>)
 
 nnoremap <C-f> :RgFile<Space>
-nnoremap <C-r> :Rg --hidden -g'!**/*test*'<Space>
+execute 'nnoremap <C-r> :Rg ' . s:project_ripgrep_options . '<Space>'
 xnoremap <expr> <C-r> VisualRipgrepMapping()
 
 " Leave netrw before opening fzf to avoid conflicts when fzf returns.
-autocmd FileType netrw nnoremap <buffer> <C-r> :enew<CR>:Rg --hidden -g'!**/*test*'<Space>
+execute 'autocmd FileType netrw nnoremap <buffer> <C-r> :enew<CR>:Rg ' . s:project_ripgrep_options . '<Space>'
