@@ -51,6 +51,10 @@ set wildmenu
 set splitbelow
 set splitright
 
+" Save without leaving insert mode
+nnoremap <C-s> :w<CR>
+inoremap <C-s> <C-o>:w<CR>
+
 " Copy yanked text to the OS clipboard without changing Vim's registers.
 if has('clipboard')
     augroup os_clipboard_yank
@@ -73,7 +77,6 @@ let g:fzf_picker_options = [
 let $FZF_DEFAULT_COMMAND = 'fd --type f --hidden --exclude .git'
 let g:fzf_open_options = g:fzf_picker_options + ['--expect=enter,ctrl-o']
 
-execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/save.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/panes.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/file-picker.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/open-files.vim')
