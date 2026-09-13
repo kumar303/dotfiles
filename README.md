@@ -62,7 +62,7 @@ Press `ctrl+a` from Vim to include the current file and line. Select text first 
 
 | Scope | Key          | Action                           |
 | ----- | ------------ | -------------------------------- |
-| Vim   | `ctrl+p`     | Open a file finder palette       |
+| Vim   | `ctrl+p`     | Open a file picker               |
 | Vim   | `ctrl+tab`   | Switch between open files        |
 | Vim   | `ctrl+l`     | List code symbols in the file    |
 | Vim   | `ctrl+g`     | Open the line on GitHub's `main` |
