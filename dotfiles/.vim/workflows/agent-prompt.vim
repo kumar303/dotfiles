@@ -72,6 +72,7 @@ function! AgentPromptOptions(state)
         \ '--expect=ctrl-y',
         \ '--header=' . a:state.context,
         \ '--header-border=bottom',
+        \ '--info=hidden',
         \ '--no-sort',
         \ '--phony',
         \ '--preview=' . preview_command,
