@@ -26,6 +26,16 @@ if (area === "api" && command === "snapshot") {
   output({ result: { snapshot: state.result.snapshot } });
 } else if (area === "agent" && command === "list") {
   output({ result: { agents: state.result.agents ?? [] } });
+} else if (area === "agent" && command === "get") {
+  const agent = state.result.agents?.find((item) => item.pane_id === args[2]);
+  output({ result: { agent } });
+} else if (area === "agent" && command === "read") {
+  const agent = state.result.agents?.find((item) => item.pane_id === args[2]);
+  process.stdout.write(
+    typeof agent?.visible_text === "string"
+      ? agent.visible_text
+      : "────────────────────\n\n────────────────────\n",
+  );
 } else if (area === "agent" && ["prompt", "send-keys"].includes(String(command))) {
   output({ result: {} });
 } else if (area === "tab" && command === "list") {

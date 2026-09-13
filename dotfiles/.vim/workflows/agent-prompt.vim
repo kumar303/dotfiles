@@ -66,15 +66,15 @@ endfunction
 
 function! AgentPromptOptions(state)
     return g:fzf_picker_options + [
-        \ '--bind=ctrl-q:backward-word,ctrl-x:forward-word',
+        \ '--bind=ctrl-q:backward-word,ctrl-x:forward-word,change:refresh-preview',
         \ '--delimiter=\t',
         \ '--expect=ctrl-y',
         \ '--header=' . a:state.context,
         \ '--header-border=bottom',
         \ '--no-sort',
         \ '--phony',
-        \ '--preview=printf "\n\n%s" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
-        \ '--preview-window=down,3,border-none,wrap,noinfo',
+        \ '--preview=printf "%s\n\n%s" "$FZF_QUERY" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
+        \ '--preview-window=down,7,border-none,wrap,noinfo',
         \ '--print-query',
         \ '--prompt=Prompt> ',
         \ '--with-nth=2..',
@@ -131,7 +131,7 @@ endfunction
 
 function! AgentPromptPopupWindow(state)
     let layout = dotfiles#fzf#file_tool_layout()
-    let content_height = len(split(a:state.context, "\n", 1)) + len(a:state.entries) + 7
+    let content_height = len(split(a:state.context, "\n", 1)) + len(a:state.entries) + 11
     return {
         \ 'border': layout.border,
         \ 'height': min([layout.height, content_height]),

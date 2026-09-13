@@ -3,6 +3,7 @@
 import { execFileSync } from "node:child_process";
 
 /** @typedef {(args: string[]) => unknown} HerdrRunner */
+/** @typedef {(args: string[]) => string} HerdrTextRunner */
 
 /**
  * @typedef {object} AgentInfo
@@ -54,6 +55,43 @@ export function listWorkspaceAgents(workspaceId, run = runHerdr) {
 
 /**
  * @param {string} paneId
+ * @param {HerdrRunner} [run]
+ * @param {HerdrTextRunner} [read]
+ */
+export function hasPendingPiPrompt(paneId, run = runHerdr, read = runHerdrText) {
+  const response = /** @type {any} */ (run(["agent", "get", paneId]));
+  const agent = response?.result?.agent;
+  if (!agent || typeof agent.agent !== "string") {
+    throw new Error("Herdr agent get lacks an agent");
+  }
+  if (agent.agent !== "pi") return false;
+
+  const visibleText = read([
+    "agent",
+    "read",
+    paneId,
+    "--source",
+    "visible",
+    "--lines",
+    "200",
+    "--format",
+    "text",
+  ]);
+  const lines = visibleText.replaceAll("\r", "").split("\n");
+  const separators = lines.flatMap((line, index) =>
+    /^(?:─|━|═|-){20,}$/.test(line.trim()) ? [index] : [],
+  );
+  if (separators.length < 2) {
+    throw new Error("Cannot find the Pi prompt in the Herdr pane");
+  }
+
+  const promptStart = separators[separators.length - 2] ?? 0;
+  const promptEnd = separators[separators.length - 1] ?? lines.length;
+  return lines.slice(promptStart + 1, promptEnd).some((line) => line.trim());
+}
+
+/**
+ * @param {string} paneId
  * @param {string} prompt
  * @param {HerdrRunner} [run]
  */
@@ -76,12 +114,25 @@ export function followUpAgent(paneId, prompt, run = runHerdr) {
  * @returns {unknown}
  */
 export function runHerdr(args) {
-  const output = execFileSync(requiredEnvironment("HERDR_BIN_PATH"), args, {
+  const output = runHerdrCommand(args).trim();
+  return output ? JSON.parse(output) : {};
+}
+
+/**
+ * @param {string[]} args
+ * @returns {string}
+ */
+export function runHerdrText(args) {
+  return runHerdrCommand(args);
+}
+
+/** @param {string[]} args */
+function runHerdrCommand(args) {
+  return execFileSync(requiredEnvironment("HERDR_BIN_PATH"), args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: 10000,
-  }).trim();
-  return output ? JSON.parse(output) : {};
+  });
 }
 
 /** @param {...unknown} values */

@@ -110,7 +110,9 @@ qa!
     expect(result.options).toContain("--print-query");
     expect(result.options.at(-1)).toBe("--layout=reverse-list");
     expect(result.options).toContain("--expect=ctrl-y");
-    expect(result.options).toContain("--bind=ctrl-q:backward-word,ctrl-x:forward-word");
+    expect(result.options).toContain(
+      "--bind=ctrl-q:backward-word,ctrl-x:forward-word,change:refresh-preview",
+    );
     expect(result.termMapping).toBe("<C-Y>");
     expect(result.termBackward).toBe("<C-Q>");
     expect(result.termForward).toBe("<C-X>");
@@ -118,9 +120,9 @@ qa!
       "--footer=↑/↓ agent • enter steer • opt+enter follow-up • esc close",
     );
     expect(result.options).toContain(
-      '--preview=printf "\\n\\n%s" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
+      '--preview=printf "%s\\n\\n%s" "$FZF_QUERY" "↑/↓ agent • enter steer • opt+enter follow-up • esc close"',
     );
-    expect(result.options).toContain("--preview-window=down,3,border-none,wrap,noinfo");
+    expect(result.options).toContain("--preview-window=down,7,border-none,wrap,noinfo");
     expect(result.options).toContain(
       "--color=fg:#403f53,bg:#fbfbfb,hl:#994cc3,fg+:#403f53,bg+:#d3e8f8,hl+:#994cc3,prompt:#0c969b,pointer:#e64d49,marker:#2aa298,spinner:#4876d6,header:#5f7e97",
     );
@@ -152,7 +154,7 @@ qa!
     for (const layout of [layouts.single, layouts.left, layouts.right]) {
       expect(layout.actual).toEqual({
         border: layout.expected.border,
-        height: 12,
+        height: 16,
         width: layout.expected.width,
         xoffset: layout.expected.xoffset,
         yoffset: layout.expected.yoffset,
@@ -199,10 +201,46 @@ qa!
       { VIM_TEST_SOURCE: sourcePath },
     );
 
-    expect(herdrCalls()).toEqual([["agent", "prompt", "w1:p1", "example.ts:2\n\nExplain this"]]);
+    expect(herdrCalls()).toEqual([
+      ["agent", "get", "w1:p1"],
+      ["agent", "read", "w1:p1", "--source", "visible", "--lines", "200", "--format", "text"],
+      ["agent", "prompt", "w1:p1", "example.ts:2\n\nExplain this"],
+    ]);
+  });
+
+  it("stops before sending when the Pi prompt contains unsent text", () => {
+    writeHerdrState([
+      {
+        ...agent("w1:p1", "w1", "pi"),
+        visible_text:
+          "previous response\n────────────────────\nUnsent prompt text\n────────────────────\nfooter\n",
+      },
+    ]);
+    const sourcePath = join(testDirectory, "example.ts");
+    const resultPath = join(testDirectory, "error.txt");
+    writeFileSync(sourcePath, "alpha\n");
+
+    runVim(
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+let g:agent_prompt_context = 'example.ts:1'
+silent! call AgentPromptResults(['New prompt', '', "w1:p1\tpi  idle"])
+call writefile([v:errmsg], $VIM_TEST_RESULT)
+qa!
+`,
+      { VIM_TEST_RESULT: resultPath, VIM_TEST_SOURCE: sourcePath },
+    );
+
+    expect(readFileSync(resultPath, "utf8").trim()).toBe(
+      "Pi has unsent prompt text; send or clear it before using ctrl+a",
+    );
+    expect(herdrCalls()).toEqual([
+      ["agent", "get", "w1:p1"],
+      ["agent", "read", "w1:p1", "--source", "visible", "--lines", "200", "--format", "text"],
+    ]);
   });
 
   it("sends option-enter as a follow-up", () => {
+    writeHerdrState([agent("w1:p3", "w1", "reviewer")]);
     const sourcePath = join(testDirectory, "example.ts");
     writeFileSync(sourcePath, "alpha\n");
 
@@ -216,12 +254,15 @@ qa!
     );
 
     expect(herdrCalls()).toEqual([
+      ["agent", "get", "w1:p3"],
+      ["agent", "read", "w1:p3", "--source", "visible", "--lines", "200", "--format", "text"],
       ["pane", "send-text", "w1:p3", "example.ts:1\n> alpha\n\nCheck this next"],
       ["agent", "send-keys", "w1:p3", "alt+enter"],
     ]);
   });
 
   it("sends to the agent selected with fzf navigation", () => {
+    writeHerdrState([agent("w1:p3", "w1", "reviewer")]);
     const sourcePath = join(testDirectory, "example.ts");
     writeFileSync(sourcePath, "alpha\n");
 
@@ -235,6 +276,8 @@ qa!
     );
 
     expect(herdrCalls()).toEqual([
+      ["agent", "get", "w1:p3"],
+      ["agent", "read", "w1:p3", "--source", "visible", "--lines", "200", "--format", "text"],
       ["agent", "prompt", "w1:p3", "example.ts:1\n> alpha\n\nReview this"],
     ]);
   });
