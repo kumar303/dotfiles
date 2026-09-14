@@ -17,13 +17,23 @@ https://github.com/user-attachments/assets/2d99c01b-bbeb-4ee6-b818-1d7eaf472ec6
 
 Required: Node.js 22 or newer, Vim, Ghostty, and Herdr.
 
-1. Install the Herdr skill:
+1. Install Vim dependencies: [fzf](https://github.com/junegunn/fzf),
+   [fd](https://github.com/sharkdp/fd),
+   [ripgrep](https://github.com/BurntSushi/ripgrep),
+   [Bat](https://github.com/sharkdp/bat),
+   [Universal Ctags](https://github.com/universal-ctags/ctags), and `jq`:
+
+   ```sh
+   brew install fzf fd ripgrep bat universal-ctags jq
+   ```
+
+2. Install the Herdr skill:
 
    ```sh
    npx skills add ogulcancelik/herdr
    ```
 
-2. Link the tracked dotfiles and plugins, then reload Herdr:
+3. Link the tracked dotfiles and plugins, then reload Herdr:
 
    ```sh
    ./setup.sh
@@ -99,16 +109,6 @@ Press `ctrl+opt+d` again to list changed locations. Press `X` in the list to exi
 | Vim   | `space`  | Clear search highlighting              |
 
 ## Vim
-
-Install [fzf](https://github.com/junegunn/fzf),
-[fd](https://github.com/sharkdp/fd),
-[ripgrep](https://github.com/BurntSushi/ripgrep),
-[Bat](https://github.com/sharkdp/bat), and
-[Universal Ctags](https://github.com/universal-ctags/ctags):
-
-```sh
-brew install fzf fd ripgrep bat universal-ctags jq
-```
 
 In `ctrl+p` and `ctrl+r` results, `enter` opens a right split when the current
 split has a file. `ctrl+enter` reuses the current split.
