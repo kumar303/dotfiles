@@ -7,6 +7,7 @@ import {
   mkdirSync,
   readFileSync,
   readlinkSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -65,21 +66,23 @@ describe("setup", () => {
       join(repositoryRoot, "dotfiles", ".config", "zsh", "dotfiles.zsh"),
     );
 
+    const otherDirectory = join(testDirectory, "other workspace");
+    mkdirSync(otherDirectory);
     const result = spawnSync(
       "zsh",
       [
         "-c",
-        'herdr() { printf "%s\\n" "$@"; }; source "$1"; herdr-workspace-create "$2"; herdr-workspace-create',
+        'herdr() { printf "%s\\n" "$@"; }; source "$1"; herdr-workspace-create .; herdr-workspace-create "$2"',
         "zsh",
         additionsPath,
-        "/tmp/example workspace",
+        otherDirectory,
       ],
-      { encoding: "utf8" },
+      { cwd: homeDirectory, encoding: "utf8" },
     );
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     expect(result.stdout).toBe(
-      "workspace\ncreate\n--cwd\n/tmp/example workspace\n--focus\nworkspace\ncreate\n--cwd\n.\n--focus\n",
+      `workspace\ncreate\n--cwd\n${realpathSync(homeDirectory)}\n--focus\nworkspace\ncreate\n--cwd\n${realpathSync(otherDirectory)}\n--focus\n`,
     );
   });
 });
