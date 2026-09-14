@@ -34,9 +34,6 @@ matching path under `~/`. It prompts before replacing existing files. Run it
 again when this repository adds a dotfile. It also includes
 `~/.config/zsh/dotfiles.zsh` once from `~/.zshrc`.
 
-Run `herdr-workspace-create [directory]` to create and focus a Herdr workspace.
-The command uses the current directory when the directory is omitted.
-
 ### Manual setup
 
 Add this `[include]` section to `.gitconfig`:
@@ -45,6 +42,12 @@ Add this `[include]` section to `.gitconfig`:
 [include]
     path = ~/.gitconfig.defaults
 ```
+
+## Zsh commands
+
+| Command                              | Description            |
+| ------------------------------------ | ---------------------- |
+| `herdr-workspace-create [directory]` | create a new workspace |
 
 ## Key bindings
 
