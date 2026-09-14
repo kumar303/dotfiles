@@ -31,7 +31,11 @@ Required: Node.js 22 or newer, Vim, Ghostty, and Herdr.
 
 The setup script recursively links each file under [`dotfiles`](dotfiles) to the
 matching path under `~/`. It prompts before replacing existing files. Run it
-again when this repository adds a dotfile.
+again when this repository adds a dotfile. It also includes
+`~/.config/zsh/dotfiles.zsh` once from `~/.zshrc`.
+
+Run `herdr-workspace-create [directory]` to create and focus a Herdr workspace.
+The command uses the current directory when the directory is omitted.
 
 ### Manual setup
 

@@ -41,6 +41,19 @@ while IFS= read -r -d '' -u 3 src; do
   link_file "$src" "$HOME/$relative_path"
 done 3< <(find "$dotfiles_dir" -type f -print0)
 
+zshrc_file="$HOME/.zshrc"
+zsh_source_line='source "$HOME/.config/zsh/dotfiles.zsh"'
+zsh_source_pattern='^[[:space:]]*(source|\.)[[:space:]]+.*[/]\.config/zsh/dotfiles\.zsh([^[:alnum:]_.-]|$)'
+if ! grep -Eq "$zsh_source_pattern" "$zshrc_file" 2>/dev/null; then
+  if [ -s "$zshrc_file" ]; then
+    printf '\n' >> "$zshrc_file"
+  fi
+  printf '%s\n' "$zsh_source_line" >> "$zshrc_file"
+  echo "Included dotfiles zsh additions: $zshrc_file"
+else
+  echo "Dotfiles zsh additions already included: $zshrc_file"
+fi
+
 echo "Linking Herdr plugins"
 for plugin_dir in "$repo_dir"/plugins/*; do
   herdr plugin link "$plugin_dir" --enabled
