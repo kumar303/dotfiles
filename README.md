@@ -60,15 +60,15 @@ Press `ctrl+a` from Vim to include the current file and line. Select text first 
 
 ### File navigation
 
-| Scope | Key          | Action                           |
-| ----- | ------------ | -------------------------------- |
-| Vim   | `ctrl+p`     | Open a file picker               |
-| Vim   | `ctrl+tab`   | Switch between open files        |
-| Vim   | `ctrl+l`     | List code symbols in the file    |
-| Vim   | `ctrl+g`     | Open the line on GitHub's `main` |
-| Vim   | `ctrl+j`     | Open the import under the cursor |
-| Vim   | `ctrl+s`     | Save the file                    |
-| Vim   | `ctrl+opt+d` | View changed Git locations       |
+| Scope | Key          | Action                              |
+| ----- | ------------ | ----------------------------------- |
+| Vim   | `ctrl+p`     | Open a file picker                  |
+| Vim   | `ctrl+tab`   | Switch between open or recent files |
+| Vim   | `ctrl+l`     | List code symbols in the file       |
+| Vim   | `ctrl+g`     | Open the line on GitHub's `main`    |
+| Vim   | `ctrl+j`     | Open the import under the cursor    |
+| Vim   | `ctrl+s`     | Save the file                       |
+| Vim   | `ctrl+opt+d` | View changed Git locations          |
 
 Press `ctrl+opt+d` again to list changed locations. Press `X` in the list to exit diff mode.
 
@@ -107,7 +107,7 @@ brew install fzf fd ripgrep bat universal-ctags jq
 In `ctrl+p` and `ctrl+r` results, `enter` opens a right split when the current
 split has a file. `ctrl+enter` reuses the current split.
 
-In the `ctrl+tab` switcher, `enter` focuses a file and `x` closes it.
+In the `ctrl+tab` switcher, `enter` focuses an open file or opens a recent file. `x` closes an open file.
 
 Select text with `v`, then press `ctrl+r` to use it as the search term.
 `ctrl+r` and `ctrl+f` can also pass any ripgrep option. Example of searching for
