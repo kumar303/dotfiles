@@ -82,7 +82,7 @@ let g:fzf_open_options = g:fzf_picker_options + ['--expect=enter,ctrl-o']
 
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/panes.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/file-picker.vim')
-execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/open-files.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/open-file-switcher.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/search.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/github.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/import-jump.vim')
