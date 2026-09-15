@@ -1,7 +1,7 @@
 function! ImportAtCursor()
     let cursor_line = line('.')
     let start_line = cursor_line
-    while start_line >= 1 && getline(start_line) !~# '^\s*import\>'
+    while start_line >= 1 && getline(start_line) !~# '^\s*\%(import\|export\)\>'
         let start_line -= 1
     endwhile
     if start_line < 1
