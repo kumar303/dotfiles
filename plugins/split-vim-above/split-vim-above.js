@@ -28,6 +28,7 @@ import { join, resolve } from "node:path";
 /** @typedef {{result: {root_pane: Pane}}} TabCreateResponse */
 /** @typedef {{result: {move_result: {pane: Pane}}}} PaneMoveResponse */
 /** @typedef {{pane_id: string, terminal_id: string}} PaneMarker */
+/** @typedef {{file: string, line: number | null}} RequestedFile */
 /** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
 /** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
 /** @typedef {{file: string, view: VimView, focused: boolean}} RestoredWindow */
@@ -188,14 +189,15 @@ function vimSingleQuoted(value) {
   return value.replaceAll("'", "''");
 }
 
-/** @param {Pane} pane @param {string} file */
-function openFileInVim(pane, file) {
+/** @param {Pane} pane @param {RequestedFile} requestedFile */
+function openFileInVim(pane, requestedFile) {
+  const lineCommand = requestedFile.line === null ? "" : ` | ${requestedFile.line}`;
   runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
   runHerdr([
     "pane",
     "send-text",
     pane.pane_id,
-    `:execute (empty(filter(getbufinfo({'bufloaded': 1}), '!empty(v:val.name) && getbufvar(v:val.bufnr, "&buftype") ==# ""')) ? 'edit ' : 'rightbelow vsplit ') . fnameescape('${vimSingleQuoted(file)}')`,
+    `:execute (empty(filter(getbufinfo({'bufloaded': 1}), '!empty(v:val.name) && getbufvar(v:val.bufnr, "&buftype") ==# ""')) ? 'edit ' : 'rightbelow vsplit ') . fnameescape('${vimSingleQuoted(requestedFile.file)}')${lineCommand}`,
   ]);
   runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
 }
@@ -239,17 +241,19 @@ function validVimState(state) {
 
 /**
  * @param {VimState | null} state
- * @param {string | null} requestedFile
+ * @param {RequestedFile | null} requestedFile
  * @returns {RestoredLayout | null}
  */
 function restoredLayout(state, requestedFile) {
+  const requestedLine = requestedFile?.line ?? 1;
+  const requestedView = { lnum: requestedLine, col: 0, topline: requestedLine, leftcol: 0 };
   if (!state) {
     return requestedFile
       ? [
           "leaf",
           {
-            file: requestedFile,
-            view: { lnum: 1, col: 0, topline: 1, leftcol: 0 },
+            file: requestedFile.file,
+            view: requestedView,
             focused: false,
           },
         ]
@@ -257,7 +261,6 @@ function restoredLayout(state, requestedFile) {
   }
   const windows = new Map(state.windows.map((window) => [window.id, window]));
   const focusedWindowId = state.focused;
-  const defaultView = { lnum: 1, col: 0, topline: 1, leftcol: 0 };
 
   /** @param {VimLayout} layout @returns {RestoredLayout | null} */
   function restore(layout) {
@@ -280,7 +283,7 @@ function restoredLayout(state, requestedFile) {
   if (requestedFile) {
     const requestedWindow = /** @type {RestoredLayout} */ ([
       "leaf",
-      { file: requestedFile, view: defaultView, focused: true },
+      { file: requestedFile.file, view: requestedView, focused: true },
     ]);
     return layout ? ["row", [layout, requestedWindow]] : requestedWindow;
   }
@@ -328,7 +331,7 @@ unlet s:focused_window
   writeFileSync(path, script, { mode: 0o600 });
 }
 
-/** @param {Pane} sourcePane @param {string | null} requestedFile @param {string} layoutPath */
+/** @param {Pane} sourcePane @param {RequestedFile | null} requestedFile @param {string} layoutPath */
 function createVimPane(sourcePane, requestedFile, layoutPath) {
   const response = /** @type {TabCreateResponse} */ (
     runHerdr([
@@ -358,13 +361,12 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
       writeRestoreScript(restoreScript, layout);
       runHerdr(["pane", "run", pane.pane_id, "vim", "-S", restoreScript]);
     } else {
-      runHerdr([
-        "pane",
-        "run",
-        pane.pane_id,
-        "vim",
-        layout?.[0] === "leaf" ? layout[1].file : sourcePane.cwd,
-      ]);
+      const vimArguments = ["pane", "run", pane.pane_id, "vim"];
+      if (requestedFile?.line !== null && requestedFile?.line !== undefined) {
+        vimArguments.push(`+${requestedFile.line}`);
+      }
+      vimArguments.push(layout?.[0] === "leaf" ? layout[1].file : sourcePane.cwd);
+      runHerdr(vimArguments);
     }
     return pane;
   } catch (error) {
@@ -426,9 +428,15 @@ function main() {
   if (!sourcePane?.pane_id || !sourcePane.tab_id || !sourcePane.workspace_id || !sourcePane.cwd) {
     throw new Error("could not determine the focused pane, tab, and cwd");
   }
-  const requestedFile = requestedFileArgument
-    ? resolve(sourcePane.cwd, requestedFileArgument)
-    : null;
+  let requestedFile = null;
+  if (requestedFileArgument) {
+    const location = requestedFileArgument.match(/^(.*):([1-9]\d*)$/);
+    const line = location ? Number.parseInt(location[2], 10) : null;
+    requestedFile = {
+      file: resolve(sourcePane.cwd, location?.[1] || requestedFileArgument),
+      line: Number.isSafeInteger(line) ? line : null,
+    };
+  }
 
   mkdirSync(paneMarkerDirectory, { recursive: true });
   mkdirSync(vimLayoutDirectory, { recursive: true });

@@ -307,6 +307,43 @@ describe("split-vim-above", () => {
     expect(filesAfterVimCommand(String(command))).toEqual([requested]);
   });
 
+  it("opens --file file:line at that line in a new Vim pane", () => {
+    const requested = createFile("project/requested.js");
+    const cwd = join(testDirectory, "project");
+    setPanes([sourcePane({ cwd })]);
+
+    runScript({ filePath: "requested.js:12" });
+
+    expect(herdrCalls()).toContainEqual(["pane", "run", "w1:p101", "vim", "+12", requested]);
+  });
+
+  it("opens --file file:line at that line in an existing Vim pane", () => {
+    const requested = createFile("project/requested.js");
+    writeFileSync(requested, "one\ntwo\nthree\nfour\n");
+    setPanes([sourcePane({ cwd: join(testDirectory, "project") })]);
+    runScript();
+    clearHerdrCalls();
+
+    runScript({ filePath: `${requested}:3` });
+
+    const command = String(herdrCommandCalls("send-text")[0]?.[3]);
+    expect(fileAndLineAfterVimCommand(command)).toEqual({ file: requested, line: 3 });
+  });
+
+  it("opens --file file:line at that line with a remembered layout", () => {
+    const existing = createFile("project/existing.js");
+    const requested = createFile("project/requested.js");
+    writeFileSync(requested, "one\ntwo\nthree\nfour\n");
+    const cwd = join(testDirectory, "project");
+    setPanes([sourcePane({ cwd })]);
+    writeLayoutState("w1", layoutState([[11, existing]]));
+
+    runScript({ filePath: "requested.js:4" });
+
+    expect(focusedFileAfterRestore()).toBe(requested);
+    expect(focusedLineAfterRestore()).toBe(4);
+  });
+
   it("restores the same layout in every tab of a workspace", () => {
     const a = createFile("project-one/a.js");
     const b = createFile("project-one/b.js");
@@ -556,8 +593,17 @@ qa!
 }
 
 function focusedFileAfterRestore() {
+  return focusedValueAfterRestore("expand('%:p')", "focused-file");
+}
+
+function focusedLineAfterRestore() {
+  return Number(focusedValueAfterRestore("line('.')", "focused-line"));
+}
+
+/** @param {string} expression @param {string} resultName */
+function focusedValueAfterRestore(expression, resultName) {
   const run = herdrCommandCalls("run").at(-1);
-  const resultPath = join(testDirectory, "focused-file");
+  const resultPath = join(testDirectory, resultName);
   const result = spawnSync(
     "vim",
     [
@@ -568,7 +614,7 @@ function focusedFileAfterRestore() {
       "-S",
       String(run?.[5]),
       "-c",
-      "call writefile([expand('%:p')], $VIM_TEST_RESULT)",
+      `call writefile([${expression}], $VIM_TEST_RESULT)`,
       "-c",
       "qa!",
     ],
@@ -576,6 +622,29 @@ function focusedFileAfterRestore() {
   );
   expect(result.status, result.stderr).toBe(0);
   return readFileSync(resultPath, "utf8").trim();
+}
+
+/** @param {string} command */
+function fileAndLineAfterVimCommand(command) {
+  const resultPath = join(testDirectory, "command-file-and-line");
+  const scriptPath = join(testDirectory, "command-file-and-line.vim");
+  writeFileSync(
+    scriptPath,
+    `execute $VIM_TEST_COMMAND
+call writefile([json_encode({'file': expand('%:p'), 'line': line('.')})], $VIM_TEST_RESULT)
+qa!
+`,
+  );
+  const result = spawnSync("vim", ["-Nu", "NONE", "-n", "-es", "-S", scriptPath], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      VIM_TEST_COMMAND: command.replace(/^:/, ""),
+      VIM_TEST_RESULT: resultPath,
+    },
+  });
+  expect(result.status, result.stderr).toBe(0);
+  return JSON.parse(readFileSync(resultPath, "utf8"));
 }
 
 /**
