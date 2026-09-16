@@ -1,6 +1,7 @@
 
 let g:vim_dotfiles_directory = fnamemodify(resolve(expand('<sfile>:p')), ':h')
 execute 'set runtimepath^=' . fnameescape(g:vim_dotfiles_directory . '/.vim')
+execute 'set runtimepath+=' . fnameescape(g:vim_dotfiles_directory . '/.vim/after')
 
 if exists('+keyprotocol')
     set keyprotocol=xterm:kitty
