@@ -33,8 +33,8 @@ beforeEach(() => {
   herdrLogPath = join(testDirectory, "herdr-calls.log");
   panesPath = join(testDirectory, "panes.json");
   counterPath = join(testDirectory, "counter");
-  stateDirectory = join(testDirectory, "state");
-  mkdirSync(stateDirectory);
+  stateDirectory = join(testDirectory, ".cache", "split-vim-above");
+  mkdirSync(stateDirectory, { recursive: true });
   writeFileSync(herdrLogPath, "");
   writeFileSync(counterPath, "100\n");
 });
@@ -487,7 +487,6 @@ function runScript(options = {}) {
       ...process.env,
       HERDR_BIN_PATH: mockHerdrPath,
       HERDR_PANE_ID: options.paneId || "w1:p1",
-      HERDR_PLUGIN_STATE_DIR: stateDirectory,
       HERDR_MOCK_COUNTER: counterPath,
       HERDR_MOCK_LOG: herdrLogPath,
       HERDR_MOCK_PANES: panesPath,

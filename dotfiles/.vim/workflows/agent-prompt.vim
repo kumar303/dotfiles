@@ -89,7 +89,7 @@ function! AgentPromptMarkerPath()
         return $HERDR_SPLIT_VIM_PROMPT_MARKER
     endif
     let state_directory = empty($HERDR_SPLIT_VIM_STATE_DIR)
-        \ ? (empty($XDG_STATE_HOME) ? expand('~/.local/state') : $XDG_STATE_HOME) . '/herdr/plugins/kumar303.split-vim-above'
+        \ ? expand('~/.cache/split-vim-above')
         \ : $HERDR_SPLIT_VIM_STATE_DIR
     let workspace = substitute($HERDR_WORKSPACE_ID, '[^A-Za-z0-9_.-]', '_', 'g')
     let tab = substitute($HERDR_TAB_ID, '[^A-Za-z0-9_.-]', '_', 'g')

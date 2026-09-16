@@ -36,10 +36,7 @@ import { join, resolve } from "node:path";
 /** @typedef {{layout: VimLayout, windows: Array<{id: number, file: string, view: VimView}>, focused: number}} VimState */
 
 const herdrCommand = process.env.HERDR_BIN_PATH || "herdr";
-const stateHome = process.env.XDG_STATE_HOME || join(process.env.HOME || "", ".local", "state");
-const pluginStateDirectory =
-  process.env.HERDR_PLUGIN_STATE_DIR ||
-  join(stateHome, "herdr", "plugins", "kumar303.split-vim-above");
+const pluginStateDirectory = join(process.env.HOME || "", ".cache", "split-vim-above");
 const paneMarkerDirectory = join(pluginStateDirectory, "pane-markers");
 const vimLayoutDirectory = join(pluginStateDirectory, "vim-layouts");
 const fileOptionIndex = process.argv.indexOf("--file");
