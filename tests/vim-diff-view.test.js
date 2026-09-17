@@ -151,7 +151,7 @@ call writefile([json_encode({'mapping': maparg('<C-M-d>', 'n'), 'window': window
     });
     expect(result.options).toContain("--expect=enter,X");
     expect(result.options).toContain("--bind=load:pos(2)");
-    expect(result.options).toContain("--preview-window=down,60%,border-top,wrap,noinfo");
+    expect(result.options).toContain("--preview-window=down,70%,border-top,wrap,noinfo");
     expect(
       result.options.some(
         (/** @type {string} */ option) =>
