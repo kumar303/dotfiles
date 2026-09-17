@@ -48,7 +48,7 @@ function! DiffViewLocationOptions(view)
         \ '--footer=↑/↓ select  •  enter open  •  X exit diff  •  esc close',
         \ '--footer-border=none',
         \ '--preview=' . DiffViewPreviewCommand(a:view),
-        \ '--preview-window=down,50%,border-top,wrap,noinfo',
+        \ '--preview-window=down,60%,border-top,wrap,noinfo',
         \ '--prompt=Change> ',
         \ '--with-nth=5..',
         \ ]
