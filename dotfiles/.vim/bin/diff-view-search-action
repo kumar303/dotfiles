@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+case "${FZF_KEY:-}:${FZF_INPUT_STATE:-}" in
+    /:disabled)
+        printf 'enable-search+change-prompt(Search> )\n'
+        ;;
+    /:enabled)
+        printf 'put(/)\n'
+        ;;
+    esc:enabled)
+        printf 'disable-search+change-prompt(Change> )\n'
+        ;;
+    esc:disabled)
+        printf 'abort\n'
+        ;;
+    down:enabled)
+        printf 'down+disable-search+change-prompt(Change> )\n'
+        ;;
+    down:disabled)
+        printf 'down\n'
+        ;;
+    t:disabled)
+        printf 'print(t)+accept\n'
+        ;;
+    t:enabled)
+        printf 'put(t)\n'
+        ;;
+    X:disabled)
+        printf 'print(X)+accept\n'
+        ;;
+    X:enabled)
+        printf 'put(X)\n'
+        ;;
+    *)
+        printf 'ignore\n'
+        ;;
+esac

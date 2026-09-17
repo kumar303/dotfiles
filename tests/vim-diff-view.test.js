@@ -153,8 +153,15 @@ call writefile([json_encode({'cached_hunk': join(readfile(entry[4]), "\\n"), 'hi
       xoffset: result.layout.xoffset,
       yoffset: 0.5,
     });
-    expect(result.options).toContain("--expect=enter,X,t");
+    expect(result.options).toContain("--disabled");
+    expect(result.options).toContain("--expect=enter");
     expect(result.options).toContain("--bind=load:pos(2)");
+    expect(result.options).toContainEqual(expect.stringMatching(/^--bind=\/:transform:/));
+    expect(result.options).toContainEqual(expect.stringMatching(/^--bind=down:transform:/));
+    expect(result.options).toContainEqual(expect.stringMatching(/^--bind=esc:transform:/));
+    expect(result.options).toContainEqual(expect.stringMatching(/^--bind=t:transform:/));
+    expect(result.options).toContainEqual(expect.stringMatching(/^--bind=X:transform:/));
+    expect(result.options).toContainEqual(expect.stringContaining("/ search"));
     expect(result.options).toContainEqual(expect.stringContaining("t hide tests"));
     expect(result.hidden_options).toContainEqual(expect.stringContaining("t unhide tests"));
     expect(result.options).toContain("--preview-window=down,70%,border-top,wrap,noinfo");
@@ -175,7 +182,7 @@ call writefile([json_encode({'cached_hunk': join(readfile(entry[4]), "\\n"), 'hi
     const result = runVim(`
 let view = json_decode(ViewDiffCommand(['start', g:fzf_file_picker_root, 'working']))
 call ApplyDiffView(view)
-call DiffViewResults(['X', '1\texample.js\t2\tchange\texample.js:2'])
+call DiffViewResults(['', 'X', '1\texample.js\t2\tchange\texample.js:2'])
 let refreshed = json_decode(ViewDiffCommand(['refresh', g:fzf_file_picker_root, expand('%:p'), line('.')]))
 let placed = sign_getplaced(bufnr(), {'group': 'view-diff-in-vim'})[0].signs
 call writefile([json_encode({'refreshed': refreshed, 'signs': placed})], $VIM_TEST_RESULT)

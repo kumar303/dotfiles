@@ -61,11 +61,18 @@ endfunction
 
 function! DiffViewLocationOptions(view)
     let test_action = get(a:view, 'hideTests', 0) ? 'unhide tests' : 'hide tests'
+    let search_action = shellescape(g:vim_dotfiles_directory . '/.vim/bin/diff-view-search-action')
     return g:fzf_picker_options + [
         \ '--bind=load:pos(' . a:view.position . ')',
+        \ '--bind=/:transform:' . search_action,
+        \ '--bind=down:transform:' . search_action,
+        \ '--bind=esc:transform:' . search_action,
+        \ '--bind=t:transform:' . search_action,
+        \ '--bind=X:transform:' . search_action,
         \ '--delimiter=\t',
-        \ '--expect=enter,X,t',
-        \ '--footer=↑/↓ select  •  enter open  •  t ' . test_action . '  •  X exit diff  •  esc close',
+        \ '--disabled',
+        \ '--expect=enter',
+        \ '--footer=↑/↓ select  •  / search  •  enter open  •  t ' . test_action . '  •  X exit diff  •  esc close',
         \ '--footer-border=none',
         \ '--preview=' . DiffViewPreviewCommand(),
         \ '--preview-window=down,70%,border-top,wrap,noinfo',
@@ -164,18 +171,24 @@ function! ToggleDiffViewTests()
 endfunction
 
 function! DiffViewResults(lines)
-    if !empty(a:lines) && a:lines[0] ==# 'X'
+    let action = get(a:lines, 0, '')
+    let selected_index = 1
+    if empty(action) && index(['X', 't'], get(a:lines, 1, '')) >= 0
+        let action = a:lines[1]
+        let selected_index = 2
+    endif
+    if action ==# 'X'
         call ClearDiffView()
         return
     endif
-    if !empty(a:lines) && a:lines[0] ==# 't'
+    if action ==# 't'
         call ToggleDiffViewTests()
         return
     endif
-    if len(a:lines) < 2 || a:lines[0] !=# 'enter'
+    if len(a:lines) <= selected_index || action !=# 'enter'
         return
     endif
-    let fields = split(a:lines[1], "\t", 1)
+    let fields = split(a:lines[selected_index], "\t", 1)
     if len(fields) < 4
         return
     endif
