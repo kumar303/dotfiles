@@ -137,18 +137,27 @@ call writefile([json_encode({'count': winnr('$'), 'first_count': first_count, 'f
   it("uses the shared file-tool layout and binds ctrl+opt+d", () => {
     const result = runVim(`
 set columns=180 lines=40
-let window = DiffViewPopupWindow(6)
-call writefile([json_encode({'mapping': maparg('<C-M-d>', 'n'), 'window': window, 'layout': dotfiles#fzf#file_tool_layout(), 'options': DiffViewLocationOptions(2)})], $VIM_TEST_RESULT)
+let window = DiffViewLocationPopupWindow()
+let view = {'mode': 'working', 'position': 2}
+call writefile([json_encode({'mapping': maparg('<C-M-d>', 'n'), 'window': window, 'layout': dotfiles#fzf#file_tool_layout(), 'options': DiffViewLocationOptions(view)})], $VIM_TEST_RESULT)
 `);
 
     expect(result.mapping).toContain("OpenDiffView");
     expect(result.window).toMatchObject({
       width: result.layout.width,
+      height: 36,
       xoffset: result.layout.xoffset,
-      yoffset: result.layout.yoffset,
+      yoffset: 0.5,
     });
     expect(result.options).toContain("--expect=enter,X");
     expect(result.options).toContain("--bind=load:pos(2)");
+    expect(result.options).toContain("--preview-window=down,50%,border-top,wrap,noinfo");
+    expect(
+      result.options.some(
+        (/** @type {string} */ option) =>
+          option.startsWith("--preview=") && option.includes("delta"),
+      ),
+    ).toBe(true);
   });
 
   it("clears the active workspace state and gutter signs with X", () => {

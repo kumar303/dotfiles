@@ -260,15 +260,15 @@ function untrackedChanges(root, paths) {
 /**
  * @param {string} root
  * @param {DiffMode} mode
- * @returns {{base?: BranchBase, locations: Location[], signs: Sign[]}}
+ * @param {number} unified
+ * @param {string} [path]
  */
-function calculate(root, mode) {
+function diffCommand(root, mode, unified, path) {
   /** @type {BranchBase | undefined} */
   let base;
-  /** @type {string[]} */
   const arguments_ = [
     "diff",
-    "--unified=0",
+    `--unified=${unified}`,
     "--no-color",
     "--no-ext-diff",
     "--find-renames",
@@ -284,6 +284,17 @@ function calculate(root, mode) {
     arguments_.push(base.commit);
   }
   arguments_.push("--");
+  if (path) arguments_.push(path);
+  return { arguments_, base };
+}
+
+/**
+ * @param {string} root
+ * @param {DiffMode} mode
+ * @returns {{base?: BranchBase, locations: Location[], signs: Sign[]}}
+ */
+function calculate(root, mode) {
+  const { arguments_, base } = diffCommand(root, mode, 0);
   const parsed = parseDiff(String(git(root, arguments_)), root);
   const untracked = untrackedChanges(root, untrackedFiles(root));
   return {
@@ -291,6 +302,57 @@ function calculate(root, mode) {
     locations: [...parsed.locations, ...untracked.locations],
     signs: [...parsed.signs, ...untracked.signs],
   };
+}
+
+/** @param {string} path @param {string} content */
+function addedFileDiff(path, content) {
+  const lines = content.split(/\r?\n/);
+  if (lines.at(-1) === "") lines.pop();
+  return [
+    `diff --git ${path} ${path}`,
+    "new file mode 100644",
+    "--- /dev/null",
+    `+++ ${path}`,
+    `@@ -0,0 +1,${lines.length} @@`,
+    ...lines.map((line) => `+${line}`),
+    "",
+  ].join("\n");
+}
+
+/** @param {string} diff @param {number} selectedLine */
+function selectedHunk(diff, selectedLine) {
+  const lines = diff.split("\n");
+  const headers = [];
+  for (const line of lines) {
+    if (line.startsWith("@@ ")) break;
+    headers.push(line);
+  }
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+    if (!match) continue;
+    const start = Number(match[1]);
+    const count = match[2] === undefined ? 1 : Number(match[2]);
+    if (count === 0 || selectedLine < start || selectedLine >= start + count) continue;
+    let end = index + 1;
+    while (end < lines.length && !lines[end].startsWith("@@ ")) end += 1;
+    return [...headers, ...lines.slice(index, end)].join("\n");
+  }
+  return "";
+}
+
+/** @param {string} workspace @param {DiffMode} mode @param {string} path @param {number} line */
+function previewHunk(workspace, mode, path, line) {
+  const workspaceRoot = realpathSync(workspace);
+  const root = repositoryRoot(workspaceRoot);
+  const absolutePath = resolve(workspaceRoot, path);
+  const repositoryPath = relative(root, absolutePath);
+  const tracked = String(
+    git(root, ["ls-files", "--error-unmatch", "--", repositoryPath], { allowFailure: true }),
+  ).trim();
+  const diff = tracked
+    ? String(git(root, diffCommand(root, mode, 3, repositoryPath).arguments_))
+    : addedFileDiff(repositoryPath, readFileSync(absolutePath, "utf8"));
+  return selectedHunk(diff, line);
 }
 
 /**
@@ -387,6 +449,16 @@ function main(arguments_) {
   if (command === "clear") {
     rmSync(statePath(workspace), { force: true });
     output({ cleared: true });
+    return;
+  }
+  if (command === "preview") {
+    const mode = rest[0];
+    if (mode !== "working" && mode !== "branch") throw new Error(`Unknown diff mode: ${mode}`);
+    const path = rest[1];
+    const line = Number(rest[2]);
+    if (!path || !Number.isInteger(line) || line < 1)
+      throw new Error("Usage: view-diff-in-vim.js preview <workspace> <mode> <path> <line>");
+    process.stdout.write(previewHunk(workspace, mode, path, line));
     return;
   }
   if (command === "start") {

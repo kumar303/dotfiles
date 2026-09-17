@@ -21,10 +21,11 @@ Required: Node.js 22 or newer, Vim, Ghostty, and Herdr.
    [fd](https://github.com/sharkdp/fd),
    [ripgrep](https://github.com/BurntSushi/ripgrep),
    [Bat](https://github.com/sharkdp/bat),
-   [Universal Ctags](https://github.com/universal-ctags/ctags), and `jq`:
+   [Universal Ctags](https://github.com/universal-ctags/ctags), `jq`, and
+   [Delta](https://github.com/dandavison/delta):
 
    ```sh
-   brew install fzf fd ripgrep bat universal-ctags jq
+   brew install fzf fd ripgrep bat universal-ctags jq git-delta
    ```
 
 2. Install the Herdr skill:

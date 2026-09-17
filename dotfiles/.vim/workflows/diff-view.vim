@@ -21,13 +21,34 @@ function! DiffViewPopupWindow(content_height)
         \ }
 endfunction
 
-function! DiffViewLocationOptions(position)
+function! DiffViewLocationPopupWindow()
+    let layout = dotfiles#fzf#file_tool_layout()
+    return {
+        \ 'border': layout.border,
+        \ 'height': min([&lines - 2, max([4, float2nr(&lines * 0.9)])]),
+        \ 'width': layout.width,
+        \ 'xoffset': layout.xoffset,
+        \ 'yoffset': 0.5,
+        \ }
+endfunction
+
+function! DiffViewPreviewCommand(view)
+    let node = shellescape(exepath('node'))
+    let script = shellescape(g:vim_dotfiles_directory . '/.vim/bin/view-diff-in-vim.js')
+    let root = shellescape(resolve(get(g:, 'fzf_file_picker_root', getcwd())))
+    let mode = shellescape(a:view.mode)
+    return node . ' ' . script . ' preview ' . root . ' ' . mode . ' {2} {3} | delta --paging=never --width "$FZF_PREVIEW_COLUMNS"'
+endfunction
+
+function! DiffViewLocationOptions(view)
     return g:fzf_picker_options + [
-        \ '--bind=load:pos(' . a:position . ')',
+        \ '--bind=load:pos(' . a:view.position . ')',
         \ '--delimiter=\t',
         \ '--expect=enter,X',
         \ '--footer=↑/↓ select  •  enter open  •  X exit diff  •  esc close',
         \ '--footer-border=none',
+        \ '--preview=' . DiffViewPreviewCommand(a:view),
+        \ '--preview-window=down,50%,border-top,wrap,noinfo',
         \ '--prompt=Change> ',
         \ '--with-nth=5..',
         \ ]
@@ -181,10 +202,10 @@ function! OpenDiffView()
     endif
     let entries = DiffViewEntries(view)
     call fzf#run(fzf#wrap('diff-locations', {
-        \ 'options': DiffViewLocationOptions(view.position),
+        \ 'options': DiffViewLocationOptions(view),
         \ 'sink*': function('DiffViewResults'),
         \ 'source': entries,
-        \ 'window': DiffViewPopupWindow(len(entries) + 4),
+        \ 'window': DiffViewLocationPopupWindow(),
         \ }))
 endfunction
 

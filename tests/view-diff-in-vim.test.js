@@ -36,18 +36,21 @@ function git(command) {
   return execSync(`git ${command}`, { cwd: testDirectory, encoding: "utf8" }).trim();
 }
 
+/** @param {string[]} arguments_ */
+function runText(arguments_) {
+  return execFileSync(process.execPath, [scriptPath, ...arguments_], {
+    cwd: testDirectory,
+    encoding: "utf8",
+    env: { ...process.env, VIEW_DIFF_IN_VIM_STATE_DIR: stateDirectory },
+  });
+}
+
 /**
  * @param {string[]} arguments_
  * @returns {any}
  */
 function run(arguments_) {
-  return JSON.parse(
-    execFileSync(process.execPath, [scriptPath, ...arguments_], {
-      cwd: testDirectory,
-      encoding: "utf8",
-      env: { ...process.env, VIEW_DIFF_IN_VIM_STATE_DIR: stateDirectory },
-    }),
-  );
+  return JSON.parse(runText(arguments_));
 }
 
 describe("view-diff-in-vim entrypoint", () => {
@@ -173,6 +176,33 @@ describe("view-diff-in-vim entrypoint", () => {
 
     expect(view.locations).toEqual([{ kind: "change", line: 1, path: "kept.js", text: "after" }]);
     expect(view.signs).toEqual([{ kind: "change", line: 1, path: "kept.js" }]);
+  });
+
+  it("prints only the selected diff hunk for previews", () => {
+    const original = Array.from({ length: 15 }, (_, index) => `line ${index + 1}`);
+    writeFileSync(join(testDirectory, "example.js"), `${original.join("\n")}\n`);
+    git("add example.js");
+    git("commit -m long-file");
+    const changed = [...original];
+    changed[0] = "changed one";
+    changed[14] = "changed fifteen";
+    writeFileSync(join(testDirectory, "example.js"), `${changed.join("\n")}\n`);
+
+    const preview = runText(["preview", testDirectory, "working", "example.js", "1"]);
+
+    expect(preview).toContain("diff --git");
+    expect(preview).toContain("changed one");
+    expect(preview).not.toContain("changed fifteen");
+  });
+
+  it("prints an untracked file as an added diff hunk", () => {
+    writeFileSync(join(testDirectory, "new file.js"), "alpha\nbeta\n");
+
+    const preview = runText(["preview", testDirectory, "working", "new file.js", "1"]);
+
+    expect(preview).toContain("--- /dev/null");
+    expect(preview).toContain("+++ new file.js");
+    expect(preview).toContain("+alpha");
   });
 
   it("clears only the state for the selected workspace", () => {
