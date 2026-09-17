@@ -84,7 +84,7 @@ function! AgentPromptOptions(state)
         \ ]
 endfunction
 
-function! AgentPromptMarkerPath()
+function! FzfOverlayMarkerPath()
     if !empty($HERDR_SPLIT_VIM_PROMPT_MARKER)
         return $HERDR_SPLIT_VIM_PROMPT_MARKER
     endif
@@ -96,21 +96,21 @@ function! AgentPromptMarkerPath()
     return state_directory . '/agent-prompts/' . workspace . '__' . tab
 endfunction
 
-function! ActivateAgentPrompt()
-    let g:agent_prompt_marker = AgentPromptMarkerPath()
-    call mkdir(fnamemodify(g:agent_prompt_marker, ':h'), 'p', 0700)
-    call writefile(['active'], g:agent_prompt_marker)
+function! ActivateFzfOverlay()
+    let g:fzf_overlay_marker = FzfOverlayMarkerPath()
+    call mkdir(fnamemodify(g:fzf_overlay_marker, ':h'), 'p', 0700)
+    call writefile(['active'], g:fzf_overlay_marker)
 endfunction
 
-function! RemoveAgentPromptMarker(timer)
-    if exists('g:agent_prompt_marker')
-        call delete(g:agent_prompt_marker)
-        unlet g:agent_prompt_marker
+function! RemoveFzfOverlayMarker(timer)
+    if exists('g:fzf_overlay_marker')
+        call delete(g:fzf_overlay_marker)
+        unlet g:fzf_overlay_marker
     endif
 endfunction
 
 function! AgentPromptExit(code)
-    call timer_start(0, function('RemoveAgentPromptMarker'))
+    call timer_start(0, function('RemoveFzfOverlayMarker'))
 endfunction
 
 function! AgentPromptResults(lines)
@@ -150,7 +150,7 @@ function! OpenAgentPrompt(include_selection)
         return
     endif
     let g:agent_prompt_context = state.context
-    call ActivateAgentPrompt()
+    call ActivateFzfOverlay()
     call fzf#run(fzf#wrap('agent-prompt', {
         \ 'exit': function('AgentPromptExit'),
         \ 'options': AgentPromptOptions(state),

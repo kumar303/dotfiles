@@ -57,6 +57,7 @@ endfunction
 
 function! DiffViewExit(code)
     call CleanupDiffViewPreviews()
+    call timer_start(0, function('RemoveFzfOverlayMarker'))
 endfunction
 
 function! DiffViewLocationOptions(view)
@@ -222,7 +223,9 @@ function! OpenDiffChoices()
         \ '--prompt=Diff> ',
         \ '--with-nth=2..',
         \ ]
+    call ActivateFzfOverlay()
     call fzf#run(fzf#wrap('diff-kind', {
+        \ 'exit': function('DiffViewExit'),
         \ 'options': options,
         \ 'sink': function('StartDiffView'),
         \ 'source': choices,
@@ -252,6 +255,7 @@ function! OpenDiffView()
     endif
     call PrepareDiffViewPreviews(view)
     let entries = DiffViewEntries(view)
+    call ActivateFzfOverlay()
     call fzf#run(fzf#wrap('diff-locations', {
         \ 'exit': function('DiffViewExit'),
         \ 'options': DiffViewLocationOptions(view),

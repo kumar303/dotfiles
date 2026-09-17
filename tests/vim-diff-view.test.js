@@ -47,6 +47,7 @@ function runVim(body, workspace = testDirectory) {
     encoding: "utf8",
     env: {
       ...process.env,
+      HERDR_SPLIT_VIM_PROMPT_MARKER: join(stateDirectory, "fzf-overlay"),
       VIEW_DIFF_IN_VIM_STATE_DIR: stateDirectory,
       VIM_TEST_RESULT: resultPath,
     },
@@ -174,6 +175,18 @@ call writefile([json_encode({'cached_hunk': join(readfile(entry[4]), "\\n"), 'hi
           !option.includes("view-diff-in-vim.js"),
       ),
     ).toBe(true);
+  });
+
+  it("marks the diff overlay as active until fzf exits", () => {
+    const result = runVim(`
+call ActivateFzfOverlay()
+let active = filereadable($HERDR_SPLIT_VIM_PROMPT_MARKER)
+call DiffViewExit(0)
+sleep 10m
+call writefile([json_encode({'active': active, 'closed': !filereadable($HERDR_SPLIT_VIM_PROMPT_MARKER)})], $VIM_TEST_RESULT)
+`);
+
+    expect(result).toEqual({ active: 1, closed: 1 });
   });
 
   it("clears the active workspace state and gutter signs with X", () => {

@@ -372,15 +372,16 @@ function createVimPane(sourcePane, requestedFile, layoutPath) {
   }
 }
 
-/** @param {string} path */
-function waitForRemoval(path) {
+/** @param {Pane} pane @param {string} path */
+function closeFzfOverlay(pane, path) {
   const waiter = new Int32Array(new SharedArrayBuffer(4));
   const deadline = Date.now() + 2_000;
   while (Date.now() < deadline) {
     if (!existsSync(path)) return;
-    Atomics.wait(waiter, 0, 0, 25);
+    runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
+    Atomics.wait(waiter, 0, 0, 50);
   }
-  throw new Error("The Vim agent prompt did not close after Escape; the pane remains open");
+  throw new Error("The Vim fzf overlay did not close after Escape; the pane remains open");
 }
 
 /** @param {Pane} pane @param {string} layoutPath */
@@ -388,10 +389,12 @@ function saveLayoutAndClose(pane, layoutPath) {
   const capturePath = `${layoutPath}.capture.${process.pid}`;
   rmSync(capturePath, { force: true });
   const command = `:call writefile([json_encode({'layout': winlayout(), 'focused': win_getid(), 'windows': map(getwininfo(), '{"id": v:val.winid, "file": fnamemodify(bufname(v:val.bufnr), ":p"), "view": {"lnum": getcurpos(v:val.winid)[1], "col": getcurpos(v:val.winid)[2] - 1, "topline": v:val.topline, "leftcol": v:val.leftcol}}')})], '${vimSingleQuoted(capturePath)}')`;
-  const agentPromptMarker = agentPromptMarkerPath(pane);
-  const agentPromptActive = existsSync(agentPromptMarker);
-  runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
-  if (agentPromptActive) waitForRemoval(agentPromptMarker);
+  const fzfOverlayMarker = agentPromptMarkerPath(pane);
+  if (existsSync(fzfOverlayMarker)) {
+    closeFzfOverlay(pane, fzfOverlayMarker);
+  } else {
+    runHerdr(["pane", "send-keys", pane.pane_id, "esc"]);
+  }
   runHerdr(["pane", "send-text", pane.pane_id, command]);
   runHerdr(["pane", "send-keys", pane.pane_id, "enter"]);
 

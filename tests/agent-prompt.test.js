@@ -189,8 +189,8 @@ qa!
 
     runVim(
       `let $HERDR_SPLIT_VIM_STATE_DIR = $VIM_TEST_STATE
-call ActivateAgentPrompt()
-let marker = g:agent_prompt_marker
+call ActivateFzfOverlay()
+let marker = g:fzf_overlay_marker
 let active = filereadable(marker)
 call AgentPromptExit(130)
 sleep 10m
