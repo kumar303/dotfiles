@@ -33,7 +33,7 @@ function! DiffViewLocationPopupWindow()
 endfunction
 
 function! DiffViewPreviewCommand()
-    return 'cat {5} | delta --paging=never --width "$FZF_PREVIEW_COLUMNS"'
+    return 'cat {5} | delta --paging=never --file-style=omit --width "$FZF_PREVIEW_COLUMNS"'
 endfunction
 
 function! CleanupDiffViewPreviews()
