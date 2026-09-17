@@ -25,7 +25,7 @@ function! DiffViewLocationPopupWindow()
     let layout = dotfiles#fzf#file_tool_layout()
     return {
         \ 'border': layout.border,
-        \ 'height': min([&lines - 2, max([4, float2nr(&lines * 0.9)])]),
+        \ 'height': min([&lines - 1, max([4, float2nr(&lines * 0.98)])]),
         \ 'width': layout.width,
         \ 'xoffset': layout.xoffset,
         \ 'yoffset': 0.5,

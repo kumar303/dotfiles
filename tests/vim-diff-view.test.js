@@ -145,7 +145,7 @@ call writefile([json_encode({'mapping': maparg('<C-M-d>', 'n'), 'window': window
     expect(result.mapping).toContain("OpenDiffView");
     expect(result.window).toMatchObject({
       width: result.layout.width,
-      height: 36,
+      height: 39,
       xoffset: result.layout.xoffset,
       yoffset: 0.5,
     });
