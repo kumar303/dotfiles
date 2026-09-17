@@ -1,7 +1,15 @@
 // @ts-check
 
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  mkdirSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,12 +44,12 @@ function git(command) {
   return execSync(`git ${command}`, { cwd: testDirectory, encoding: "utf8" }).trim();
 }
 
-/** @param {string[]} arguments_ */
-function runText(arguments_) {
+/** @param {string[]} arguments_ @param {NodeJS.ProcessEnv} [environment] */
+function runText(arguments_, environment = {}) {
   return execFileSync(process.execPath, [scriptPath, ...arguments_], {
     cwd: testDirectory,
     encoding: "utf8",
-    env: { ...process.env, VIEW_DIFF_IN_VIM_STATE_DIR: stateDirectory },
+    env: { ...process.env, ...environment, VIEW_DIFF_IN_VIM_STATE_DIR: stateDirectory },
   });
 }
 
@@ -72,7 +80,7 @@ describe("view-diff-in-vim entrypoint", () => {
     const view = run(["start", testDirectory, "working"]);
 
     expect(view).toMatchObject({ mode: "working", position: 1 });
-    expect(view.locations).toEqual([
+    expect(view.locations).toMatchObject([
       { kind: "change", line: 2, path: "example.js", text: "changed" },
       { kind: "add", line: 4, path: "example.js", text: "four" },
       { kind: "add", line: 1, path: "new file.js", text: "alpha" },
@@ -123,12 +131,14 @@ describe("view-diff-in-vim entrypoint", () => {
 
     const view = run(["start", workspace, "working"]);
 
-    expect(view.locations).toContainEqual({
-      kind: "change",
-      line: 1,
-      path: "nested.js",
-      text: "after",
-    });
+    expect(view.locations).toContainEqual(
+      expect.objectContaining({
+        kind: "change",
+        line: 1,
+        path: "nested.js",
+        text: "after",
+      }),
+    );
     expect(view.signs).toContainEqual({ kind: "change", line: 1, path: "nested.js" });
   });
 
@@ -157,7 +167,7 @@ describe("view-diff-in-vim entrypoint", () => {
       mode: "branch",
       position: 1,
     });
-    expect(view.locations).toEqual([
+    expect(view.locations).toMatchObject([
       { kind: "change", line: 2, path: "example.js", text: "working branch" },
     ]);
   });
@@ -174,11 +184,40 @@ describe("view-diff-in-vim entrypoint", () => {
 
     const view = run(["start", testDirectory, "branch"]);
 
-    expect(view.locations).toEqual([{ kind: "change", line: 1, path: "kept.js", text: "after" }]);
+    expect(view.locations).toMatchObject([
+      { kind: "change", line: 1, path: "kept.js", text: "after" },
+    ]);
     expect(view.signs).toEqual([{ kind: "change", line: 1, path: "kept.js" }]);
   });
 
-  it("prints only the selected diff hunk for previews", () => {
+  it("calculates the Git diff once while producing locations and cached hunks", () => {
+    writeFileSync(join(testDirectory, "example.js"), "one\nchanged\nthree\n");
+    const binDirectory = join(testDirectory, "bin");
+    const gitLog = join(testDirectory, "git-calls");
+    const realGit = execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim();
+    mkdirSync(binDirectory);
+    const wrapper = join(binDirectory, "git");
+    writeFileSync(
+      wrapper,
+      `#!/bin/sh
+if [ "$1" = diff ]; then printf 'diff\\n' >> "$VIEW_DIFF_GIT_LOG"; fi
+exec "${realGit}" "$@"
+`,
+    );
+    chmodSync(wrapper, 0o755);
+
+    const view = JSON.parse(
+      runText(["start", testDirectory, "working"], {
+        PATH: `${binDirectory}:${process.env.PATH}`,
+        VIEW_DIFF_GIT_LOG: gitLog,
+      }),
+    );
+
+    expect(readFileSync(gitLog, "utf8").trim().split("\n")).toEqual(["diff"]);
+    expect(view.locations[0].hunk).toContain("+changed");
+  });
+
+  it("includes only the selected diff hunk in the calculated view", () => {
     const original = Array.from({ length: 15 }, (_, index) => `line ${index + 1}`);
     writeFileSync(join(testDirectory, "example.js"), `${original.join("\n")}\n`);
     git("add example.js");
@@ -188,17 +227,23 @@ describe("view-diff-in-vim entrypoint", () => {
     changed[14] = "changed fifteen";
     writeFileSync(join(testDirectory, "example.js"), `${changed.join("\n")}\n`);
 
-    const preview = runText(["preview", testDirectory, "working", "example.js", "1"]);
+    const view = run(["start", testDirectory, "working"]);
+    const preview = view.locations.find(
+      (/** @type {{line: number}} */ location) => location.line === 1,
+    ).hunk;
 
     expect(preview).toContain("diff --git");
     expect(preview).toContain("changed one");
     expect(preview).not.toContain("changed fifteen");
   });
 
-  it("prints an untracked file as an added diff hunk", () => {
+  it("includes an untracked file as an added diff hunk", () => {
     writeFileSync(join(testDirectory, "new file.js"), "alpha\nbeta\n");
 
-    const preview = runText(["preview", testDirectory, "working", "new file.js", "1"]);
+    const view = run(["start", testDirectory, "working"]);
+    const preview = view.locations.find(
+      (/** @type {{path: string}} */ location) => location.path === "new file.js",
+    ).hunk;
 
     expect(preview).toContain("--- /dev/null");
     expect(preview).toContain("+++ new file.js");

@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 /** @typedef {"add" | "change"} ChangeKind */
 /** @typedef {{commit: string, name: string}} BranchBase */
 /** @typedef {{kind: ChangeKind, line: number, path: string}} Sign */
-/** @typedef {Sign & {text: string}} Location */
+/** @typedef {Sign & {text: string, hunk: string}} Location */
 /** @typedef {{version: 1, workspace: string, mode: DiffMode, hideTests: boolean}} StoredState */
 /** @typedef {{active: true, base?: BranchBase, hideTests: boolean, locations: Location[], mode: DiffMode, position: number, signs: Sign[]}} View */
 
@@ -209,36 +209,72 @@ function parseDiff(diff, root) {
   const locations = [];
   /** @type {Sign[]} */
   const signs = [];
+  const lines = diff.split("\n");
+  /** @type {string[]} */
+  let headers = [];
   let path = "";
-  let oldPath = "";
   let deletedFile = false;
 
-  for (const diffLine of diff.split("\n")) {
-    if (diffLine.startsWith("--- ")) {
-      oldPath = diffLine.slice(4);
+  for (let index = 0; index < lines.length; index += 1) {
+    const diffLine = lines[index];
+    if (diffLine.startsWith("diff --git ")) {
+      headers = [diffLine];
+      path = "";
       deletedFile = false;
       continue;
     }
     if (diffLine.startsWith("+++ ")) {
       path = diffLine.slice(4);
       deletedFile = path === "/dev/null";
-      if (deletedFile) path = oldPath;
+    }
+    const match = diffLine.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+    if (!match) {
+      if (headers.length > 0) headers.push(diffLine);
       continue;
     }
-    const match = diffLine.match(/^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
-    if (!match || !path || deletedFile) continue;
-    const oldCount = match[1] === undefined ? 1 : Number(match[1]);
-    const newStart = Number(match[2]);
-    const newCount = match[3] === undefined ? 1 : Number(match[3]);
-    if (newCount === 0) continue;
-    /** @type {ChangeKind} */
-    const kind = oldCount === 0 ? "add" : "change";
-    const line = Math.max(1, newStart);
-    locations.push({ kind, line, path, text: lineText(root, path, line).trim() });
-    const signCount = Math.max(1, newCount);
-    for (let offset = 0; offset < signCount; offset += 1) {
-      signs.push({ kind, line: line + offset, path });
+    let end = index + 1;
+    while (
+      end < lines.length &&
+      !lines[end].startsWith("@@ ") &&
+      !lines[end].startsWith("diff --git ")
+    ) {
+      end += 1;
     }
+    if (!path || deletedFile) {
+      index = end - 1;
+      continue;
+    }
+    const hunk = [...headers, ...lines.slice(index, end)].join("\n");
+    let newLine = Number(match[1]);
+    let deletedLines = 0;
+    /** @type {number[]} */
+    let addedLines = [];
+    const flushChange = () => {
+      if (addedLines.length === 0) {
+        deletedLines = 0;
+        return;
+      }
+      /** @type {ChangeKind} */
+      const kind = deletedLines === 0 ? "add" : "change";
+      const line = Math.max(1, addedLines[0]);
+      locations.push({ kind, line, path, text: lineText(root, path, line).trim(), hunk });
+      for (const addedLine of addedLines) signs.push({ kind, line: addedLine, path });
+      deletedLines = 0;
+      addedLines = [];
+    };
+    for (const contentLine of lines.slice(index + 1, end)) {
+      if (contentLine.startsWith("-")) {
+        deletedLines += 1;
+      } else if (contentLine.startsWith("+")) {
+        addedLines.push(newLine);
+        newLine += 1;
+      } else if (contentLine.startsWith(" ")) {
+        flushChange();
+        newLine += 1;
+      }
+    }
+    flushChange();
+    index = end - 1;
   }
   return { locations, signs };
 }
@@ -257,7 +293,8 @@ function untrackedChanges(root, paths) {
     const lines = readFileSync(join(root, path), "utf8").split(/\r?\n/);
     if (lines.at(-1) === "") lines.pop();
     const count = Math.max(1, lines.length);
-    locations.push({ kind: "add", line: 1, path, text: lines[0]?.trim() ?? "" });
+    const hunk = addedFileDiff(path, lines.join("\n"));
+    locations.push({ kind: "add", line: 1, path, text: lines[0]?.trim() ?? "", hunk });
     for (let line = 1; line <= count; line += 1) signs.push({ kind: "add", line, path });
   }
   return { locations, signs };
@@ -300,8 +337,9 @@ function diffCommand(root, mode, unified, path) {
  * @returns {{base?: BranchBase, locations: Location[], signs: Sign[]}}
  */
 function calculate(root, mode) {
-  const { arguments_, base } = diffCommand(root, mode, 0);
-  const parsed = parseDiff(String(git(root, arguments_)), root);
+  const { arguments_, base } = diffCommand(root, mode, 3);
+  const diff = String(git(root, arguments_));
+  const parsed = parseDiff(diff, root);
   const untracked = untrackedChanges(root, untrackedFiles(root));
   return {
     ...(base ? { base } : {}),
@@ -323,42 +361,6 @@ function addedFileDiff(path, content) {
     ...lines.map((line) => `+${line}`),
     "",
   ].join("\n");
-}
-
-/** @param {string} diff @param {number} selectedLine */
-function selectedHunk(diff, selectedLine) {
-  const lines = diff.split("\n");
-  const headers = [];
-  for (const line of lines) {
-    if (line.startsWith("@@ ")) break;
-    headers.push(line);
-  }
-  for (let index = 0; index < lines.length; index += 1) {
-    const match = lines[index].match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
-    if (!match) continue;
-    const start = Number(match[1]);
-    const count = match[2] === undefined ? 1 : Number(match[2]);
-    if (count === 0 || selectedLine < start || selectedLine >= start + count) continue;
-    let end = index + 1;
-    while (end < lines.length && !lines[end].startsWith("@@ ")) end += 1;
-    return [...headers, ...lines.slice(index, end)].join("\n");
-  }
-  return "";
-}
-
-/** @param {string} workspace @param {DiffMode} mode @param {string} path @param {number} line */
-function previewHunk(workspace, mode, path, line) {
-  const workspaceRoot = realpathSync(workspace);
-  const root = repositoryRoot(workspaceRoot);
-  const absolutePath = resolve(workspaceRoot, path);
-  const repositoryPath = relative(root, absolutePath);
-  const tracked = String(
-    git(root, ["ls-files", "--error-unmatch", "--", repositoryPath], { allowFailure: true }),
-  ).trim();
-  const diff = tracked
-    ? String(git(root, diffCommand(root, mode, 3, repositoryPath).arguments_))
-    : addedFileDiff(repositoryPath, readFileSync(absolutePath, "utf8"));
-  return selectedHunk(diff, line);
 }
 
 /**
@@ -467,16 +469,6 @@ function main(arguments_) {
     state.hideTests = !state.hideTests;
     storeState(workspace, state.mode, state.hideTests);
     output({ hideTests: state.hideTests });
-    return;
-  }
-  if (command === "preview") {
-    const mode = rest[0];
-    if (mode !== "working" && mode !== "branch") throw new Error(`Unknown diff mode: ${mode}`);
-    const path = rest[1];
-    const line = Number(rest[2]);
-    if (!path || !Number.isInteger(line) || line < 1)
-      throw new Error("Usage: view-diff-in-vim.js preview <workspace> <mode> <path> <line>");
-    process.stdout.write(previewHunk(workspace, mode, path, line));
     return;
   }
   if (command === "start") {

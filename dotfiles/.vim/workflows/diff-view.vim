@@ -32,12 +32,31 @@ function! DiffViewLocationPopupWindow()
         \ }
 endfunction
 
-function! DiffViewPreviewCommand(view)
-    let node = shellescape(exepath('node'))
-    let script = shellescape(g:vim_dotfiles_directory . '/.vim/bin/view-diff-in-vim.js')
-    let root = shellescape(resolve(get(g:, 'fzf_file_picker_root', getcwd())))
-    let mode = shellescape(a:view.mode)
-    return node . ' ' . script . ' preview ' . root . ' ' . mode . ' {2} {3} | delta --paging=never --width "$FZF_PREVIEW_COLUMNS"'
+function! DiffViewPreviewCommand()
+    return 'cat {5} | delta --paging=never --width "$FZF_PREVIEW_COLUMNS"'
+endfunction
+
+function! CleanupDiffViewPreviews()
+    if exists('g:diff_view_preview_directory')
+        call delete(g:diff_view_preview_directory, 'rf')
+        unlet g:diff_view_preview_directory
+    endif
+endfunction
+
+function! PrepareDiffViewPreviews(view)
+    call CleanupDiffViewPreviews()
+    let g:diff_view_preview_directory = tempname()
+    call mkdir(g:diff_view_preview_directory, 'p', 0700)
+    let index = 1
+    for location in a:view.locations
+        let location.preview = g:diff_view_preview_directory . '/' . index . '.diff'
+        call writefile(split(location.hunk, "\n", 1), location.preview)
+        let index += 1
+    endfor
+endfunction
+
+function! DiffViewExit(code)
+    call CleanupDiffViewPreviews()
 endfunction
 
 function! DiffViewLocationOptions(view)
@@ -48,10 +67,10 @@ function! DiffViewLocationOptions(view)
         \ '--expect=enter,X,t',
         \ '--footer=↑/↓ select  •  enter open  •  t ' . test_action . '  •  X exit diff  •  esc close',
         \ '--footer-border=none',
-        \ '--preview=' . DiffViewPreviewCommand(a:view),
+        \ '--preview=' . DiffViewPreviewCommand(),
         \ '--preview-window=down,70%,border-top,wrap,noinfo',
         \ '--prompt=Change> ',
-        \ '--with-nth=5..',
+        \ '--with-nth=6..',
         \ ]
 endfunction
 
@@ -60,7 +79,7 @@ function! DiffViewEntries(view)
     let index = 1
     for location in a:view.locations
         let text = substitute(location.text, '\t', ' ', 'g')
-        call add(entries, printf("%d\t%s\t%d\t%s\t%s:%d  %s", index, location.path, location.line, location.kind, location.path, location.line, text))
+        call add(entries, printf("%d\t%s\t%d\t%s\t%s\t%s:%d  %s", index, location.path, location.line, location.kind, get(location, 'preview', ''), location.path, location.line, text))
         let index += 1
     endfor
     return entries
@@ -218,8 +237,10 @@ function! OpenDiffView()
         echo 'No changed locations'
         return
     endif
+    call PrepareDiffViewPreviews(view)
     let entries = DiffViewEntries(view)
     call fzf#run(fzf#wrap('diff-locations', {
+        \ 'exit': function('DiffViewExit'),
         \ 'options': DiffViewLocationOptions(view),
         \ 'sink*': function('DiffViewResults'),
         \ 'source': entries,

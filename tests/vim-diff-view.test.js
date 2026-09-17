@@ -140,7 +140,10 @@ set columns=180 lines=40
 let window = DiffViewLocationPopupWindow()
 let view = {'hideTests': v:false, 'mode': 'working', 'position': 2}
 let hidden_view = {'hideTests': v:true, 'mode': 'working', 'position': 2}
-call writefile([json_encode({'hidden_options': DiffViewLocationOptions(hidden_view), 'mapping': maparg('<C-M-d>', 'n'), 'window': window, 'layout': dotfiles#fzf#file_tool_layout(), 'options': DiffViewLocationOptions(view)})], $VIM_TEST_RESULT)
+let preview_view = {'locations': [{'hunk': "@@ -1 +1 @@\\n-old\\n+new", 'kind': 'change', 'line': 1, 'path': 'example.js', 'text': 'new'}]}
+call PrepareDiffViewPreviews(preview_view)
+let entry = split(DiffViewEntries(preview_view)[0], "\\t", 1)
+call writefile([json_encode({'cached_hunk': join(readfile(entry[4]), "\\n"), 'hidden_options': DiffViewLocationOptions(hidden_view), 'mapping': maparg('<C-M-d>', 'n'), 'window': window, 'layout': dotfiles#fzf#file_tool_layout(), 'options': DiffViewLocationOptions(view)})], $VIM_TEST_RESULT)
 `);
 
     expect(result.mapping).toContain("OpenDiffView");
@@ -155,10 +158,13 @@ call writefile([json_encode({'hidden_options': DiffViewLocationOptions(hidden_vi
     expect(result.options).toContainEqual(expect.stringContaining("t hide tests"));
     expect(result.hidden_options).toContainEqual(expect.stringContaining("t unhide tests"));
     expect(result.options).toContain("--preview-window=down,70%,border-top,wrap,noinfo");
+    expect(result.cached_hunk).toBe("@@ -1 +1 @@\n-old\n+new");
     expect(
       result.options.some(
         (/** @type {string} */ option) =>
-          option.startsWith("--preview=") && option.includes("delta"),
+          option.startsWith("--preview=") &&
+          option.includes("delta") &&
+          !option.includes("view-diff-in-vim.js"),
       ),
     ).toBe(true);
   });
