@@ -249,6 +249,9 @@ function parseDiff(diff, root) {
     let deletedLines = 0;
     /** @type {number[]} */
     let addedLines = [];
+    /** @type {ChangeKind} */
+    let firstKind = "change";
+    let firstLine = 0;
     const flushChange = () => {
       if (addedLines.length === 0) {
         deletedLines = 0;
@@ -257,7 +260,10 @@ function parseDiff(diff, root) {
       /** @type {ChangeKind} */
       const kind = deletedLines === 0 ? "add" : "change";
       const line = Math.max(1, addedLines[0]);
-      locations.push({ kind, line, path, text: lineText(root, path, line).trim(), hunk });
+      if (firstLine === 0) {
+        firstKind = kind;
+        firstLine = line;
+      }
       for (const addedLine of addedLines) signs.push({ kind, line: addedLine, path });
       deletedLines = 0;
       addedLines = [];
@@ -274,6 +280,15 @@ function parseDiff(diff, root) {
       }
     }
     flushChange();
+    if (firstLine > 0) {
+      locations.push({
+        kind: firstKind,
+        line: firstLine,
+        path,
+        text: lineText(root, path, firstLine).trim(),
+        hunk,
+      });
+    }
     index = end - 1;
   }
   return { locations, signs };

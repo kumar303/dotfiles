@@ -82,7 +82,6 @@ describe("view-diff-in-vim entrypoint", () => {
     expect(view).toMatchObject({ mode: "working", position: 1 });
     expect(view.locations).toMatchObject([
       { kind: "change", line: 2, path: "example.js", text: "changed" },
-      { kind: "add", line: 4, path: "example.js", text: "four" },
       { kind: "add", line: 1, path: "new file.js", text: "alpha" },
     ]);
     expect(view.signs).toEqual([
@@ -94,19 +93,49 @@ describe("view-diff-in-vim entrypoint", () => {
     expect(existsSync(run(["state-path", testDirectory]).path)).toBe(true);
   });
 
-  it("recalculates the active diff and selects the location after the cursor", () => {
-    writeFileSync(join(testDirectory, "example.js"), "changed one\ntwo\nchanged three\n");
+  it("reports only the first changed line from each Git hunk", () => {
+    const original = Array.from({ length: 10 }, (_, index) => `line ${index + 1}`);
+    writeFileSync(join(testDirectory, "example.js"), `${original.join("\n")}\n`);
+    git("add example.js");
+    git("commit -m long-file");
+    const changed = [...original];
+    changed[1] = "changed two";
+    changed[5] = "changed six";
+    writeFileSync(join(testDirectory, "example.js"), `${changed.join("\n")}\n`);
+
+    const view = run(["start", testDirectory, "working"]);
+
+    expect(view.locations.map((/** @type {{line: number}} */ location) => location.line)).toEqual([
+      2,
+    ]);
+    expect(view.locations[0].hunk).toContain("changed two");
+    expect(view.locations[0].hunk).toContain("changed six");
+    expect(view.signs).toEqual([
+      { kind: "change", line: 2, path: "example.js" },
+      { kind: "change", line: 6, path: "example.js" },
+    ]);
+  });
+
+  it("recalculates the active diff and selects the hunk after the cursor", () => {
+    const original = Array.from({ length: 15 }, (_, index) => `line ${index + 1}`);
+    writeFileSync(join(testDirectory, "example.js"), `${original.join("\n")}\n`);
+    git("add example.js");
+    git("commit -m long-file");
+    const changed = [...original];
+    changed[0] = "changed one";
+    writeFileSync(join(testDirectory, "example.js"), `${changed.join("\n")}\n`);
     run(["start", testDirectory, "working"]);
-    writeFileSync(join(testDirectory, "example.js"), "changed one\ntwo\nchanged three\nfour\n");
+    changed[14] = "changed fifteen";
+    writeFileSync(join(testDirectory, "example.js"), `${changed.join("\n")}\n`);
 
     const view = run(["refresh", testDirectory, "example.js", "1"]);
 
     expect(view.locations.map((/** @type {{line: number}} */ location) => location.line)).toEqual([
-      1, 3,
+      1, 15,
     ]);
     expect(view.signs).toContainEqual({
       kind: "change",
-      line: 4,
+      line: 15,
       path: "example.js",
     });
     expect(view.position).toBe(2);
