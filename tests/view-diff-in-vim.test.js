@@ -205,6 +205,29 @@ describe("view-diff-in-vim entrypoint", () => {
     expect(preview).toContain("+alpha");
   });
 
+  it("persists hidden test files until the diff session clears", () => {
+    writeFileSync(join(testDirectory, "example.js"), "changed\n");
+    writeFileSync(join(testDirectory, "example.test.js"), "before\n");
+    git("add example.test.js");
+    git("commit -m test-file");
+    writeFileSync(join(testDirectory, "example.test.js"), "after\n");
+    run(["start", testDirectory, "working"]);
+
+    expect(run(["toggle-tests", testDirectory])).toEqual({ hideTests: true });
+    const hidden = run(["refresh", testDirectory, "", "0"]);
+    expect(hidden.hideTests).toBe(true);
+    expect(hidden.locations.map((/** @type {{path: string}} */ location) => location.path)).toEqual(
+      ["example.js"],
+    );
+
+    expect(run(["toggle-tests", testDirectory])).toEqual({ hideTests: false });
+    expect(run(["refresh", testDirectory, "", "0"]).locations).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "example.test.js" })]),
+    );
+    run(["clear", testDirectory]);
+    expect(run(["refresh", testDirectory, "", "0"])).toEqual({ active: false });
+  });
+
   it("clears only the state for the selected workspace", () => {
     writeFileSync(join(testDirectory, "example.js"), "changed\n");
     run(["start", testDirectory, "working"]);

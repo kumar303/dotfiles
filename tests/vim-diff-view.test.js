@@ -138,8 +138,9 @@ call writefile([json_encode({'count': winnr('$'), 'first_count': first_count, 'f
     const result = runVim(`
 set columns=180 lines=40
 let window = DiffViewLocationPopupWindow()
-let view = {'mode': 'working', 'position': 2}
-call writefile([json_encode({'mapping': maparg('<C-M-d>', 'n'), 'window': window, 'layout': dotfiles#fzf#file_tool_layout(), 'options': DiffViewLocationOptions(view)})], $VIM_TEST_RESULT)
+let view = {'hideTests': v:false, 'mode': 'working', 'position': 2}
+let hidden_view = {'hideTests': v:true, 'mode': 'working', 'position': 2}
+call writefile([json_encode({'hidden_options': DiffViewLocationOptions(hidden_view), 'mapping': maparg('<C-M-d>', 'n'), 'window': window, 'layout': dotfiles#fzf#file_tool_layout(), 'options': DiffViewLocationOptions(view)})], $VIM_TEST_RESULT)
 `);
 
     expect(result.mapping).toContain("OpenDiffView");
@@ -149,8 +150,10 @@ call writefile([json_encode({'mapping': maparg('<C-M-d>', 'n'), 'window': window
       xoffset: result.layout.xoffset,
       yoffset: 0.5,
     });
-    expect(result.options).toContain("--expect=enter,X");
+    expect(result.options).toContain("--expect=enter,X,t");
     expect(result.options).toContain("--bind=load:pos(2)");
+    expect(result.options).toContainEqual(expect.stringContaining("t hide tests"));
+    expect(result.hidden_options).toContainEqual(expect.stringContaining("t unhide tests"));
     expect(result.options).toContain("--preview-window=down,70%,border-top,wrap,noinfo");
     expect(
       result.options.some(

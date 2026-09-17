@@ -41,11 +41,12 @@ function! DiffViewPreviewCommand(view)
 endfunction
 
 function! DiffViewLocationOptions(view)
+    let test_action = get(a:view, 'hideTests', 0) ? 'unhide tests' : 'hide tests'
     return g:fzf_picker_options + [
         \ '--bind=load:pos(' . a:view.position . ')',
         \ '--delimiter=\t',
-        \ '--expect=enter,X',
-        \ '--footer=↑/↓ select  •  enter open  •  X exit diff  •  esc close',
+        \ '--expect=enter,X,t',
+        \ '--footer=↑/↓ select  •  enter open  •  t ' . test_action . '  •  X exit diff  •  esc close',
         \ '--footer-border=none',
         \ '--preview=' . DiffViewPreviewCommand(a:view),
         \ '--preview-window=down,70%,border-top,wrap,noinfo',
@@ -130,9 +131,26 @@ function! ClearDiffView()
     endif
 endfunction
 
+function! ReopenDiffView(timer)
+    call OpenDiffView()
+endfunction
+
+function! ToggleDiffViewTests()
+    let output = ViewDiffCommand(['toggle-tests', g:fzf_file_picker_root])
+    if v:shell_error
+        echoerr empty(output) ? 'Cannot toggle test files in the Vim diff view' : trim(output)
+        return
+    endif
+    call timer_start(0, function('ReopenDiffView'))
+endfunction
+
 function! DiffViewResults(lines)
     if !empty(a:lines) && a:lines[0] ==# 'X'
         call ClearDiffView()
+        return
+    endif
+    if !empty(a:lines) && a:lines[0] ==# 't'
+        call ToggleDiffViewTests()
         return
     endif
     if len(a:lines) < 2 || a:lines[0] !=# 'enter'
@@ -196,7 +214,7 @@ function! OpenDiffView()
     endif
     let g:view_diff_view = view
     call ApplyDiffSigns(view)
-    if empty(view.locations)
+    if empty(view.locations) && !get(view, 'hideTests', 0)
         echo 'No changed locations'
         return
     endif

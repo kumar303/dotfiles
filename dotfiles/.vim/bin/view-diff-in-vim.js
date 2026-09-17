@@ -13,8 +13,8 @@ import { fileURLToPath } from "node:url";
 /** @typedef {{commit: string, name: string}} BranchBase */
 /** @typedef {{kind: ChangeKind, line: number, path: string}} Sign */
 /** @typedef {Sign & {text: string}} Location */
-/** @typedef {{version: 1, workspace: string, mode: DiffMode}} StoredState */
-/** @typedef {{active: true, base?: BranchBase, locations: Location[], mode: DiffMode, position: number, signs: Sign[]}} View */
+/** @typedef {{version: 1, workspace: string, mode: DiffMode, hideTests: boolean}} StoredState */
+/** @typedef {{active: true, base?: BranchBase, hideTests: boolean, locations: Location[], mode: DiffMode, position: number, signs: Sign[]}} View */
 
 const stateDirectory =
   process.env.VIEW_DIFF_IN_VIM_STATE_DIR ?? join(homedir(), ".cache", "view-diff-in-vim");
@@ -56,11 +56,11 @@ function statePath(workspace) {
   return join(stateDirectory, `${key}.json`);
 }
 
-/** @param {string} workspace @param {DiffMode} mode */
-function storeState(workspace, mode) {
+/** @param {string} workspace @param {DiffMode} mode @param {boolean} hideTests */
+function storeState(workspace, mode, hideTests) {
   mkdirSync(stateDirectory, { recursive: true, mode: 0o700 });
   /** @type {StoredState} */
-  const state = { version: 1, workspace: resolve(workspace), mode };
+  const state = { version: 1, workspace: resolve(workspace), mode, hideTests };
   writeFileSync(statePath(workspace), `${JSON.stringify(state)}\n`, { mode: 0o600 });
 }
 
@@ -77,11 +77,17 @@ function loadState(workspace) {
     !("workspace" in value) ||
     value.workspace !== resolve(workspace) ||
     !("mode" in value) ||
-    (value.mode !== "working" && value.mode !== "branch")
+    (value.mode !== "working" && value.mode !== "branch") ||
+    ("hideTests" in value && typeof value.hideTests !== "boolean")
   ) {
     return null;
   }
-  return /** @type {StoredState} */ (value);
+  return {
+    version: 1,
+    workspace: value.workspace,
+    mode: value.mode,
+    hideTests: "hideTests" in value ? value.hideTests === true : false,
+  };
 }
 
 /** @param {string} cwd */
@@ -405,19 +411,23 @@ function nextPosition(locations, root, currentFile, currentLine) {
  * @param {DiffMode} mode
  * @param {string} [currentFile]
  * @param {number} [currentLine]
+ * @param {boolean} [hideTests]
  * @returns {View}
  */
-function buildView(workspace, mode, currentFile = "", currentLine = 0) {
+function buildView(workspace, mode, currentFile = "", currentLine = 0, hideTests = false) {
   const workspaceRoot = realpathSync(workspace);
   const root = repositoryRoot(workspaceRoot);
   const result = makeWorkspaceRelative(calculate(root, mode), root, workspaceRoot);
+  const locations = hideTests
+    ? result.locations.filter((location) => !location.path.includes("test"))
+    : result.locations;
   return {
     active: true,
     ...result,
+    hideTests,
+    locations,
     mode,
-    position: currentFile
-      ? nextPosition(result.locations, workspaceRoot, currentFile, currentLine)
-      : 1,
+    position: currentFile ? nextPosition(locations, workspaceRoot, currentFile, currentLine) : 1,
   };
 }
 
@@ -451,6 +461,14 @@ function main(arguments_) {
     output({ cleared: true });
     return;
   }
+  if (command === "toggle-tests") {
+    const state = loadState(workspace);
+    if (!state) throw new Error("No active Vim diff session");
+    state.hideTests = !state.hideTests;
+    storeState(workspace, state.mode, state.hideTests);
+    output({ hideTests: state.hideTests });
+    return;
+  }
   if (command === "preview") {
     const mode = rest[0];
     if (mode !== "working" && mode !== "branch") throw new Error(`Unknown diff mode: ${mode}`);
@@ -465,7 +483,7 @@ function main(arguments_) {
     const mode = rest[0];
     if (mode !== "working" && mode !== "branch") throw new Error(`Unknown diff mode: ${mode}`);
     const view = buildView(workspace, mode);
-    storeState(workspace, mode);
+    storeState(workspace, mode, false);
     output(view);
     return;
   }
@@ -475,7 +493,7 @@ function main(arguments_) {
       output({ active: false });
       return;
     }
-    output(buildView(workspace, state.mode, rest[0] ?? "", Number(rest[1] ?? 0)));
+    output(buildView(workspace, state.mode, rest[0] ?? "", Number(rest[1] ?? 0), state.hideTests));
     return;
   }
   throw new Error(`Unknown command: ${command}`);

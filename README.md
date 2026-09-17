@@ -87,7 +87,7 @@ Press `ctrl+a` from Vim to include the current file and line. Select text first 
 | Vim   | `ctrl+s`     | Save the file                       |
 | Vim   | `ctrl+opt+d` | View changed Git locations          |
 
-Press `ctrl+opt+d` again to list changed locations. Press `X` in the list to exit diff mode.
+Press `ctrl+opt+d` again to list changed locations. Press `t` to hide or unhide test files. Press `X` to exit diff mode.
 
 ### Panes
 
