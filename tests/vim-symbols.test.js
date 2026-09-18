@@ -111,6 +111,20 @@ describe("CurrentFileSymbols", () => {
     {value}: {value: string},
   ) {}
 
+  async get(key: string) {}
+
+  get cache() {
+    return new Map();
+  }
+
+  cacheKey(key: string) {}
+
+  load(
+    key: string,
+  ) {}
+
+  #privateMethod(value: string) {}
+
   emit(payload: string): void {}
 }
 `,
@@ -138,6 +152,11 @@ describe("CurrentFileSymbols", () => {
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     const symbols = /** @type {string[]} */ (JSON.parse(readFileSync(resultPath, "utf8")));
+    expect(symbols.some((symbol) => symbol.includes("method       get"))).toBe(true);
+    expect(symbols.some((symbol) => symbol.includes("method       cache"))).toBe(true);
+    expect(symbols.some((symbol) => symbol.includes("method       cacheKey"))).toBe(true);
+    expect(symbols.some((symbol) => symbol.includes("method       load"))).toBe(true);
+    expect(symbols.some((symbol) => symbol.includes("method       #privateMethod"))).toBe(true);
     expect(symbols.some((symbol) => symbol.includes("method       emit"))).toBe(true);
   });
 

@@ -10,8 +10,9 @@ function! CurrentFileSymbols()
         let command .= ' ' . shellescape(test_regex)
     elseif file =~# '\.tsx\?$'
         let test_regex = '--regex-TypeScript=/^[ \t]*(describe|it|test)(\.(only|skip|todo))?[ \t]*\([ \t]*["'']([^"'']+)/\4/t,test/'
-        let method_regex = '--regex-TypeScript=/^  (async[ \t]+)?(#?[A-Za-z_$][A-Za-z0-9_$#]*)[ \t]*\([^)]*\)[ \t]*:[^{]+\{/\2/m,method/'
-        let command .= ' ' . shellescape(test_regex) . ' ' . shellescape(method_regex)
+        let method_regex = '--regex-TypeScript=/^  ((public|protected|private|static|override|abstract|async)[ \t]+)*(#?[A-Za-z_$][A-Za-z0-9_$#]*)[ \t]*(<[^>]+>[ \t]*)?\(/\3/m,method/'
+        let accessor_regex = '--regex-TypeScript=/^  ((public|protected|private|static|override|abstract)[ \t]+)*(get|set)[ \t]+(#?[A-Za-z_$][A-Za-z0-9_$#]*)[ \t]*\(/\4/m,method/'
+        let command .= ' ' . shellescape(test_regex) . ' ' . shellescape(method_regex) . ' ' . shellescape(accessor_regex)
     endif
     let output = systemlist(command . ' ' . shellescape(file))
     if v:shell_error
