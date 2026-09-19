@@ -5,10 +5,12 @@ import {
   chmodSync,
   mkdtempSync,
   mkdirSync,
+  lstatSync,
   readFileSync,
   readlinkSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -40,6 +42,18 @@ afterEach(() => {
 });
 
 describe("setup", () => {
+  it("replaces a dangling parent symlink before linking nested files", () => {
+    const vimDirectory = join(homeDirectory, ".vim");
+    symlinkSync(join(homeDirectory, "missing-vim"), vimDirectory);
+
+    runSetup("y\n");
+
+    expect(lstatSync(vimDirectory).isDirectory()).toBe(true);
+    expect(readlinkSync(join(vimDirectory, "workflows", "list-symbols.vim"))).toBe(
+      join(repositoryRoot, "dotfiles", ".vim", "workflows", "list-symbols.vim"),
+    );
+  });
+
   it("recognizes an existing zsh include with an equivalent path", () => {
     const zshrcPath = join(homeDirectory, ".zshrc");
     writeFileSync(zshrcPath, "source ~/.config/zsh/dotfiles.zsh\n");
@@ -87,10 +101,12 @@ describe("setup", () => {
   });
 });
 
-function runSetup() {
+/** @param {string} [input] */
+function runSetup(input = "") {
   const result = spawnSync("bash", [join(repositoryRoot, "setup.sh")], {
     cwd: repositoryRoot,
     encoding: "utf8",
+    input,
     env: {
       ...process.env,
       HOME: homeDirectory,

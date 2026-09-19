@@ -12,13 +12,44 @@ fi
 echo "Installing Node dependencies"
 npm install --prefix "$repo_dir"
 
+ensure_directory() {
+  local directory="$1"
+
+  if [ -d "$directory" ]; then
+    return
+  fi
+
+  local parent
+  parent="$(dirname "$directory")"
+  if ! ensure_directory "$parent"; then
+    return 1
+  fi
+
+  if [ -e "$directory" ] || [ -L "$directory" ]; then
+    local answer
+    echo "Replace $directory with a directory"
+    read -r -p "Overwrite $directory? [y/N] " answer
+    case "$answer" in
+      y|Y) ;;
+      *) return 1 ;;
+    esac
+    rm -rf "$directory"
+  fi
+
+  mkdir "$directory"
+}
+
 link_file() {
   local src="$1"
   local dest="$2"
 
-  mkdir -p "$(dirname "$dest")"
+  if ! ensure_directory "$(dirname "$dest")"; then
+    echo "Skipped: $dest"
+    return
+  fi
 
   if [ -e "$dest" ] || [ -L "$dest" ]; then
+    local answer
     if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$src" ]; then
       echo "Already linked: $dest"
       return
