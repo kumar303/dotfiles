@@ -1,6 +1,10 @@
 [user]
     name = Kumar McMillan
     email = kumar.mcmillan@gmail.com
+[core]
+    editor = vim
+    pager = delta
+    excludesfile = /Users/kumar/.gitignore
 [color]
     diff = auto
     status  = auto
@@ -13,9 +17,14 @@
     st = status
     fix = "commit -a --amend -C HEAD"
     ri = rebase --interactive --autosquash HEAD~5
-[core]
-    excludesfile = /Users/kumar/.gitignore
 [push]
     default = current
 [help]
     autocorrect = 1
+[init]
+    defaultBranch = main
+[interactive]
+    diffFilter = delta --color-only
+[delta]
+    navigate = true  # use n and N to move between diff sections
+    light = true
