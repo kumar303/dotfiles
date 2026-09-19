@@ -9,7 +9,7 @@ See [pie](https://github.com/kumar303/pie) for `pi` configuration.
 <details>
 <summary>Demo screencast</summary>
 
-https://github.com/user-attachments/assets/2d99c01b-bbeb-4ee6-b818-1d7eaf472ec6
+https://github.com/user-attachments/assets/8d40875d-a127-4aa3-a8f3-656202a1e64d
 
 </details>
 
