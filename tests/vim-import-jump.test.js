@@ -22,6 +22,55 @@ afterEach(() => {
 });
 
 describe("JumpToImport", () => {
+  it("opens a deferred dynamic import relative to the source file", () => {
+    const workspace = join(testDirectory, "workspace");
+    const sourceDirectory = join(workspace, "src", "checkout");
+    const sourceFile = join(sourceDirectory, "lines.ts");
+    const targetFile = join(sourceDirectory, "deferred.ts");
+    const resultPath = join(testDirectory, "result.json");
+    mkdirSync(sourceDirectory, { recursive: true });
+    writeFileSync(
+      sourceFile,
+      `const deferred = createDeferredModule(
+  () => import('./deferred'),
+);
+`,
+    );
+    writeFileSync(targetFile, "export const loaded = true;\n");
+
+    const result = spawnSync(
+      "vim",
+      [
+        "-Nu",
+        vimrcPath,
+        "-n",
+        "-es",
+        sourceFile,
+        "-c",
+        "call cursor(2, 20)",
+        "-c",
+        "call JumpToImport()",
+        "-c",
+        "call writefile([json_encode({'windows': winnr('$'), 'file': expand('%:p'), 'line': line('.')})], $VIM_TEST_RESULT)",
+        "-c",
+        "qa!",
+      ],
+      {
+        cwd: workspace,
+        encoding: "utf8",
+        env: { ...process.env, VIM_TEST_RESULT: resultPath },
+      },
+    );
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(resultPath, "utf8"))).toEqual({
+      windows: 2,
+      file: realpathSync(targetFile),
+      line: 1,
+    });
+  });
+
   it("opens a multiline re-export and jumps to the exported symbol", () => {
     const sourceDirectory = join(testDirectory, "src");
     const targetDirectory = join(sourceDirectory, "shared");

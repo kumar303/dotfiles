@@ -1,4 +1,29 @@
+function! DynamicImportAtCursor()
+    let cursor_position = getpos('.')
+    let start = searchpos('\<import\s*(', 'bcnW')
+    if empty(start) || start[0] == 0
+        return {}
+    endif
+
+    let open_column = match(getline(start[0]), '(', start[1] - 1) + 1
+    call cursor(start[0], open_column)
+    let end = searchpairpos('(', '', ')', 'cnW')
+    call setpos('.', cursor_position)
+    if empty(end) || end[0] == 0 || end[0] < cursor_position[1] || (end[0] == cursor_position[1] && end[1] < cursor_position[2])
+        return {}
+    endif
+
+    let statement = join(getline(start[0], end[0]), ' ')
+    let specifier = matchstr(statement, '\<import\s*(\s*[''"]\zs[^''"]\+\ze[''"]')
+    return empty(specifier) ? {} : {'specifier': specifier, 'symbol': ''}
+endfunction
+
 function! ImportAtCursor()
+    let dynamic_import = DynamicImportAtCursor()
+    if !empty(dynamic_import)
+        return dynamic_import
+    endif
+
     let cursor_line = line('.')
     let start_line = cursor_line
     while start_line >= 1 && getline(start_line) !~# '^\s*\%(import\|export\)\>'
