@@ -47,7 +47,7 @@ describe("JumpToImport", () => {
         "-es",
         sourceFile,
         "-c",
-        "call cursor(2, 20)",
+        "call cursor(2, 1)",
         "-c",
         "call JumpToImport()",
         "-c",

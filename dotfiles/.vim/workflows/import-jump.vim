@@ -1,6 +1,7 @@
 function! DynamicImportAtCursor()
     let cursor_position = getpos('.')
-    let start = searchpos('\<import\s*(', 'bcnW')
+    let import_column = match(getline(cursor_position[1]), '\<import\s*(') + 1
+    let start = import_column > 0 ? [cursor_position[1], import_column] : searchpos('\<import\s*(', 'bcnW')
     if empty(start) || start[0] == 0
         return {}
     endif
@@ -9,7 +10,7 @@ function! DynamicImportAtCursor()
     call cursor(start[0], open_column)
     let end = searchpairpos('(', '', ')', 'cnW')
     call setpos('.', cursor_position)
-    if empty(end) || end[0] == 0 || end[0] < cursor_position[1] || (end[0] == cursor_position[1] && end[1] < cursor_position[2])
+    if empty(end) || end[0] == 0 || end[0] < cursor_position[1]
         return {}
     endif
 
