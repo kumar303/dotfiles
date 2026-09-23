@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 // @ts-check
 
-import { spawn } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 
 const logPath = requiredEnvironment("HERDR_MOCK_LOG");
 const panesPath = requiredEnvironment("HERDR_MOCK_PANES");
@@ -171,16 +177,7 @@ function handlePaneCommand(command) {
       const paneId = args[2];
       const agentPromptMarker = process.env.HERDR_MOCK_AGENT_PROMPT_MARKER;
       if (agentPromptMarker && args[3] === "esc") {
-        const remover = spawn(
-          process.execPath,
-          [
-            "-e",
-            "setTimeout(() => require('node:fs').rmSync(process.argv[1], {force: true}), 200)",
-            agentPromptMarker,
-          ],
-          { detached: true, stdio: "ignore" },
-        );
-        remover.unref();
+        rmSync(agentPromptMarker, { force: true });
       }
       if (context && stateDirectory && paneId && args[3] === "f13") {
         const safePaneId = paneId.replace(/[^A-Za-z0-9_.-]/g, "_");

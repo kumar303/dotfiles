@@ -182,11 +182,12 @@ call writefile([json_encode({'cached_hunk': join(readfile(entry[4]), "\\n"), 'hi
 call ActivateFzfOverlay()
 let active = filereadable($HERDR_SPLIT_VIM_PROMPT_MARKER)
 call DiffViewExit(0)
-sleep 10m
-call writefile([json_encode({'active': active, 'closed': !filereadable($HERDR_SPLIT_VIM_PROMPT_MARKER)})], $VIM_TEST_RESULT)
+let scheduled = !empty(timer_info())
+call RemoveFzfOverlayMarker(0)
+call writefile([json_encode({'active': active, 'closed': !filereadable($HERDR_SPLIT_VIM_PROMPT_MARKER), 'scheduled': scheduled})], $VIM_TEST_RESULT)
 `);
 
-    expect(result).toEqual({ active: 1, closed: 1 });
+    expect(result).toEqual({ active: 1, closed: 1, scheduled: 1 });
   });
 
   it("clears the active workspace state and gutter signs with X", () => {

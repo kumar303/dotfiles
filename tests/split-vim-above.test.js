@@ -128,7 +128,7 @@ describe("split-vim-above", () => {
         .slice(0, captureIndex)
         .filter((args) => args[0] === "pane" && args[1] === "send-keys" && args[3] === "esc")
         .length,
-    ).toBeGreaterThan(1);
+    ).toBe(1);
     expect(herdrCommandCalls("process-info")).toHaveLength(0);
   });
 

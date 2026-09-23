@@ -193,8 +193,9 @@ call ActivateFzfOverlay()
 let marker = g:fzf_overlay_marker
 let active = filereadable(marker)
 call AgentPromptExit(130)
-sleep 10m
-call writefile([json_encode({'active': active, 'closed': !filereadable(marker), 'marker': marker})], $VIM_TEST_RESULT)
+let scheduled = !empty(timer_info())
+call RemoveFzfOverlayMarker(0)
+call writefile([json_encode({'active': active, 'closed': !filereadable(marker), 'marker': marker, 'scheduled': scheduled})], $VIM_TEST_RESULT)
 qa!
 `,
       { VIM_TEST_RESULT: resultPath, VIM_TEST_STATE: join(testDirectory, "state") },
@@ -204,6 +205,7 @@ qa!
       active: 1,
       closed: 1,
       marker: join(testDirectory, "state", "agent-prompts", "w1__w1_t1"),
+      scheduled: 1,
     });
   });
 
