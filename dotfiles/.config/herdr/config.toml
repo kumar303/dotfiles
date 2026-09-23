@@ -29,6 +29,7 @@ peach = "#c96765"
 [keys]
 close_tab = "cmd+shift+k"
 next_tab = "ctrl+cmd+backtick"
+previous_tab = "ctrl+cmd+shift+backtick"
 
 [ui.toast]
 delivery = "system"
