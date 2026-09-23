@@ -63,13 +63,14 @@ Add this `[include]` section to `.gitconfig`:
 
 ### Terminal
 
-| Scope | Key                 | Action                            |
-| ----- | ------------------- | --------------------------------- |
-| Herdr | `cmd+opt+backtick`  | Create a terminal tab             |
-| Herdr | `ctrl+cmd+backtick` | Select the next terminal tab      |
-| Herdr | `ctrl+shift+enter`  | Select a workspace                |
-| Herdr | `cmd+shift+k`       | Close the terminal tab            |
-| Herdr | `ctrl+backtick`     | Show, hide, or focus the Vim pane |
+| Scope | Key                       | Action                            |
+| ----- | ------------------------- | --------------------------------- |
+| Herdr | `cmd+opt+backtick`        | Create a terminal tab             |
+| Herdr | `ctrl+cmd+backtick`       | Select the next terminal tab      |
+| Herdr | `ctrl+cmd+shift+backtick` | Select the previous terminal tab  |
+| Herdr | `ctrl+shift+enter`        | Select a workspace                |
+| Herdr | `cmd+shift+k`             | Close the terminal tab            |
+| Herdr | `ctrl+backtick`           | Show, hide, or focus the Vim pane |
 
 In the workspace switcher, use `up/down` to navigate, `/` to search, `enter` to select, and `esc` to close.
 
