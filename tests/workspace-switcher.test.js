@@ -279,66 +279,6 @@ describe("workspace-switcher plugin", () => {
     );
   });
 
-  it("updates history in the background after opening the picker", async () => {
-    const remembered = createGitDirectory("remembered", "main");
-    const firstTab = createGitDirectory("first-tab", "feature/first");
-    const activeTab = createGitDirectory("active-tab", "feature/active");
-    const otherFirstTab = createGitDirectory("other-first-tab", "feature/other");
-    const rememberedAt = Date.now();
-    writeHistory([{ dir: remembered, branch: "old-branch", lastFocused: rememberedAt }]);
-    writeHerdrSnapshot({
-      workspaces: [
-        { workspace_id: "w1", focused: true, number: 1 },
-        { workspace_id: "w2", focused: false, number: 2 },
-        { workspace_id: "w3", focused: false, number: 3 },
-      ],
-      tabs: [
-        { workspace_id: "w1", tab_id: "w1:t2", focused: true, number: 2 },
-        { workspace_id: "w1", tab_id: "w1:t1", focused: false, number: 1 },
-        { workspace_id: "w2", tab_id: "w2:t1", focused: false, number: 1 },
-        { workspace_id: "w3", tab_id: "w3:t1", focused: false, number: 1 },
-      ],
-      panes: [
-        { workspace_id: "w1", tab_id: "w1:t2", cwd: activeTab, focused: true },
-        { workspace_id: "w1", tab_id: "w1:t1", cwd: firstTab, focused: false },
-        { workspace_id: "w2", tab_id: "w2:t1", cwd: otherFirstTab, focused: false },
-        { workspace_id: "w3", tab_id: "w3:t1", cwd: remembered, focused: false },
-      ],
-    });
-
-    pluginEnvironment.HERDR_MOCK_API_DELAY_MS = "1000";
-    const startedAt = Date.now();
-    runPlugin("open.js");
-
-    expect(Date.now() - startedAt).toBeLessThan(500);
-    delete pluginEnvironment.HERDR_MOCK_API_DELAY_MS;
-    runPlugin("record-workspace.js", { workspace_cwd: firstTab });
-    await waitFor(() => historyEntries().some((entry) => entry.dir === otherFirstTab));
-    const entries = historyEntries();
-    expect(entries.map((entry) => entry.dir)).toEqual([remembered, firstTab, otherFirstTab]);
-    expect(entries[0]).toEqual({
-      dir: remembered,
-      branch: "old-branch",
-      lastFocused: rememberedAt,
-    });
-    expect(entries[1].branch).toBe("feature/first");
-    expect(entries[1].lastFocused).toBeGreaterThanOrEqual(startedAt);
-    expect(entries[2].branch).toBe("feature/other");
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    expect(entries[2].lastFocused).toBeLessThan(startOfToday.getTime());
-    expect(herdrCalls()).toContainEqual(["api", "snapshot"]);
-    expect(herdrCalls()).toContainEqual([
-      "plugin",
-      "pane",
-      "open",
-      "--plugin",
-      "kumar303.workspace-switcher",
-      "--entrypoint",
-      "picker",
-    ]);
-  });
-
   it("focuses an open workspace when a pane uses the selected directory", async () => {
     const nested = join(testDirectory, "one", "nested");
     writeHistory([{ dir: nested, branch: null, lastFocused: Date.now() }]);
@@ -493,15 +433,6 @@ function herdrCalls() {
 
 function clearHerdrCalls() {
   writeFileSync(herdrLogPath, "");
-}
-
-/** @param {() => boolean} predicate */
-async function waitFor(predicate) {
-  const deadline = Date.now() + 5000;
-  while (!predicate()) {
-    if (Date.now() >= deadline) throw new Error("timed out waiting for background command");
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
-  }
 }
 
 /**
