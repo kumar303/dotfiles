@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 // @ts-check
 
-import { openPickerPopup } from "./herdr.js";
+import { currentWorkspaceDirectories, openPickerPopup, readSnapshot } from "./herdr.js";
+import { ensureWorkspaceHistory } from "./store.js";
 
+const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
+ensureWorkspaceHistory(currentWorkspaceDirectories(readSnapshot()), stateDirectory);
 openPickerPopup();
+
+/** @param {string} name */
+function requiredEnvironment(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`missing environment variable: ${name}`);
+  return value;
+}

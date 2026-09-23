@@ -80,6 +80,34 @@ export function seedWorkspaceHistory(workspaces, stateDirectory, now = Date.now(
 }
 
 /**
+ * @param {Array<{dir: string, branch?: string | null}>} workspaces
+ * @param {string} stateDirectory
+ * @param {number} [now]
+ */
+export function ensureWorkspaceHistory(workspaces, stateDirectory, now = Date.now()) {
+  mkdirSync(stateDirectory, { recursive: true });
+  const history = readWorkspaceHistory(stateDirectory, now);
+  const knownDirectories = new Set(
+    [...history.today, ...history.earlier].map((entry) => entry.dir),
+  );
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const lastFocused = startOfToday.getTime() - 1;
+
+  for (const workspace of workspaces) {
+    const dir = resolve(workspace.dir);
+    if (knownDirectories.has(dir)) continue;
+    const entry = {
+      dir,
+      branch: workspace.branch === undefined ? getGitBranch(dir) : workspace.branch,
+      lastFocused,
+    };
+    appendFileSync(historyPath(stateDirectory), `${JSON.stringify(entry)}\n`);
+    knownDirectories.add(dir);
+  }
+}
+
+/**
  * @param {string} stateDirectory
  * @param {number} [now]
  * @returns {WorkspaceHistory}

@@ -279,10 +279,44 @@ describe("workspace-switcher plugin", () => {
     );
   });
 
-  it("opens its picker through Herdr's plugin pane command", () => {
+  it("adds each open workspace's first tab to history before opening the picker", () => {
+    const remembered = createGitDirectory("remembered", "main");
+    const firstTab = createGitDirectory("first-tab", "feature/first");
+    const activeTab = createGitDirectory("active-tab", "feature/active");
+    const otherFirstTab = createGitDirectory("other-first-tab", "feature/other");
+    const rememberedAt = Date.now();
+    writeHistory([{ dir: remembered, branch: "main", lastFocused: rememberedAt }]);
+    writeHerdrSnapshot({
+      workspaces: [
+        { workspace_id: "w1", focused: true, number: 1 },
+        { workspace_id: "w2", focused: false, number: 2 },
+        { workspace_id: "w3", focused: false, number: 3 },
+      ],
+      tabs: [
+        { workspace_id: "w1", tab_id: "w1:t2", focused: true, number: 2 },
+        { workspace_id: "w1", tab_id: "w1:t1", focused: false, number: 1 },
+        { workspace_id: "w2", tab_id: "w2:t1", focused: false, number: 1 },
+        { workspace_id: "w3", tab_id: "w3:t1", focused: false, number: 1 },
+      ],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t2", cwd: activeTab, focused: true },
+        { workspace_id: "w1", tab_id: "w1:t1", cwd: firstTab, focused: false },
+        { workspace_id: "w2", tab_id: "w2:t1", cwd: otherFirstTab, focused: false },
+        { workspace_id: "w3", tab_id: "w3:t1", cwd: remembered, focused: false },
+      ],
+    });
+
     runPlugin("open.js");
 
+    const entries = historyEntries();
+    expect(entries.map((entry) => entry.dir)).toEqual([remembered, firstTab, otherFirstTab]);
+    expect(entries[0].lastFocused).toBe(rememberedAt);
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    expect(entries[1].lastFocused).toBeLessThan(startOfToday.getTime());
+    expect(entries[2].lastFocused).toBeLessThan(startOfToday.getTime());
     expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
       [
         "plugin",
         "pane",
@@ -413,7 +447,7 @@ function runPicker(input) {
   return { stdout: result.stdout, stderr: result.stderr };
 }
 
-/** @param {{workspaces: unknown[], panes: unknown[]}} snapshot */
+/** @param {{workspaces: unknown[], tabs?: unknown[], panes: unknown[]}} snapshot */
 function writeHerdrSnapshot(snapshot) {
   writeFileSync(
     herdrStatePath,

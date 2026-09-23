@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 /**
  * @typedef {object} HerdrSnapshot
  * @property {Array<Record<string, unknown>>} workspaces
+ * @property {Array<Record<string, unknown>>} [tabs]
  * @property {Array<Record<string, unknown>>} panes
  */
 
@@ -38,15 +39,21 @@ export function currentWorkspaceDirectories(snapshot) {
     )
     .flatMap((workspace) => {
       const workspaceId = /** @type {string} */ (workspace.workspace_id);
+      const tabs = (snapshot.tabs ?? [])
+        .filter((tab) => tab.workspace_id === workspaceId && typeof tab.tab_id === "string")
+        .sort((left, right) => Number(left.number ?? 0) - Number(right.number ?? 0));
+      const firstTabId = tabs[0]?.tab_id;
+      const workspacePanes = snapshot.panes.filter((pane) => pane.workspace_id === workspaceId);
+      const panes = firstTabId
+        ? workspacePanes.filter((pane) => pane.tab_id === firstTabId)
+        : workspacePanes;
+      const pane = firstTabId ? panes[0] : (panes.find((item) => item.focused) ?? panes[0]);
       const worktree = isRecord(workspace.worktree) ? workspace.worktree : undefined;
-      const worktreePath = worktree?.checkout_path;
-      const panes = snapshot.panes.filter((pane) => pane.workspace_id === workspaceId);
-      const pane = panes.find((item) => item.focused) ?? panes[0];
       const dir =
-        typeof worktreePath === "string"
-          ? worktreePath
-          : typeof pane?.cwd === "string"
-            ? pane.cwd
+        typeof pane?.cwd === "string"
+          ? pane.cwd
+          : typeof worktree?.checkout_path === "string"
+            ? worktree.checkout_path
             : undefined;
       return dir ? [{ dir: resolve(dir), workspaceId }] : [];
     });
