@@ -285,7 +285,7 @@ describe("workspace-switcher plugin", () => {
     const activeTab = createGitDirectory("active-tab", "feature/active");
     const otherFirstTab = createGitDirectory("other-first-tab", "feature/other");
     const rememberedAt = Date.now();
-    writeHistory([{ dir: remembered, branch: "main", lastFocused: rememberedAt }]);
+    writeHistory([{ dir: remembered, branch: "old-branch", lastFocused: rememberedAt }]);
     writeHerdrSnapshot({
       workspaces: [
         { workspace_id: "w1", focused: true, number: 1 },
@@ -309,8 +309,13 @@ describe("workspace-switcher plugin", () => {
     runPlugin("open.js");
 
     const entries = historyEntries();
-    expect(entries.map((entry) => entry.dir)).toEqual([remembered, firstTab, otherFirstTab]);
-    expect(entries[0].lastFocused).toBe(rememberedAt);
+    expect(entries.map((entry) => entry.dir)).toEqual([
+      remembered,
+      firstTab,
+      otherFirstTab,
+      remembered,
+    ]);
+    expect(entries.at(-1)).toEqual({ dir: remembered, branch: "main", lastFocused: rememberedAt });
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     expect(entries[1].lastFocused).toBeLessThan(startOfToday.getTime());
