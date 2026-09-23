@@ -23,6 +23,8 @@ const state = JSON.parse(readFileSync(panesPath, "utf8"));
 const [area, command] = args;
 
 if (area === "api" && command === "snapshot") {
+  const delay = Number(process.env.HERDR_MOCK_API_DELAY_MS ?? 0);
+  if (delay > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
   output({ result: { snapshot: state.result.snapshot } });
 } else if (area === "agent" && command === "list") {
   output({ result: { agents: state.result.agents ?? [] } });

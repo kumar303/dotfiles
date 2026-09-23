@@ -279,7 +279,7 @@ describe("workspace-switcher plugin", () => {
     );
   });
 
-  it("adds each open workspace's first tab to history before opening the picker", () => {
+  it("updates history in the background after opening the picker", async () => {
     const remembered = createGitDirectory("remembered", "main");
     const firstTab = createGitDirectory("first-tab", "feature/first");
     const activeTab = createGitDirectory("active-tab", "feature/active");
@@ -306,31 +306,36 @@ describe("workspace-switcher plugin", () => {
       ],
     });
 
+    pluginEnvironment.HERDR_MOCK_API_DELAY_MS = "1000";
+    const startedAt = Date.now();
     runPlugin("open.js");
 
+    expect(Date.now() - startedAt).toBeLessThan(500);
+    delete pluginEnvironment.HERDR_MOCK_API_DELAY_MS;
+    runPlugin("record-workspace.js", { workspace_cwd: firstTab });
+    await waitFor(() => historyEntries().some((entry) => entry.dir === otherFirstTab));
     const entries = historyEntries();
-    expect(entries.map((entry) => entry.dir)).toEqual([
-      remembered,
-      firstTab,
-      otherFirstTab,
-      remembered,
-    ]);
-    expect(entries.at(-1)).toEqual({ dir: remembered, branch: "main", lastFocused: rememberedAt });
+    expect(entries.map((entry) => entry.dir)).toEqual([remembered, firstTab, otherFirstTab]);
+    expect(entries[0]).toEqual({
+      dir: remembered,
+      branch: "old-branch",
+      lastFocused: rememberedAt,
+    });
+    expect(entries[1].branch).toBe("feature/first");
+    expect(entries[1].lastFocused).toBeGreaterThanOrEqual(startedAt);
+    expect(entries[2].branch).toBe("feature/other");
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    expect(entries[1].lastFocused).toBeLessThan(startOfToday.getTime());
     expect(entries[2].lastFocused).toBeLessThan(startOfToday.getTime());
-    expect(herdrCalls()).toEqual([
-      ["api", "snapshot"],
-      [
-        "plugin",
-        "pane",
-        "open",
-        "--plugin",
-        "kumar303.workspace-switcher",
-        "--entrypoint",
-        "picker",
-      ],
+    expect(herdrCalls()).toContainEqual(["api", "snapshot"]);
+    expect(herdrCalls()).toContainEqual([
+      "plugin",
+      "pane",
+      "open",
+      "--plugin",
+      "kumar303.workspace-switcher",
+      "--entrypoint",
+      "picker",
     ]);
   });
 
@@ -488,6 +493,15 @@ function herdrCalls() {
 
 function clearHerdrCalls() {
   writeFileSync(herdrLogPath, "");
+}
+
+/** @param {() => boolean} predicate */
+async function waitFor(predicate) {
+  const deadline = Date.now() + 5000;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error("timed out waiting for background command");
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
+  }
 }
 
 /**

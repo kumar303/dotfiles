@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 // @ts-check
 
-import { currentWorkspaceDirectories, openPickerPopup, readSnapshot } from "./herdr.js";
-import { ensureWorkspaceHistory } from "./store.js";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { openPickerPopup } from "./herdr.js";
 
-const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
-ensureWorkspaceHistory(currentWorkspaceDirectories(readSnapshot()), stateDirectory);
+const sync = spawn(
+  process.execPath,
+  [fileURLToPath(new URL("./sync-workspaces.js", import.meta.url))],
+  {
+    detached: true,
+    env: process.env,
+    stdio: "ignore",
+  },
+);
+sync.unref();
 openPickerPopup();
-
-/** @param {string} name */
-function requiredEnvironment(name) {
-  const value = process.env[name];
-  if (!value) throw new Error(`missing environment variable: ${name}`);
-  return value;
-}

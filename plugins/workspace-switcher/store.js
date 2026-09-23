@@ -86,26 +86,26 @@ export function seedWorkspaceHistory(workspaces, stateDirectory, now = Date.now(
  */
 export function ensureWorkspaceHistory(workspaces, stateDirectory, now = Date.now()) {
   mkdirSync(stateDirectory, { recursive: true });
+  const candidates = workspaces.map((workspace) => {
+    const dir = resolve(workspace.dir);
+    return {
+      dir,
+      branch: workspace.branch === undefined ? getGitBranch(dir) : workspace.branch,
+    };
+  });
   const history = readWorkspaceHistory(stateDirectory, now);
-  const knownEntries = new Map(
-    [...history.today, ...history.earlier].map((entry) => [entry.dir, entry]),
+  const knownDirectories = new Set(
+    [...history.today, ...history.earlier].map((entry) => entry.dir),
   );
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   const inactiveLastFocused = startOfToday.getTime() - 1;
 
-  for (const workspace of workspaces) {
-    const dir = resolve(workspace.dir);
-    const branch = workspace.branch === undefined ? getGitBranch(dir) : workspace.branch;
-    const existing = knownEntries.get(dir);
-    if (existing?.branch === branch) continue;
-    const entry = {
-      dir,
-      branch,
-      lastFocused: existing?.lastFocused ?? inactiveLastFocused,
-    };
+  for (const candidate of candidates) {
+    if (knownDirectories.has(candidate.dir)) continue;
+    const entry = { ...candidate, lastFocused: inactiveLastFocused };
     appendFileSync(historyPath(stateDirectory), `${JSON.stringify(entry)}\n`);
-    knownEntries.set(dir, entry);
+    knownDirectories.add(candidate.dir);
   }
 }
 
@@ -122,7 +122,7 @@ export function readWorkspaceHistory(stateDirectory, now = Date.now()) {
   for (const entry of entries) {
     if (entry.lastFocused < cutoff) continue;
     const existing = byDirectory.get(entry.dir);
-    if (!existing || existing.lastFocused <= entry.lastFocused) {
+    if (!existing || existing.lastFocused < entry.lastFocused) {
       byDirectory.set(entry.dir, entry);
     }
   }
