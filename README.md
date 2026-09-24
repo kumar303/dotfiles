@@ -84,8 +84,6 @@ Add this `[include]` section to `.gitconfig`:
 | Vim   | `ctrl+s`     | Save the file                       |
 | Vim   | `ctrl+opt+d` | View changed Git locations          |
 
-Press `ctrl+opt+d` again to list changed locations. Press `/` to search, then `↓` or `esc` to leave search. Press `t` to hide or unhide test files. Press `X` to exit diff mode.
-
 ### Panes
 
 | Scope | Key                   | Action                             |
