@@ -118,12 +118,6 @@ Add this `[include]` section to `.gitconfig`:
 
 ## Vim
 
-In `ctrl+p` and `ctrl+r` results, `enter` opens a right split when the current
-split has a file. `ctrl+enter` reuses the current split.
-
-In the `ctrl+tab` switcher, `enter` focuses an open file or opens a recent file. `x` closes an open file.
-
-Select text with `v`, then press `ctrl+r` to use it as the search term.
 `ctrl+r` and `ctrl+f` can also pass any ripgrep option. Example of searching for
 the text `authorization`:
 
