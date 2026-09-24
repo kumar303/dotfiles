@@ -116,8 +116,6 @@ Add this `[include]` section to `.gitconfig`:
 | ----- | -------- | ------------------------------------------------------- |
 | Vim   | `ctrl+a` | Starts an agent prompt for the current file / selection |
 
-Select text first to include it as quoted context. Use `opt+left/right` to move one word. Press `enter` to send a prompt. Press `opt+enter` to queue a follow-up when the agent is working.
-
 ## Vim
 
 In `ctrl+p` and `ctrl+r` results, `enter` opens a right split when the current
