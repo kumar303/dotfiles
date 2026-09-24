@@ -72,8 +72,6 @@ Add this `[include]` section to `.gitconfig`:
 | Herdr | `cmd+shift+k`             | Close the terminal tab            |
 | Herdr | `ctrl+backtick`           | Show, hide, or focus the Vim pane |
 
-In the workspace switcher, use `up/down` to navigate, `/` to search, `enter` to select, and `esc` to close.
-
 Press `ctrl+a` from Vim to include the current file and line. Select text first to include it as quoted context. Use `opt+left/right` to move one word. Press `enter` to send a prompt. Press `opt+enter` to queue a follow-up when the agent is working.
 
 ### File navigation
