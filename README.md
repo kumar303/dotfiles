@@ -72,8 +72,6 @@ Add this `[include]` section to `.gitconfig`:
 | Herdr | `cmd+shift+k`             | Close the terminal tab            |
 | Herdr | `ctrl+backtick`           | Show, hide, or focus the Vim pane |
 
-Press `ctrl+a` from Vim to include the current file and line. Select text first to include it as quoted context. Use `opt+left/right` to move one word. Press `enter` to send a prompt. Press `opt+enter` to queue a follow-up when the agent is working.
-
 ### File navigation
 
 | Scope | Key          | Action                              |
@@ -92,7 +90,6 @@ Press `ctrl+opt+d` again to list changed locations. Press `/` to search, then `â
 
 | Scope | Key                   | Action                             |
 | ----- | --------------------- | ---------------------------------- |
-| Vim   | `ctrl+a`              | Prompt an agent in the workspace   |
 | Vim   | `ctrl+w`, `v/s`       | Open a vertical / horizontal split |
 | Vim   | `ctrl+w`, `c`         | Close the split                    |
 | Vim   | `ctrl+w`, `h/j/k/l`   | Focus the left/down/up/right split |
@@ -114,6 +111,14 @@ Press `ctrl+opt+d` again to list changed locations. Press `/` to search, then `â
 | ----- | --- | ------ |
 | Vim   | `u` | Undo   |
 | Vim   | `U` | Redo   |
+
+## Agents
+
+| Scope | Key      | Action                                                  |
+| ----- | -------- | ------------------------------------------------------- |
+| Vim   | `ctrl+a` | Starts an agent prompt for the current file / selection |
+
+Select text first to include it as quoted context. Use `opt+left/right` to move one word. Press `enter` to send a prompt. Press `opt+enter` to queue a follow-up when the agent is working.
 
 ## Vim
 
