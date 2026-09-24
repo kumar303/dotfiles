@@ -59,6 +59,9 @@ set splitright
 nnoremap <C-s> :w<CR>
 inoremap <C-s> <C-o>:w<CR>
 
+" Keep undo and redo next to each other after remapping Ctrl-R.
+nnoremap U <C-r>
+
 " Copy yanked text to the OS clipboard without changing Vim's registers.
 if has('clipboard')
     augroup os_clipboard_yank

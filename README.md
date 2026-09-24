@@ -110,6 +110,13 @@ Press `ctrl+opt+d` again to list changed locations. Press `/` to search, then `â
 | Vim   | `ctrl+f` | Find text in the current file          |
 | Vim   | `space`  | Clear search highlighting              |
 
+### Editing
+
+| Scope | Key | Action |
+| ----- | --- | ------ |
+| Vim   | `u` | Undo   |
+| Vim   | `U` | Redo   |
+
 ## Vim
 
 In `ctrl+p` and `ctrl+r` results, `enter` opens a right split when the current
