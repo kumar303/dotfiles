@@ -231,6 +231,33 @@ qa!
     ]);
   });
 
+  it("steers a working Pi agent when its prompt editor is not visible", () => {
+    writeHerdrState([
+      {
+        ...agent("w1:p1", "w1", "pi"),
+        agent_status: "working",
+        visible_text:
+          "── Working ─────────────────────\n\n────────────────────────────────\nstatus\n",
+      },
+    ]);
+    const sourcePath = join(testDirectory, "example.ts");
+    writeFileSync(sourcePath, "alpha\n");
+
+    runVim(
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+let g:agent_prompt_context = 'example.ts:1'
+call AgentPromptResults(['New direction', '', "w1:p1\tpi  working"])
+qa!
+`,
+      { VIM_TEST_SOURCE: sourcePath },
+    );
+
+    expect(herdrCalls()).toEqual([
+      ["agent", "get", "w1:p1"],
+      ["agent", "prompt", "w1:p1", "example.ts:1\n\nNew direction"],
+    ]);
+  });
+
   it("stops before sending when the Pi prompt contains unsent text", () => {
     writeHerdrState([
       {

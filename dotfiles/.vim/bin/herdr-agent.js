@@ -64,7 +64,7 @@ export function hasPendingPiPrompt(paneId, run = runHerdr, read = runHerdrText) 
   if (!agent || typeof agent.agent !== "string") {
     throw new Error("Herdr agent get lacks an agent");
   }
-  if (agent.agent !== "pi") return false;
+  if (agent.agent !== "pi" || agent.agent_status === "working") return false;
 
   const visibleText = read([
     "agent",
