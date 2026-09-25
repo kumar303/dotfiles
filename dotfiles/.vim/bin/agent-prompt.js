@@ -3,6 +3,7 @@
 
 import { readFileSync, rmSync } from "node:fs";
 import {
+  HerdrError,
   followUpAgent,
   hasPendingPiPrompt,
   listWorkspaceAgents,
@@ -28,6 +29,13 @@ try {
       const prompt = readFileSync(promptPath, "utf8").replace(/\n$/, "");
       if (mode === "follow-up") followUpAgent(target, prompt);
       else promptAgent(target, prompt);
+    } catch (error) {
+      if (error instanceof HerdrError && error.code === "agent_not_found") {
+        throw new Error(
+          "The selected agent is no longer running; press ctrl+a to refresh the list",
+        );
+      }
+      throw error;
     } finally {
       rmSync(promptPath, { force: true });
     }

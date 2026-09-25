@@ -5,6 +5,17 @@ import { execFileSync } from "node:child_process";
 /** @typedef {(args: string[]) => unknown} HerdrRunner */
 /** @typedef {(args: string[]) => string} HerdrTextRunner */
 
+export class HerdrError extends Error {
+  /**
+   * @param {string} code
+   * @param {string} message
+   */
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
 /**
  * @typedef {object} AgentInfo
  * @property {string} paneId
@@ -82,7 +93,9 @@ export function hasPendingPiPrompt(paneId, run = runHerdr, read = runHerdrText) 
     /^(?:─|━|═|-){20,}$/.test(line.trim()) ? [index] : [],
   );
   if (separators.length < 2) {
-    throw new Error("Cannot find the Pi prompt in the Herdr pane");
+    throw new Error(
+      "Cannot check Pi for unsent prompt text because its prompt editor is not visible",
+    );
   }
 
   const promptStart = separators[separators.length - 2] ?? 0;
@@ -128,11 +141,27 @@ export function runHerdrText(args) {
 
 /** @param {string[]} args */
 function runHerdrCommand(args) {
-  return execFileSync(requiredEnvironment("HERDR_BIN_PATH"), args, {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout: 10000,
-  });
+  try {
+    return execFileSync(requiredEnvironment("HERDR_BIN_PATH"), args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 10000,
+    });
+  } catch (error) {
+    const stderr = String(/** @type {{stderr?: unknown}} */ (error).stderr ?? "").trim();
+    /** @type {{error?: {code?: unknown, message?: unknown}}} */
+    let response = {};
+    try {
+      response = JSON.parse(stderr);
+    } catch {
+      throw new Error(stderr || `herdr ${args.join(" ")} failed`);
+    }
+    const { code, message } = response.error ?? {};
+    throw new HerdrError(
+      typeof code === "string" ? code : "unknown",
+      typeof message === "string" ? message : stderr,
+    );
+  }
 }
 
 /** @param {...unknown} values */

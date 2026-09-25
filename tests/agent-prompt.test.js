@@ -258,6 +258,37 @@ qa!
     ]);
   });
 
+  it.each([
+    [
+      "the selected agent closed",
+      [],
+      "The selected agent is no longer running; press ctrl+a to refresh the list",
+    ],
+    [
+      "an idle Pi prompt editor is not visible",
+      [{ ...agent("w1:p1", "w1", "pi"), visible_text: "scrolled output\n" }],
+      "Cannot check Pi for unsent prompt text because its prompt editor is not visible",
+    ],
+  ])("explains the failure when %s", (_name, agents, message) => {
+    writeHerdrState(agents);
+    const sourcePath = join(testDirectory, "example.ts");
+    const resultPath = join(testDirectory, "error.txt");
+    writeFileSync(sourcePath, "alpha\n");
+
+    runVim(
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+let g:agent_prompt_context = 'example.ts:1'
+silent! call AgentPromptResults(['New prompt', '', "w1:p1\tpi  idle"])
+call writefile([v:errmsg], $VIM_TEST_RESULT)
+qa!
+`,
+      { VIM_TEST_RESULT: resultPath, VIM_TEST_SOURCE: sourcePath },
+    );
+
+    expect(readFileSync(resultPath, "utf8").trim()).toBe(message);
+    expect(herdrCalls().some((call) => call[1] === "prompt")).toBe(false);
+  });
+
   it("stops before sending when the Pi prompt contains unsent text", () => {
     writeHerdrState([
       {

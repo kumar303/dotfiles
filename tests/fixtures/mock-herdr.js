@@ -34,6 +34,14 @@ if (area === "api" && command === "snapshot") {
   output({ result: { agents: state.result.agents ?? [] } });
 } else if (area === "agent" && command === "get") {
   const agent = state.result.agents?.find((item) => item.pane_id === args[2]);
+  if (!agent) {
+    fail(
+      JSON.stringify({
+        error: { code: "agent_not_found", message: `agent target ${args[2]} not found` },
+        id: "cli:agent:get",
+      }),
+    );
+  }
   output({ result: { agent } });
 } else if (area === "agent" && command === "read") {
   const agent = state.result.agents?.find((item) => item.pane_id === args[2]);
