@@ -33,9 +33,11 @@ const currentWorkspaces = buildWorkspaceSnapshot(
 const model = new WorkspacePickerModel(
   mergeCurrentWorkspaces(currentWorkspaces, readWorkspaceHistory(stateDirectory)),
 );
-const focusedWorkspaceId = initialSnapshot.workspaces.find(
+const focusedWorkspaceIdValue = initialSnapshot.workspaces.find(
   (workspace) => workspace.focused,
 )?.workspace_id;
+const focusedWorkspaceId =
+  typeof focusedWorkspaceIdValue === "string" ? focusedWorkspaceIdValue : undefined;
 const currentDirectory = currentWorkspaceDirectories(initialSnapshot)[0]?.dir;
 const lastUsedIndex = model.entries.findIndex((entry) =>
   entry.workspaceId ? entry.workspaceId !== focusedWorkspaceId : entry.dir !== currentDirectory,
@@ -125,7 +127,7 @@ function handleKeypress(character, key) {
 }
 
 render();
-startWorkspaceSnapshotRefresh(currentWorkspaces, stateDirectory);
+startWorkspaceSnapshotRefresh(currentWorkspaces, stateDirectory, focusedWorkspaceId);
 
 function render() {
   const rows = buildWorkspaceRows(model.filteredHistory, model.selectedIndex);

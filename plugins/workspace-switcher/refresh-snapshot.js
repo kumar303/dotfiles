@@ -11,6 +11,7 @@ const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const workspaces = /** @type {import("./snapshot.js").WorkspaceSnapshot[]} */ (
   JSON.parse(requiredEnvironment("HERDR_WORKSPACE_SNAPSHOT_JSON"))
 );
+const focusedWorkspaceId = process.env.HERDR_FOCUSED_WORKSPACE_ID;
 const ownerPath = join(stateDirectory, "snapshot-refresh.json");
 const token = randomUUID();
 
@@ -18,12 +19,12 @@ cancelPreviousRefresh();
 writeFileSync(ownerPath, `${JSON.stringify({ pid: process.pid, token })}\n`);
 writeIfOwner();
 
-for (const workspace of workspaces) {
-  for (const pane of workspace.panes) {
-    if (!ownsRefresh()) process.exit(0);
-    pane.branch = getGitBranch(pane.cwd);
-    writeIfOwner();
-  }
+const focusedPane = workspaces
+  .find((workspace) => workspace.workspaceId === focusedWorkspaceId)
+  ?.panes.find((pane) => pane.focused);
+if (focusedPane) {
+  focusedPane.branch = getGitBranch(focusedPane.cwd);
+  writeIfOwner();
 }
 
 if (ownsRefresh()) rmSync(ownerPath, { force: true });

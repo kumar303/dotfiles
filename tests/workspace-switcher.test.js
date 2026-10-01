@@ -156,7 +156,7 @@ describe("workspace-switcher plugin", () => {
     ]);
   });
 
-  it("caches every current pane and refreshes its Git branch in the background", async () => {
+  it("caches every current pane and refreshes only the focused pane's Git branch", async () => {
     const dotfiles = createGitDirectory("dotfiles", "main");
     const docs = createGitDirectory("docs", "docs-branch");
     const stale = createGitDirectory("stale", "stale-branch");
@@ -201,10 +201,10 @@ describe("workspace-switcher plugin", () => {
     expect(text).toContain("dotfiles [cached-main]");
     expect(text).not.toContain("dotfiles: dotfiles");
     expect(text).not.toContain("stale");
-    waitForSnapshot((snapshot) =>
-      snapshot[0]?.panes.every((/** @type {any} */ pane) =>
-        ["main", "docs-branch"].includes(String(pane.branch)),
-      ),
+    waitForCondition(
+      () =>
+        !existsSync(join(stateDirectory, "snapshot-refresh.json")) &&
+        snapshotEntries()[0]?.panes[0]?.branch === "main",
     );
     expect(snapshotEntries()).toEqual([
       {
@@ -217,7 +217,7 @@ describe("workspace-switcher plugin", () => {
             focused: true,
             lastFocused: expect.any(Number),
           }),
-          { cwd: docs, branch: "docs-branch", focused: false, lastFocused: earlier - 1 },
+          { cwd: docs, branch: "cached-docs", focused: false, lastFocused: earlier - 1 },
         ],
       },
     ]);

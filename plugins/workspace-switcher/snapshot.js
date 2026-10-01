@@ -127,8 +127,9 @@ export function writeWorkspaceSnapshot(workspaces, stateDirectory) {
 /**
  * @param {WorkspaceSnapshot[]} workspaces
  * @param {string} stateDirectory
+ * @param {string | undefined} focusedWorkspaceId
  */
-export function startWorkspaceSnapshotRefresh(workspaces, stateDirectory) {
+export function startWorkspaceSnapshotRefresh(workspaces, stateDirectory, focusedWorkspaceId) {
   const refresh = spawn(
     process.execPath,
     [fileURLToPath(new URL("./refresh-snapshot.js", import.meta.url))],
@@ -136,6 +137,7 @@ export function startWorkspaceSnapshotRefresh(workspaces, stateDirectory) {
       detached: true,
       env: {
         ...process.env,
+        HERDR_FOCUSED_WORKSPACE_ID: focusedWorkspaceId ?? "",
         HERDR_PLUGIN_STATE_DIR: stateDirectory,
         HERDR_WORKSPACE_SNAPSHOT_JSON: JSON.stringify(workspaces),
       },
