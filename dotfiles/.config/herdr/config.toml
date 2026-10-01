@@ -1,5 +1,8 @@
 onboarding = false
 
+[session]
+resume_agents_on_restore = false
+
 # Light Owl credits and license: themes/light-owl.LICENSE
 
 [theme]
