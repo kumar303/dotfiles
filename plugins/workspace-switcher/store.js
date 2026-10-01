@@ -14,6 +14,8 @@ const MAX_AGE_DAYS = 180;
  * @property {number} lastFocused
  * @property {string} [workspaceId]
  * @property {string} [workspaceName]
+ * @property {string[]} [workspaceDirectories]
+ * @property {(string | null)[]} [workspaceBranches]
  */
 
 /**
@@ -161,10 +163,14 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
         lastFocused: pane.lastFocused ?? now,
         workspaceId: workspace.workspaceId,
         workspaceName: workspace.name,
+        workspaceDirectories: workspace.panes.map((candidate) => candidate.cwd),
+        workspaceBranches: workspace.panes.map((candidate) => candidate.branch),
       },
     ];
   });
-  const currentDirectories = new Set(current.map((entry) => entry.dir));
+  const currentDirectories = new Set(
+    workspaces.flatMap((workspace) => workspace.panes.map((pane) => pane.cwd)),
+  );
   const combined = [
     ...current,
     ...history.today.filter((entry) => !currentDirectories.has(entry.dir)),
@@ -194,7 +200,11 @@ export function filterWorkspaces(entries, query) {
     (entry) =>
       basename(entry.dir).toLowerCase().includes(normalized) ||
       entry.dir.toLowerCase().includes(normalized) ||
-      (entry.branch ?? "").toLowerCase().includes(normalized),
+      (entry.branch ?? "").toLowerCase().includes(normalized) ||
+      (entry.workspaceDirectories ?? []).some((dir) => dir.toLowerCase().includes(normalized)) ||
+      (entry.workspaceBranches ?? []).some((branch) =>
+        (branch ?? "").toLowerCase().includes(normalized),
+      ),
   );
 }
 

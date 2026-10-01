@@ -278,6 +278,56 @@ printf 'slow-branch\\n'
     waitForSnapshot((snapshot) => snapshot[0]?.panes[0]?.branch === "slow-branch");
   });
 
+  it("shows one current workspace while searching all of its pane directories", async () => {
+    const dotfiles = createGitDirectory("dotfiles", "main");
+    const worktree = createGitDirectory("kumar303.workspace-switcher", "feature/switcher");
+    const now = Date.now();
+    writeSnapshotCache([
+      {
+        workspaceId: "old-w1",
+        name: "dotfiles",
+        panes: [
+          {
+            cwd: worktree,
+            branch: "feature/switcher",
+            focused: true,
+            lastFocused: now,
+          },
+          { cwd: dotfiles, branch: "main", focused: false, lastFocused: now - 1 },
+        ],
+      },
+    ]);
+    writeHistory([{ dir: dotfiles, branch: "main", lastFocused: now - 1 }]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "dotfiles",
+          active_tab_id: "w1:t1",
+          focused: true,
+          number: 1,
+        },
+      ],
+      tabs: [],
+      layouts: [{ workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" }],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: worktree },
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p2", cwd: dotfiles },
+      ],
+    });
+
+    const result = await runPicker("/dotfiles\r");
+    const text = stripTerminalControls(result.stdout);
+
+    expect(text).toContain("dotfiles: kumar303.workspace-switcher [feature/switcher]");
+    expect(text).not.toContain("dotfiles [main]");
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["workspace", "focus", "w1"],
+    ]);
+  });
+
   it("lists duplicate paths as distinct workspaces and focuses the selected workspace id", async () => {
     const shared = createGitDirectory("shared", "main");
     const now = Date.now();
@@ -517,7 +567,7 @@ printf 'slow-branch\\n'
     );
   });
 
-  it("focuses the workspace whose non-selected pane uses a historic directory", async () => {
+  it("finds a workspace through a historic directory used by its non-selected pane", async () => {
     const current = join(testDirectory, "current");
     const historic = join(testDirectory, "historic");
     writeHistory([{ dir: historic, branch: null, lastFocused: Date.now() - 1 }]);
@@ -540,10 +590,9 @@ printf 'slow-branch\\n'
       ],
     });
 
-    await runPicker("\r");
+    await runPicker("/historic\r");
 
     expect(herdrCalls()).toEqual([
-      ["api", "snapshot"],
       ["api", "snapshot"],
       ["workspace", "focus", "w1"],
     ]);
