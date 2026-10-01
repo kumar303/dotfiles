@@ -8,6 +8,8 @@ import { resolve } from "node:path";
 /**
  * @typedef {object} HerdrSnapshot
  * @property {Array<Record<string, unknown>>} workspaces
+ * @property {string} [focused_pane_id]
+ * @property {Array<Record<string, unknown>>} [layouts]
  * @property {Array<Record<string, unknown>>} [tabs]
  * @property {Array<Record<string, unknown>>} panes
  */
@@ -86,6 +88,14 @@ export function openWorkspace(dir, snapshot, run = runHerdr) {
   } else {
     run(["workspace", "create", "--cwd", absoluteDirectory, "--focus"]);
   }
+}
+
+/**
+ * @param {string} workspaceId
+ * @param {HerdrRunner} [run]
+ */
+export function focusWorkspace(workspaceId, run = runHerdr) {
+  run(["workspace", "focus", workspaceId]);
 }
 
 /** @param {HerdrRunner} [run] */

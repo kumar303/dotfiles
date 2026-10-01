@@ -12,6 +12,8 @@ const MAX_AGE_DAYS = 180;
  * @property {string} dir
  * @property {string | null} branch
  * @property {number} lastFocused
+ * @property {string} [workspaceId]
+ * @property {string} [workspaceName]
  */
 
 /**
@@ -135,6 +137,46 @@ export function readWorkspaceHistory(stateDirectory, now = Date.now()) {
   return {
     today: sorted.filter((entry) => entry.lastFocused >= startOfToday.getTime()).slice(0, MAX_LIST),
     earlier: sorted
+      .filter((entry) => entry.lastFocused < startOfToday.getTime())
+      .slice(0, MAX_LIST),
+  };
+}
+
+/**
+ * @param {import("./snapshot.js").WorkspaceSnapshot[]} workspaces
+ * @param {WorkspaceHistory} history
+ * @param {number} [now]
+ * @returns {WorkspaceHistory}
+ */
+export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
+  const historyEntries = [...history.today, ...history.earlier];
+  const current = workspaces.flatMap((workspace) => {
+    const pane = workspace.panes.find((candidate) => candidate.focused);
+    if (!pane) return [];
+    const remembered = historyEntries.find((entry) => entry.dir === pane.cwd);
+    return [
+      {
+        dir: pane.cwd,
+        branch: pane.branch ?? remembered?.branch ?? null,
+        lastFocused: pane.lastFocused ?? now,
+        workspaceId: workspace.workspaceId,
+        workspaceName: workspace.name,
+      },
+    ];
+  });
+  const currentDirectories = new Set(current.map((entry) => entry.dir));
+  const combined = [
+    ...current,
+    ...history.today.filter((entry) => !currentDirectories.has(entry.dir)),
+    ...history.earlier.filter((entry) => !currentDirectories.has(entry.dir)),
+  ].sort((left, right) => right.lastFocused - left.lastFocused);
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  return {
+    today: combined
+      .filter((entry) => entry.lastFocused >= startOfToday.getTime())
+      .slice(0, MAX_LIST),
+    earlier: combined
       .filter((entry) => entry.lastFocused < startOfToday.getTime())
       .slice(0, MAX_LIST),
   };

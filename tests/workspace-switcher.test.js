@@ -1,7 +1,7 @@
 // @ts-check
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -81,7 +81,6 @@ describe("workspace-switcher plugin", () => {
 
     expect(herdrCalls()).toEqual([
       ["api", "snapshot"],
-      ["api", "snapshot"],
       ["workspace", "focus", "w2"],
     ]);
     expect(historyEntries().filter((entry) => entry.dir === checkout)).toHaveLength(3);
@@ -145,6 +144,184 @@ describe("workspace-switcher plugin", () => {
     });
     expect(herdrCalls()).toEqual([
       ["api", "snapshot"],
+      ["workspace", "focus", "w2"],
+    ]);
+  });
+
+  it("caches every current pane and refreshes its Git branch in the background", async () => {
+    const dotfiles = createGitDirectory("dotfiles", "main");
+    const docs = createGitDirectory("docs", "docs-branch");
+    const stale = createGitDirectory("stale", "stale-branch");
+    const earlier = Date.now() - 24 * 60 * 60 * 1000;
+    writeSnapshotCache([
+      {
+        workspaceId: "old-w1",
+        name: "dotfiles",
+        panes: [
+          { cwd: dotfiles, branch: "cached-main", focused: true, lastFocused: earlier },
+          { cwd: docs, branch: "cached-docs", focused: false, lastFocused: earlier - 1 },
+        ],
+      },
+      {
+        workspaceId: "old-w9",
+        name: "closed",
+        panes: [{ cwd: stale, branch: "stale-branch", focused: true, lastFocused: earlier }],
+      },
+    ]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "dotfiles",
+          active_tab_id: "w1:t1",
+          focused: true,
+          number: 1,
+        },
+      ],
+      tabs: [{ workspace_id: "w1", tab_id: "w1:t1", number: 1 }],
+      layouts: [{ workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" }],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: dotfiles },
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p2", cwd: docs },
+      ],
+    });
+
+    const result = await runPicker("\x1b");
+    const text = stripTerminalControls(result.stdout);
+
+    expect(text).toContain("dotfiles [cached-main]");
+    expect(text).not.toContain("dotfiles: dotfiles");
+    expect(text).not.toContain("stale");
+    waitForSnapshot((snapshot) =>
+      snapshot[0]?.panes.every((/** @type {any} */ pane) =>
+        ["main", "docs-branch"].includes(String(pane.branch)),
+      ),
+    );
+    expect(snapshotEntries()).toEqual([
+      {
+        workspaceId: "w1",
+        name: "dotfiles",
+        panes: [
+          expect.objectContaining({
+            cwd: dotfiles,
+            branch: "main",
+            focused: true,
+            lastFocused: expect.any(Number),
+          }),
+          { cwd: docs, branch: "docs-branch", focused: false, lastFocused: earlier - 1 },
+        ],
+      },
+    ]);
+  });
+
+  it("lists duplicate paths as distinct workspaces and focuses the selected workspace id", async () => {
+    const shared = createGitDirectory("shared", "main");
+    const now = Date.now();
+    writeSnapshotCache([
+      {
+        workspaceId: "old-w1",
+        name: "one",
+        panes: [{ cwd: shared, branch: "main", focused: true, lastFocused: now }],
+      },
+      {
+        workspaceId: "old-w2",
+        name: "two",
+        panes: [{ cwd: shared, branch: "main", focused: true, lastFocused: now - 1 }],
+      },
+    ]);
+    writeHistory([{ dir: shared, branch: "main", lastFocused: now - 2 }]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        { workspace_id: "w1", label: "one", active_tab_id: "w1:t1", focused: true, number: 1 },
+        {
+          workspace_id: "w2",
+          label: "two",
+          active_tab_id: "w2:t1",
+          focused: false,
+          number: 2,
+        },
+      ],
+      tabs: [
+        { workspace_id: "w1", tab_id: "w1:t1", number: 1 },
+        { workspace_id: "w2", tab_id: "w2:t1", number: 1 },
+      ],
+      layouts: [
+        { workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" },
+        { workspace_id: "w2", tab_id: "w2:t1", focused_pane_id: "w2:p1" },
+      ],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: shared },
+        { workspace_id: "w2", tab_id: "w2:t1", pane_id: "w2:p1", cwd: shared },
+      ],
+    });
+
+    const result = await runPicker("\r");
+    const text = stripTerminalControls(result.stdout);
+
+    expect(text).toContain("one: shared [main]");
+    expect(text).toContain("two: shared [main]");
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["workspace", "focus", "w2"],
+    ]);
+  });
+
+  it("searches current workspaces by path or cached branch", async () => {
+    const dotfiles = createGitDirectory("dotfiles", "main");
+    const checkout = createGitDirectory("checkout-web", "feature/payment");
+    writeSnapshotCache([
+      {
+        workspaceId: "old-w1",
+        name: "dotfiles",
+        panes: [{ cwd: dotfiles, branch: "main", focused: true, lastFocused: Date.now() }],
+      },
+      {
+        workspaceId: "old-w2",
+        name: "web",
+        panes: [
+          {
+            cwd: checkout,
+            branch: "feature/payment",
+            focused: true,
+            lastFocused: Date.now() - 1,
+          },
+        ],
+      },
+    ]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "dotfiles",
+          active_tab_id: "w1:t1",
+          focused: true,
+          number: 1,
+        },
+        {
+          workspace_id: "w2",
+          label: "web",
+          active_tab_id: "w2:t1",
+          focused: false,
+          number: 2,
+        },
+      ],
+      tabs: [],
+      layouts: [
+        { workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" },
+        { workspace_id: "w2", tab_id: "w2:t1", focused_pane_id: "w2:p1" },
+      ],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: dotfiles },
+        { workspace_id: "w2", tab_id: "w2:t1", pane_id: "w2:p1", cwd: checkout },
+      ],
+    });
+
+    await runPicker("/payment\r");
+
+    expect(herdrCalls()).toEqual([
       ["api", "snapshot"],
       ["workspace", "focus", "w2"],
     ]);
@@ -171,7 +348,6 @@ describe("workspace-switcher plugin", () => {
     await runPicker("/payment\r");
 
     expect(herdrCalls()).toEqual([
-      ["api", "snapshot"],
       ["api", "snapshot"],
       ["workspace", "focus", "w2"],
     ]);
@@ -205,7 +381,6 @@ describe("workspace-switcher plugin", () => {
     expect(text.indexOf("current")).toBeLessThan(text.indexOf("previous"));
     expect(text.indexOf("previous")).toBeLessThan(text.indexOf("older"));
     expect(herdrCalls()).toEqual([
-      ["api", "snapshot"],
       ["api", "snapshot"],
       ["workspace", "focus", "w2"],
     ]);
@@ -290,7 +465,6 @@ describe("workspace-switcher plugin", () => {
     await runPicker("\r");
 
     expect(herdrCalls()).toEqual([
-      ["api", "snapshot"],
       ["api", "snapshot"],
       ["workspace", "focus", "w1"],
     ]);
@@ -397,7 +571,15 @@ function runPicker(input) {
   return { stdout: result.stdout, stderr: result.stderr };
 }
 
-/** @param {{workspaces: unknown[], tabs?: unknown[], panes: unknown[]}} snapshot */
+/**
+ * @param {{
+ *   focused_pane_id?: string,
+ *   workspaces: unknown[],
+ *   tabs?: unknown[],
+ *   layouts?: unknown[],
+ *   panes: unknown[]
+ * }} snapshot
+ */
 function writeHerdrSnapshot(snapshot) {
   writeFileSync(
     herdrStatePath,
@@ -411,6 +593,35 @@ function writeHistory(entries) {
     join(stateDirectory, "workspaces.jsonl"),
     entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n",
   );
+}
+
+/** @param {unknown[]} entries */
+function writeSnapshotCache(entries) {
+  writeFileSync(
+    join(stateDirectory, "herdr-snapshot.jsonl"),
+    entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n",
+  );
+}
+
+/** @returns {Array<any>} */
+function snapshotEntries() {
+  const file = join(stateDirectory, "herdr-snapshot.jsonl");
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+/** @param {(snapshot: Array<any>) => boolean} predicate */
+function waitForSnapshot(predicate) {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const snapshot = snapshotEntries();
+    if (predicate(snapshot)) return;
+  }
+  expect(snapshotEntries(), "background snapshot refresh did not finish").toSatisfy(predicate);
 }
 
 /** @returns {Array<{dir: string, branch: string | null, lastFocused: number}>} */

@@ -55,9 +55,14 @@ export function buildWorkspaceRows(history, selectedIndex) {
  */
 function entryRow(entry, selected) {
   const branch = entry.branch ? ` [${entry.branch}]` : "";
+  const directoryName = basename(entry.dir);
+  const name =
+    entry.workspaceName && entry.workspaceName !== directoryName
+      ? `${entry.workspaceName}: ${directoryName}`
+      : directoryName;
   return {
     kind: "entry",
-    text: `${selected ? "   > " : "     "}${basename(entry.dir)}${branch}`,
+    text: `${selected ? "   > " : "     "}${name}${branch}`,
     entry,
     selected,
   };
