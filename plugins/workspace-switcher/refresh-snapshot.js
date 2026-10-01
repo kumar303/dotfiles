@@ -33,7 +33,11 @@ function cancelPreviousRefresh() {
   try {
     const owner = JSON.parse(readFileSync(ownerPath, "utf8"));
     if (typeof owner?.pid === "number" && owner.pid !== process.pid) {
-      process.kill(owner.pid, "SIGTERM");
+      try {
+        process.kill(-owner.pid, "SIGTERM");
+      } catch {
+        process.kill(owner.pid, "SIGTERM");
+      }
     }
   } catch {
     // Replace invalid ownership state.

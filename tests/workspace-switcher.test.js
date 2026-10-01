@@ -1,7 +1,15 @@
 // @ts-check
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -213,6 +221,61 @@ describe("workspace-switcher plugin", () => {
         ],
       },
     ]);
+  });
+
+  it("does not wait for branch refresh and cancels the previous refresh process", async () => {
+    const workspace = join(testDirectory, "slow-workspace");
+    const control = join(testDirectory, "git-control");
+    const bin = join(testDirectory, "bin");
+    mkdirSync(workspace);
+    mkdirSync(control);
+    mkdirSync(bin);
+    const fakeGit = join(bin, "git");
+    writeFileSync(
+      fakeGit,
+      `#!/bin/sh
+printf '%s\\n' "$$" >> "$HERDR_TEST_CONTROL/starts"
+trap 'printf "%s\\n" "$$" >> "$HERDR_TEST_CONTROL/terms"; exit 0' TERM INT
+while [ ! -f "$HERDR_TEST_CONTROL/release-$$" ]; do sleep 0.01; done
+printf 'slow-branch\\n'
+`,
+    );
+    chmodSync(fakeGit, 0o755);
+    pluginEnvironment.PATH = `${bin}:${process.env.PATH ?? ""}`;
+    pluginEnvironment.HERDR_TEST_CONTROL = control;
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "slow-workspace",
+          active_tab_id: "w1:t1",
+          focused: true,
+          number: 1,
+        },
+      ],
+      tabs: [],
+      layouts: [{ workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" }],
+      panes: [{ workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: workspace }],
+    });
+
+    await runPicker("\x1b");
+    waitForFile(join(control, "starts"));
+    const firstPid = readFileSync(join(control, "starts"), "utf8").trim();
+
+    await runPicker("\x1b");
+    waitForCondition(() => readLines(join(control, "starts")).length === 2);
+    const secondPid = readLines(join(control, "starts"))[1];
+    waitForCondition(() => readLines(join(control, "terms")).includes(firstPid));
+
+    expect(secondPid).not.toBe(firstPid);
+    expect(snapshotEntries()[0]).toMatchObject({
+      workspaceId: "w1",
+      panes: [{ cwd: workspace, branch: null }],
+    });
+
+    writeFileSync(join(control, `release-${secondPid}`), "");
+    waitForSnapshot((snapshot) => snapshot[0]?.panes[0]?.branch === "slow-branch");
   });
 
   it("lists duplicate paths as distinct workspaces and focuses the selected workspace id", async () => {
@@ -616,12 +679,28 @@ function snapshotEntries() {
 
 /** @param {(snapshot: Array<any>) => boolean} predicate */
 function waitForSnapshot(predicate) {
+  waitForCondition(() => predicate(snapshotEntries()));
+  expect(snapshotEntries(), "background snapshot refresh did not finish").toSatisfy(predicate);
+}
+
+/** @param {string} file */
+function waitForFile(file) {
+  waitForCondition(() => existsSync(file));
+}
+
+/** @param {() => boolean} predicate */
+function waitForCondition(predicate) {
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
-    const snapshot = snapshotEntries();
-    if (predicate(snapshot)) return;
+    if (predicate()) return;
   }
-  expect(snapshotEntries(), "background snapshot refresh did not finish").toSatisfy(predicate);
+  expect(predicate(), "background process did not reach the expected state").toBe(true);
+}
+
+/** @param {string} file */
+function readLines(file) {
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8").trim().split("\n").filter(Boolean);
 }
 
 /** @returns {Array<{dir: string, branch: string | null, lastFocused: number}>} */
