@@ -517,6 +517,38 @@ printf 'slow-branch\\n'
     );
   });
 
+  it("focuses the workspace whose non-selected pane uses a historic directory", async () => {
+    const current = join(testDirectory, "current");
+    const historic = join(testDirectory, "historic");
+    writeHistory([{ dir: historic, branch: null, lastFocused: Date.now() - 1 }]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "current",
+          active_tab_id: "w1:t1",
+          focused: true,
+          number: 1,
+        },
+      ],
+      tabs: [],
+      layouts: [{ workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" }],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: current },
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p2", cwd: historic },
+      ],
+    });
+
+    await runPicker("\r");
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["api", "snapshot"],
+      ["workspace", "focus", "w1"],
+    ]);
+  });
+
   it("focuses an open workspace when a pane uses the selected directory", async () => {
     const nested = join(testDirectory, "one", "nested");
     writeHistory([{ dir: nested, branch: null, lastFocused: Date.now() }]);
