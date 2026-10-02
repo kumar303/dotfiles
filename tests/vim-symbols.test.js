@@ -101,6 +101,60 @@ describe("CurrentFileSymbols", () => {
     ).toBe(true);
   });
 
+  it("finds test cases and functions in TSX files", () => {
+    const sourceFile = join(testDirectory, "example.test.tsx");
+    const resultPath = join(testDirectory, "symbols.json");
+    writeFileSync(
+      sourceFile,
+      `function renderApp() {
+  return <div>App booted</div>;
+}
+
+describe('app metafields preloading', () => {
+  it('does not preload without installed extensions', async () => {
+    renderApp();
+  });
+  test.skip('ignores missing responses', () => {});
+});
+`,
+    );
+
+    const result = spawnSync(
+      "vim",
+      [
+        "-Nu",
+        vimrcPath,
+        "-n",
+        "-es",
+        sourceFile,
+        "-c",
+        "call writefile([json_encode(CurrentFileSymbols())], $VIM_TEST_RESULT)",
+        "-c",
+        "qa!",
+      ],
+      {
+        encoding: "utf8",
+        env: { ...process.env, VIM_TEST_RESULT: resultPath },
+      },
+    );
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const symbols = /** @type {string[]} */ (JSON.parse(readFileSync(resultPath, "utf8")));
+    expect(symbols.some((symbol) => symbol.includes("function     renderApp"))).toBe(true);
+    expect(
+      symbols.some((symbol) => symbol.includes("test         app metafields preloading")),
+    ).toBe(true);
+    expect(
+      symbols.some((symbol) =>
+        symbol.includes("test         does not preload without installed extensions"),
+      ),
+    ).toBe(true);
+    expect(
+      symbols.some((symbol) => symbol.includes("test         ignores missing responses")),
+    ).toBe(true);
+  });
+
   it("finds methods after a constructor with a typed destructured parameter", () => {
     const sourceFile = join(testDirectory, "emitter.ts");
     const resultPath = join(testDirectory, "symbols.json");
