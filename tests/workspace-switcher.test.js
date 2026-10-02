@@ -15,7 +15,14 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "smol-toml";
-import { writeWorkspaceSnapshot } from "../plugins/workspace-switcher/snapshot.js";
+import {
+  startWorkspaceSnapshotRefresh,
+  writeWorkspaceSnapshot,
+} from "../plugins/workspace-switcher/snapshot.js";
+import {
+  mergeCurrentWorkspaces,
+  readWorkspaceHistory,
+} from "../plugins/workspace-switcher/store.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -95,6 +102,179 @@ describe("workspace-switcher plugin", () => {
     ).toThrow();
 
     expect(readdirSync(stateDirectory)).toEqual(["herdr-snapshot.jsonl"]);
+  });
+
+  it("keeps uncached focus times in Earlier when the picker reads Herdr", async () => {
+    const current = createGitDirectory("current", "main");
+    const other = createGitDirectory("other", "develop");
+    writeHistory([{ dir: current, branch: "main", lastFocused: Date.now() }]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        { workspace_id: "w1", focused: true, number: 1 },
+        { workspace_id: "w2", focused: false, number: 2 },
+      ],
+      panes: [
+        { workspace_id: "w1", pane_id: "w1:p1", cwd: current, focused: true },
+        { workspace_id: "w2", pane_id: "w2:p1", cwd: other, focused: true },
+      ],
+    });
+
+    await runPicker("\x1b");
+    waitForSnapshot((workspaces) => workspaces.length === 2);
+
+    expect(snapshotEntries().map((workspace) => workspace.panes[0].lastFocused)).toEqual([
+      null,
+      null,
+    ]);
+    const history = mergeCurrentWorkspaces(snapshotEntries(), readWorkspaceHistory(stateDirectory));
+    expect(history.today).toEqual([]);
+    expect(history.earlier.map((entry) => entry.dir)).toEqual([current, other]);
+  });
+
+  it("records only the event workspace pane's focus time in the atomic snapshot", () => {
+    const first = createGitDirectory("first", "main");
+    const second = createGitDirectory("second", "develop");
+    writeHerdrSnapshot({
+      focused_pane_id: "w2:p1",
+      workspaces: [
+        { workspace_id: "w1", focused: false, number: 1 },
+        { workspace_id: "w2", focused: true, number: 2 },
+      ],
+      panes: [
+        { workspace_id: "w1", pane_id: "w1:p1", cwd: first, focused: true },
+        { workspace_id: "w2", pane_id: "w2:p1", cwd: second, focused: true },
+      ],
+    });
+
+    const before = Date.now();
+    emitPluginEvent("workspace.focused", { workspace_id: "w2", workspace_cwd: second });
+    const after = Date.now();
+
+    expect(snapshotEntries()[0].panes[0].lastFocused).toBeNull();
+    expect(snapshotEntries()[1].panes[0].lastFocused).toBeGreaterThanOrEqual(before);
+    expect(snapshotEntries()[1].panes[0].lastFocused).toBeLessThanOrEqual(after);
+    expect(readdirSync(stateDirectory).some((file) => file.includes(".tmp"))).toBe(false);
+    const history = mergeCurrentWorkspaces(snapshotEntries(), readWorkspaceHistory(stateDirectory));
+    expect(history.today.map((entry) => entry.dir)).toEqual([second]);
+    expect(history.earlier.map((entry) => entry.dir)).toEqual([first]);
+  });
+
+  it("keeps cached pane focus times when the event selects another pane", () => {
+    const first = createGitDirectory("first", "main");
+    const second = createGitDirectory("second", "develop");
+    const earlier = Date.now() - 24 * 60 * 60 * 1000;
+    writeSnapshotCache([
+      {
+        workspaceId: "w1",
+        name: "first",
+        panes: [
+          { paneId: "w1:p1", cwd: first, branch: "main", focused: true, lastFocused: earlier },
+          { paneId: "w1:p2", cwd: second, branch: "develop", focused: false, lastFocused: null },
+        ],
+      },
+    ]);
+    writeHerdrSnapshot({
+      workspaces: [{ workspace_id: "w1", label: "first", focused: true, active_tab_id: "w1:t1" }],
+      layouts: [{ workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p2" }],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: first },
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p2", cwd: second },
+      ],
+    });
+
+    emitPluginEvent("workspace.focused", { workspace_id: "w1", workspace_cwd: first });
+
+    expect(snapshotEntries()[0].panes[0].lastFocused).toBe(earlier);
+    expect(snapshotEntries()[0].panes[1].lastFocused).toBeGreaterThan(earlier);
+  });
+
+  it("records the selected existing workspace's focused pane when switching from the picker", async () => {
+    const first = createGitDirectory("first", "main");
+    const second = createGitDirectory("second", "develop");
+    const third = createGitDirectory("third", "feature");
+    const earlier = Date.now() - 24 * 60 * 60 * 1000;
+    writeSnapshotCache([
+      {
+        workspaceId: "w1",
+        name: "first",
+        panes: [
+          { paneId: "w1:p1", cwd: first, branch: "main", focused: true, lastFocused: earlier },
+        ],
+      },
+      {
+        workspaceId: "w2",
+        name: "second",
+        panes: [
+          { paneId: "w2:p1", cwd: second, branch: "develop", focused: false, lastFocused: null },
+          { paneId: "w2:p2", cwd: third, branch: "feature", focused: true, lastFocused: null },
+        ],
+      },
+    ]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        { workspace_id: "w1", label: "first", focused: true, active_tab_id: "w1:t1" },
+        { workspace_id: "w2", label: "second", focused: false, active_tab_id: "w2:t1" },
+      ],
+      layouts: [
+        { workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" },
+        { workspace_id: "w2", tab_id: "w2:t1", focused_pane_id: "w2:p2" },
+      ],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: first },
+        { workspace_id: "w2", tab_id: "w2:t1", pane_id: "w2:p1", cwd: second },
+        { workspace_id: "w2", tab_id: "w2:t1", pane_id: "w2:p2", cwd: third },
+      ],
+    });
+
+    const before = Date.now();
+    await runPicker("\r");
+    const after = Date.now();
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["workspace", "focus", "w2"],
+    ]);
+    const workspaces = snapshotEntries();
+    expect(workspaces[0].panes[0].lastFocused).toBe(earlier);
+    expect(workspaces[1].panes[0].lastFocused).toBeNull();
+    expect(workspaces[1].panes[1].lastFocused).toBeGreaterThanOrEqual(before);
+    expect(workspaces[1].panes[1].lastFocused).toBeLessThanOrEqual(after);
+    expect(readdirSync(stateDirectory).some((file) => file.includes(".tmp"))).toBe(false);
+  });
+
+  it("does not let a delayed branch refresh erase a newer picker focus time", () => {
+    const workspace = createGitDirectory("workspace", "main");
+    const now = Date.now();
+    writeSnapshotCache([
+      {
+        workspaceId: "w1",
+        name: "workspace",
+        panes: [{ paneId: "w1:p1", cwd: workspace, branch: null, focused: true, lastFocused: now }],
+      },
+    ]);
+
+    startWorkspaceSnapshotRefresh(
+      [
+        {
+          workspaceId: "w1",
+          name: "workspace",
+          panes: [
+            { paneId: "w1:p1", cwd: workspace, branch: null, focused: true, lastFocused: null },
+          ],
+        },
+      ],
+      stateDirectory,
+      "w1",
+    );
+    waitForCondition(
+      () =>
+        snapshotEntries()[0]?.panes[0]?.branch === "main" &&
+        !existsSync(join(stateDirectory, "snapshot-refresh.json")),
+    );
+
+    expect(snapshotEntries()[0].panes[0].lastFocused).toBe(now);
   });
 
   it("records branch history, deduplicates directories, and orders by recent focus", async () => {
@@ -245,7 +425,7 @@ describe("workspace-switcher plugin", () => {
             cwd: dotfiles,
             branch: "main",
             focused: true,
-            lastFocused: expect.any(Number),
+            lastFocused: earlier,
           }),
           {
             paneId: "w1:p2",

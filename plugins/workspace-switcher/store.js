@@ -11,7 +11,7 @@ const MAX_AGE_DAYS = 180;
  * @typedef {object} WorkspaceEntry
  * @property {string} dir
  * @property {string | null} branch
- * @property {number} lastFocused
+ * @property {number | null} lastFocused
  * @property {string} [workspaceId]
  * @property {string} [workspaceName]
  * @property {string[]} [workspaceDirectories]
@@ -84,19 +84,18 @@ export function recordWorkspace(dir, stateDirectory, options = {}) {
 /**
  * @param {Array<{dir: string, branch?: string | null}>} workspaces
  * @param {string} stateDirectory
- * @param {number} [now]
  * @returns {boolean}
  */
-export function seedWorkspaceHistory(workspaces, stateDirectory, now = Date.now()) {
+export function seedWorkspaceHistory(workspaces, stateDirectory) {
   mkdirSync(stateDirectory, { recursive: true });
   const file = historyPath(stateDirectory);
   if (existsSync(file)) return false;
 
-  const lines = workspaces.map((workspace, index) =>
+  const lines = workspaces.map((workspace) =>
     JSON.stringify({
       dir: resolve(workspace.dir),
       branch: workspace.branch === undefined ? getGitBranch(workspace.dir) : workspace.branch,
-      lastFocused: now - index,
+      lastFocused: null,
     }),
   );
   writeFileSync(file, lines.length ? `${lines.join("\n")}\n` : "");
@@ -121,13 +120,9 @@ export function ensureWorkspaceHistory(workspaces, stateDirectory, now = Date.no
   const knownDirectories = new Set(
     [...history.today, ...history.earlier].map((entry) => entry.dir),
   );
-  const startOfToday = new Date(now);
-  startOfToday.setHours(0, 0, 0, 0);
-  const inactiveLastFocused = startOfToday.getTime() - 1;
-
   for (const candidate of candidates) {
     if (knownDirectories.has(candidate.dir)) continue;
-    const entry = { ...candidate, lastFocused: inactiveLastFocused };
+    const entry = { ...candidate, lastFocused: null };
     appendFileSync(historyPath(stateDirectory), `${JSON.stringify(entry)}\n`);
     knownDirectories.add(candidate.dir);
   }
@@ -144,9 +139,9 @@ export function readWorkspaceHistory(stateDirectory, now = Date.now()) {
   /** @type {Map<string, WorkspaceEntry>} */
   const byDirectory = new Map();
   for (const entry of entries) {
-    if (entry.lastFocused < cutoff) continue;
+    if (entry.lastFocused !== null && entry.lastFocused < cutoff) continue;
     const existing = byDirectory.get(entry.dir);
-    if (!existing || existing.lastFocused < entry.lastFocused) {
+    if (!existing || (existing.lastFocused ?? -Infinity) < (entry.lastFocused ?? -Infinity)) {
       byDirectory.set(entry.dir, entry);
     }
   }
@@ -154,12 +149,14 @@ export function readWorkspaceHistory(stateDirectory, now = Date.now()) {
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   const sorted = [...byDirectory.values()].sort(
-    (left, right) => right.lastFocused - left.lastFocused,
+    (left, right) => (right.lastFocused ?? -Infinity) - (left.lastFocused ?? -Infinity),
   );
   return {
-    today: sorted.filter((entry) => entry.lastFocused >= startOfToday.getTime()).slice(0, MAX_LIST),
+    today: sorted
+      .filter((entry) => entry.lastFocused !== null && entry.lastFocused >= startOfToday.getTime())
+      .slice(0, MAX_LIST),
     earlier: sorted
-      .filter((entry) => entry.lastFocused < startOfToday.getTime())
+      .filter((entry) => entry.lastFocused === null || entry.lastFocused < startOfToday.getTime())
       .slice(0, MAX_LIST),
   };
 }
@@ -185,7 +182,7 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
       {
         dir: pane.cwd,
         branch: pane.branch ?? remembered?.branch ?? null,
-        lastFocused: pane.lastFocused ?? now,
+        lastFocused: pane.lastFocused,
         workspaceId: workspace.workspaceId,
         workspaceName: workspace.name,
         workspaceDirectories: workspace.panes.map((candidate) => candidate.cwd),
@@ -201,15 +198,15 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
     ...current,
     ...history.today.filter((entry) => !currentDirectories.has(entry.dir)),
     ...history.earlier.filter((entry) => !currentDirectories.has(entry.dir)),
-  ].sort((left, right) => right.lastFocused - left.lastFocused);
+  ].sort((left, right) => (right.lastFocused ?? -Infinity) - (left.lastFocused ?? -Infinity));
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   return {
     today: combined
-      .filter((entry) => entry.lastFocused >= startOfToday.getTime())
+      .filter((entry) => entry.lastFocused !== null && entry.lastFocused >= startOfToday.getTime())
       .slice(0, MAX_LIST),
     earlier: combined
-      .filter((entry) => entry.lastFocused < startOfToday.getTime())
+      .filter((entry) => entry.lastFocused === null || entry.lastFocused < startOfToday.getTime())
       .slice(0, MAX_LIST),
   };
 }
@@ -246,7 +243,7 @@ function readEntries(stateDirectory) {
       if (
         typeof entry?.dir === "string" &&
         (typeof entry.branch === "string" || entry.branch === null) &&
-        typeof entry.lastFocused === "number"
+        (typeof entry.lastFocused === "number" || entry.lastFocused === null)
       ) {
         entries.push(entry);
       }

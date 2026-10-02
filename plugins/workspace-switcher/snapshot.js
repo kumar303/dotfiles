@@ -25,10 +25,9 @@ import { writeFileAtomically } from "./atomic-file.js";
 /**
  * @param {import("./herdr.js").HerdrSnapshot} snapshot
  * @param {WorkspaceSnapshot[]} cached
- * @param {number} [now]
  * @returns {WorkspaceSnapshot[]}
  */
-export function buildWorkspaceSnapshot(snapshot, cached, now = Date.now()) {
+export function buildWorkspaceSnapshot(snapshot, cached) {
   return snapshot.workspaces.flatMap((workspace) => {
     if (typeof workspace.workspace_id !== "string") return [];
     const workspaceId = workspace.workspace_id;
@@ -72,25 +71,28 @@ export function buildWorkspaceSnapshot(snapshot, cached, now = Date.now()) {
           ? pane.pane_id === selectedPaneId
           : cwd === selectedDirectory;
       const cachedPane = cachedWorkspace?.panes.find((candidate) => candidate.paneId === paneId);
-      const globallyFocused =
-        pane.pane_id === snapshot.focused_pane_id ||
-        (Boolean(workspace.focused) && Boolean(pane.focused));
       return {
         paneId,
         cwd,
         branch: cachedPane?.branch ?? null,
         focused,
-        lastFocused: globallyFocused
-          ? now
-          : typeof cachedPane?.lastFocused === "number"
-            ? cachedPane.lastFocused
-            : focused
-              ? now
-              : null,
+        lastFocused: cachedPane?.lastFocused ?? null,
       };
     });
     return [{ workspaceId, name, panes }];
   });
+}
+
+/**
+ * @param {WorkspaceSnapshot[]} workspaces
+ * @param {string} workspaceId
+ * @param {number} [now]
+ */
+export function markWorkspaceFocused(workspaces, workspaceId, now = Date.now()) {
+  const pane = workspaces
+    .find((workspace) => workspace.workspaceId === workspaceId)
+    ?.panes.find((candidate) => candidate.focused);
+  if (pane) pane.lastFocused = now;
 }
 
 /** @param {string} stateDirectory @returns {WorkspaceSnapshot[]} */

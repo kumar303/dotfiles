@@ -13,8 +13,11 @@ import { WorkspacePickerModel } from "./model.js";
 import { mergeCurrentWorkspaces, readWorkspaceHistory } from "./store.js";
 import {
   buildWorkspaceSnapshot,
+  cancelWorkspaceSnapshotRefresh,
+  markWorkspaceFocused,
   readWorkspaceSnapshot,
   startWorkspaceSnapshotRefresh,
+  writeWorkspaceSnapshot,
 } from "./snapshot.js";
 import { applyTerminalThemePalette, readWorkspaceSwitcherTheme } from "./theme.js";
 import { buildWorkspaceRows, workspaceEntryName } from "./view.js";
@@ -176,6 +179,13 @@ function selectWorkspace() {
   try {
     if (selected.workspaceId) {
       focusWorkspace(selected.workspaceId);
+      cancelWorkspaceSnapshotRefresh(stateDirectory);
+      const workspaces = buildWorkspaceSnapshot(
+        initialSnapshot,
+        readWorkspaceSnapshot(stateDirectory),
+      );
+      markWorkspaceFocused(workspaces, selected.workspaceId);
+      writeWorkspaceSnapshot(workspaces, stateDirectory);
     } else {
       openWorkspace(selected.dir, readSnapshot());
     }

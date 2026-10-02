@@ -6,7 +6,11 @@ import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { writeFileAtomically } from "./atomic-file.js";
 import { getGitBranchUpdate } from "./store.js";
-import { cancelWorkspaceSnapshotRefresh, writeWorkspaceSnapshot } from "./snapshot.js";
+import {
+  cancelWorkspaceSnapshotRefresh,
+  readWorkspaceSnapshot,
+  writeWorkspaceSnapshot,
+} from "./snapshot.js";
 
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const workspaces = /** @type {import("./snapshot.js").WorkspaceSnapshot[]} */ (
@@ -34,6 +38,21 @@ if (focusedPane) {
 if (ownsRefresh()) rmSync(ownerPath, { force: true });
 
 function writeIfOwner() {
+  if (!ownsRefresh()) process.exit(0);
+  const cached = readWorkspaceSnapshot(stateDirectory);
+  for (const workspace of workspaces) {
+    const cachedWorkspace = cached.find(
+      (candidate) => candidate.workspaceId === workspace.workspaceId,
+    );
+    for (const pane of workspace.panes) {
+      const lastFocused = cachedWorkspace?.panes.find(
+        (candidate) => candidate.paneId === pane.paneId,
+      )?.lastFocused;
+      if (typeof lastFocused === "number" && (pane.lastFocused ?? -Infinity) < lastFocused) {
+        pane.lastFocused = lastFocused;
+      }
+    }
+  }
   if (!ownsRefresh()) process.exit(0);
   writeWorkspaceSnapshot(workspaces, stateDirectory);
 }

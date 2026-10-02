@@ -5,12 +5,13 @@ import { currentWorkspaceDirectories, readSnapshot } from "./herdr.js";
 import {
   buildWorkspaceSnapshot,
   cancelWorkspaceSnapshotRefresh,
+  markWorkspaceFocused,
   readWorkspaceSnapshot,
   writeWorkspaceSnapshot,
 } from "./snapshot.js";
 import { recordWorkspace, seedWorkspaceHistory } from "./store.js";
 
-/** @typedef {{workspace_cwd?: unknown}} PluginContext */
+/** @typedef {{workspace_cwd?: unknown, workspace_id?: unknown}} PluginContext */
 
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const context = /** @type {PluginContext} */ (
@@ -24,11 +25,17 @@ cancelWorkspaceSnapshotRefresh(stateDirectory);
 const snapshot = readSnapshot();
 const current = currentWorkspaceDirectories(snapshot);
 seedWorkspaceHistory(current, stateDirectory);
-recordWorkspace(context.workspace_cwd, stateDirectory);
-writeWorkspaceSnapshot(
-  buildWorkspaceSnapshot(snapshot, readWorkspaceSnapshot(stateDirectory)),
-  stateDirectory,
+const now = Date.now();
+recordWorkspace(context.workspace_cwd, stateDirectory, { now });
+const workspaces = buildWorkspaceSnapshot(snapshot, readWorkspaceSnapshot(stateDirectory));
+const workspace = workspaces.find(
+  (candidate) =>
+    candidate.workspaceId === context.workspace_id ||
+    (typeof context.workspace_id !== "string" &&
+      candidate.panes.some((pane) => pane.focused && pane.cwd === context.workspace_cwd)),
 );
+if (workspace) markWorkspaceFocused(workspaces, workspace.workspaceId, now);
+writeWorkspaceSnapshot(workspaces, stateDirectory);
 
 /** @param {string} name */
 function requiredEnvironment(name) {
