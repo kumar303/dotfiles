@@ -38,9 +38,13 @@ const focusedWorkspaceIdValue = initialSnapshot.workspaces.find(
 const focusedWorkspaceId =
   typeof focusedWorkspaceIdValue === "string" ? focusedWorkspaceIdValue : undefined;
 const currentDirectory = currentWorkspaceDirectories(initialSnapshot)[0]?.dir;
-const lastUsedIndex = model.entries.findIndex((entry) =>
-  entry.workspaceId ? entry.workspaceId !== focusedWorkspaceId : entry.dir !== currentDirectory,
+const previousWorkspaceIndex = model.entries.findIndex(
+  (entry) => entry.workspaceId && entry.workspaceId !== focusedWorkspaceId,
 );
+const lastUsedIndex =
+  previousWorkspaceIndex >= 0
+    ? previousWorkspaceIndex
+    : model.entries.findIndex((entry) => entry.dir !== currentDirectory);
 if (lastUsedIndex >= 0) model.selectedIndex = lastUsedIndex;
 let scrollOffset = 0;
 let errorMessage = "";

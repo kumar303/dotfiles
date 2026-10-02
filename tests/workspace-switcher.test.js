@@ -218,7 +218,13 @@ describe("workspace-switcher plugin", () => {
             focused: true,
             lastFocused: expect.any(Number),
           }),
-          { cwd: docs, branch: "cached-docs", focused: false, lastFocused: earlier - 1 },
+          {
+            paneId: "w1:p2",
+            cwd: docs,
+            branch: "cached-docs",
+            focused: false,
+            lastFocused: earlier - 1,
+          },
         ],
       },
     ]);
@@ -567,7 +573,16 @@ printf 'slow-branch\\n'
       {
         workspaceId: "w1",
         name: "other-example",
-        panes: [{ cwd: other, branch: "main", focused: true, lastFocused: 100 }],
+        panes: [
+          {
+            paneId: "w1:p1",
+            cwd: other,
+            branch: "main",
+            focused: false,
+            lastFocused: null,
+          },
+          { paneId: "w1:p2", cwd: other, branch: "main", focused: true, lastFocused: 100 },
+        ],
       },
       {
         workspaceId: "w4",
@@ -584,19 +599,20 @@ printf 'slow-branch\\n'
       {
         workspace_id: "w1",
         label: "other-example",
-        active_tab_id: "w1:t1",
+        active_tab_id: "w1:t2",
         number: 1,
       },
       { workspace_id: "w4", label: "dotfiles", active_tab_id: "w4:t1", number: 2 },
       { workspace_id: "wA", label: "dotfiles", active_tab_id: "wA:t1", number: 3 },
     ];
     const layouts = [
-      { workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" },
+      { workspace_id: "w1", tab_id: "w1:t2", focused_pane_id: "w1:p2" },
       { workspace_id: "w4", tab_id: "w4:t1", focused_pane_id: "w4:p1" },
       { workspace_id: "wA", tab_id: "wA:t1", focused_pane_id: "wA:p1" },
     ];
     const panes = [
       { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: other },
+      { workspace_id: "w1", tab_id: "w1:t2", pane_id: "w1:p2", cwd: other },
       { workspace_id: "w4", tab_id: "w4:t1", pane_id: "w4:p1", cwd: dotfiles },
       { workspace_id: "wA", tab_id: "wA:t1", pane_id: "wA:p1", cwd: dotfiles },
     ];
@@ -629,6 +645,61 @@ printf 'slow-branch\\n'
     expect(herdrCalls()).toEqual([
       ["api", "snapshot"],
       ["workspace", "focus", "w4"],
+    ]);
+  });
+
+  it("selects the previous workspace instead of a newer historic path", async () => {
+    const previous = join(testDirectory, "previous-workspace");
+    const current = join(testDirectory, "current-workspace");
+    const recentPath = join(testDirectory, "recent-path");
+    const now = Date.now();
+    writeSnapshotCache([
+      {
+        workspaceId: "w1",
+        name: "previous-workspace",
+        panes: [{ cwd: previous, branch: null, focused: true, lastFocused: now - 1 }],
+      },
+      {
+        workspaceId: "w2",
+        name: "current-workspace",
+        panes: [{ cwd: current, branch: null, focused: true, lastFocused: now }],
+      },
+    ]);
+    writeHistory([{ dir: recentPath, branch: null, lastFocused: now + 1 }]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w2:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "previous-workspace",
+          active_tab_id: "w1:t1",
+          focused: false,
+          number: 1,
+        },
+        {
+          workspace_id: "w2",
+          label: "current-workspace",
+          active_tab_id: "w2:t1",
+          focused: true,
+          number: 2,
+        },
+      ],
+      tabs: [],
+      layouts: [
+        { workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" },
+        { workspace_id: "w2", tab_id: "w2:t1", focused_pane_id: "w2:p1" },
+      ],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: previous },
+        { workspace_id: "w2", tab_id: "w2:t1", pane_id: "w2:p1", cwd: current },
+      ],
+    });
+
+    await runPicker("\r");
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["workspace", "focus", "w1"],
     ]);
   });
 
