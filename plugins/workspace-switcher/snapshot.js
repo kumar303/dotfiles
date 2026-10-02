@@ -1,9 +1,10 @@
 // @ts-check
 
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeFileAtomically } from "./atomic-file.js";
 
 /**
  * @typedef {object} SnapshotPane
@@ -124,10 +125,8 @@ export function readWorkspaceSnapshot(stateDirectory) {
 export function writeWorkspaceSnapshot(workspaces, stateDirectory) {
   mkdirSync(stateDirectory, { recursive: true });
   const file = snapshotPath(stateDirectory);
-  const temporary = `${file}.${process.pid}.${Date.now()}`;
   const contents = workspaces.map((workspace) => JSON.stringify(workspace)).join("\n");
-  writeFileSync(temporary, contents ? `${contents}\n` : "");
-  renameSync(temporary, file);
+  writeFileAtomically(file, contents ? `${contents}\n` : "");
 }
 
 /** @param {string} stateDirectory */

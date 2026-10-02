@@ -31,17 +31,36 @@ const MAX_AGE_DAYS = 180;
  */
 export function getGitBranch(dir) {
   try {
-    return (
-      execFileSync("git", ["branch", "--show-current"], {
-        cwd: dir,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-        timeout: 3000,
-      }).trim() || null
-    );
+    return readGitBranch(dir);
   } catch {
     return null;
   }
+}
+
+/**
+ * @param {string} dir
+ * @returns {{branch: string | null} | undefined}
+ */
+export function getGitBranchUpdate(dir) {
+  try {
+    return { branch: readGitBranch(dir) };
+  } catch (error) {
+    const stderr =
+      error && typeof error === "object" && "stderr" in error ? String(error.stderr) : "";
+    return stderr.includes("not a git repository") ? { branch: null } : undefined;
+  }
+}
+
+/** @param {string} dir */
+function readGitBranch(dir) {
+  return (
+    execFileSync("git", ["branch", "--show-current"], {
+      cwd: dir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 3000,
+    }).trim() || null
+  );
 }
 
 /**

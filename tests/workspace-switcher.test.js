@@ -7,6 +7,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -14,6 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "smol-toml";
+import { writeWorkspaceSnapshot } from "../plugins/workspace-switcher/snapshot.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -68,6 +70,33 @@ afterEach(() => {
 });
 
 describe("workspace-switcher plugin", () => {
+  it("removes a temporary snapshot when an atomic replacement fails", () => {
+    mkdirSync(join(stateDirectory, "herdr-snapshot.jsonl"));
+
+    expect(() =>
+      writeWorkspaceSnapshot(
+        [
+          {
+            workspaceId: "w1",
+            name: "workspace",
+            panes: [
+              {
+                paneId: "w1:p1",
+                cwd: testDirectory,
+                branch: null,
+                focused: true,
+                lastFocused: 1,
+              },
+            ],
+          },
+        ],
+        stateDirectory,
+      ),
+    ).toThrow();
+
+    expect(readdirSync(stateDirectory)).toEqual(["herdr-snapshot.jsonl"]);
+  });
+
   it("records branch history, deduplicates directories, and orders by recent focus", async () => {
     const checkout = createGitDirectory("checkout-web", "feature/payment");
     const dotfiles = createGitDirectory("dotfiles", "main");
@@ -228,6 +257,54 @@ describe("workspace-switcher plugin", () => {
         ],
       },
     ]);
+  });
+
+  it("preserves a cached branch when Git fails", async () => {
+    const workspace = join(testDirectory, "workspace");
+    const bin = join(testDirectory, "bin");
+    const attempted = join(testDirectory, "git-attempted");
+    mkdirSync(workspace);
+    mkdirSync(bin);
+    const fakeGit = join(bin, "git");
+    writeFileSync(fakeGit, `#!/bin/sh\ntouch "$HERDR_GIT_ATTEMPTED"\nexit 1\n`);
+    chmodSync(fakeGit, 0o755);
+    pluginEnvironment.PATH = `${bin}:${process.env.PATH ?? ""}`;
+    pluginEnvironment.HERDR_GIT_ATTEMPTED = attempted;
+    writeSnapshotCache([
+      {
+        workspaceId: "w1",
+        name: "workspace",
+        panes: [
+          {
+            cwd: workspace,
+            branch: "cached-branch",
+            focused: true,
+            lastFocused: Date.now(),
+          },
+        ],
+      },
+    ]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "workspace",
+          active_tab_id: "w1:t1",
+          focused: true,
+          number: 1,
+        },
+      ],
+      tabs: [],
+      layouts: [{ workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" }],
+      panes: [{ workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: workspace }],
+    });
+
+    await runPicker("\x1b");
+    waitForFile(attempted);
+    waitForCondition(() => !existsSync(join(stateDirectory, "snapshot-refresh.json")));
+
+    expect(snapshotEntries()[0]?.panes[0]?.branch).toBe("cached-branch");
   });
 
   it("does not wait for branch refresh and cancels the previous refresh process", async () => {

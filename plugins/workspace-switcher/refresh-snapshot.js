@@ -2,9 +2,10 @@
 // @ts-check
 
 import { randomUUID } from "node:crypto";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { getGitBranch } from "./store.js";
+import { writeFileAtomically } from "./atomic-file.js";
+import { getGitBranchUpdate } from "./store.js";
 import { cancelWorkspaceSnapshotRefresh, writeWorkspaceSnapshot } from "./snapshot.js";
 
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
@@ -16,15 +17,18 @@ const ownerPath = join(stateDirectory, "snapshot-refresh.json");
 const token = randomUUID();
 
 cancelWorkspaceSnapshotRefresh(stateDirectory);
-writeFileSync(ownerPath, `${JSON.stringify({ pid: process.pid, token })}\n`);
+writeFileAtomically(ownerPath, `${JSON.stringify({ pid: process.pid, token })}\n`);
 writeIfOwner();
 
 const focusedPane = workspaces
   .find((workspace) => workspace.workspaceId === focusedWorkspaceId)
   ?.panes.find((pane) => pane.focused);
 if (focusedPane) {
-  focusedPane.branch = getGitBranch(focusedPane.cwd);
-  writeIfOwner();
+  const update = getGitBranchUpdate(focusedPane.cwd);
+  if (update) {
+    focusedPane.branch = update.branch;
+    writeIfOwner();
+  }
 }
 
 if (ownsRefresh()) rmSync(ownerPath, { force: true });
