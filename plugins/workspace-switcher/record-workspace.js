@@ -2,6 +2,12 @@
 // @ts-check
 
 import { currentWorkspaceDirectories, readSnapshot } from "./herdr.js";
+import {
+  buildWorkspaceSnapshot,
+  cancelWorkspaceSnapshotRefresh,
+  readWorkspaceSnapshot,
+  writeWorkspaceSnapshot,
+} from "./snapshot.js";
 import { recordWorkspace, seedWorkspaceHistory } from "./store.js";
 
 /** @typedef {{workspace_cwd?: unknown}} PluginContext */
@@ -14,9 +20,15 @@ if (typeof context.workspace_cwd !== "string" || !context.workspace_cwd) {
   throw new Error("plugin context lacks workspace_cwd");
 }
 
-const current = currentWorkspaceDirectories(readSnapshot());
+cancelWorkspaceSnapshotRefresh(stateDirectory);
+const snapshot = readSnapshot();
+const current = currentWorkspaceDirectories(snapshot);
 seedWorkspaceHistory(current, stateDirectory);
 recordWorkspace(context.workspace_cwd, stateDirectory);
+writeWorkspaceSnapshot(
+  buildWorkspaceSnapshot(snapshot, readWorkspaceSnapshot(stateDirectory)),
+  stateDirectory,
+);
 
 /** @param {string} name */
 function requiredEnvironment(name) {

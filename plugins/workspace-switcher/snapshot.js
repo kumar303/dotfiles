@@ -1,7 +1,7 @@
 // @ts-check
 
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -125,6 +125,30 @@ export function writeWorkspaceSnapshot(workspaces, stateDirectory) {
   const contents = workspaces.map((workspace) => JSON.stringify(workspace)).join("\n");
   writeFileSync(temporary, contents ? `${contents}\n` : "");
   renameSync(temporary, file);
+}
+
+/** @param {string} stateDirectory */
+export function cancelWorkspaceSnapshotRefresh(stateDirectory) {
+  const ownerPath = join(stateDirectory, "snapshot-refresh.json");
+  if (!existsSync(ownerPath)) return;
+  let pid;
+  try {
+    const owner = JSON.parse(readFileSync(ownerPath, "utf8"));
+    if (typeof owner?.pid === "number") pid = owner.pid;
+  } catch {
+    // Remove invalid ownership state.
+  }
+  rmSync(ownerPath, { force: true });
+  if (pid === undefined || pid === process.pid) return;
+  try {
+    process.kill(-pid, "SIGTERM");
+  } catch {
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {
+      // The refresh already stopped.
+    }
+  }
 }
 
 /**

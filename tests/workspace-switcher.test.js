@@ -560,6 +560,78 @@ printf 'slow-branch\\n'
     ]);
   });
 
+  it("selects the previously focused workspace after focus events", async () => {
+    const other = join(testDirectory, "other-example");
+    const dotfiles = join(testDirectory, "dotfiles");
+    writeSnapshotCache([
+      {
+        workspaceId: "w1",
+        name: "other-example",
+        panes: [{ cwd: other, branch: "main", focused: true, lastFocused: 100 }],
+      },
+      {
+        workspaceId: "w4",
+        name: "dotfiles",
+        panes: [{ cwd: dotfiles, branch: "main", focused: true, lastFocused: 1 }],
+      },
+      {
+        workspaceId: "wA",
+        name: "dotfiles",
+        panes: [{ cwd: dotfiles, branch: "main", focused: true, lastFocused: 0 }],
+      },
+    ]);
+    const workspaces = [
+      {
+        workspace_id: "w1",
+        label: "other-example",
+        active_tab_id: "w1:t1",
+        number: 1,
+      },
+      { workspace_id: "w4", label: "dotfiles", active_tab_id: "w4:t1", number: 2 },
+      { workspace_id: "wA", label: "dotfiles", active_tab_id: "wA:t1", number: 3 },
+    ];
+    const layouts = [
+      { workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" },
+      { workspace_id: "w4", tab_id: "w4:t1", focused_pane_id: "w4:p1" },
+      { workspace_id: "wA", tab_id: "wA:t1", focused_pane_id: "wA:p1" },
+    ];
+    const panes = [
+      { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: other },
+      { workspace_id: "w4", tab_id: "w4:t1", pane_id: "w4:p1", cwd: dotfiles },
+      { workspace_id: "wA", tab_id: "wA:t1", pane_id: "wA:p1", cwd: dotfiles },
+    ];
+    writeHerdrSnapshot({
+      focused_pane_id: "w4:p1",
+      workspaces: workspaces.map((workspace) => ({
+        ...workspace,
+        focused: workspace.workspace_id === "w4",
+      })),
+      tabs: [],
+      layouts,
+      panes,
+    });
+    emitPluginEvent("workspace.focused", { workspace_id: "w4", workspace_cwd: dotfiles });
+    writeHerdrSnapshot({
+      focused_pane_id: "wA:p1",
+      workspaces: workspaces.map((workspace) => ({
+        ...workspace,
+        focused: workspace.workspace_id === "wA",
+      })),
+      tabs: [],
+      layouts,
+      panes,
+    });
+    emitPluginEvent("workspace.focused", { workspace_id: "wA", workspace_cwd: dotfiles });
+    clearHerdrCalls();
+
+    await runPicker("\r");
+
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["workspace", "focus", "w4"],
+    ]);
+  });
+
   it("wraps upward from the first workspace to the last workspace", async () => {
     const first = join(testDirectory, "first");
     const last = join(testDirectory, "last");
