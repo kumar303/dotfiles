@@ -63,7 +63,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(testDirectory, { recursive: true, force: true });
+  stopSnapshotRefresh();
+  rmSync(testDirectory, { recursive: true, force: true, maxRetries: 5, retryDelay: 10 });
 });
 
 describe("workspace-switcher plugin", () => {
@@ -261,20 +262,22 @@ printf 'slow-branch\\n'
 
     await runPicker("\x1b");
     waitForFile(join(control, "starts"));
-    const firstPid = readFileSync(join(control, "starts"), "utf8").trim();
+    const firstGitPid = readFileSync(join(control, "starts"), "utf8").trim();
+    const firstRefreshPid = refreshOwnerPid();
 
     await runPicker("\x1b");
     waitForCondition(() => readLines(join(control, "starts")).length === 2);
-    const secondPid = readLines(join(control, "starts"))[1];
-    waitForCondition(() => readLines(join(control, "terms")).includes(firstPid));
+    const secondGitPid = readLines(join(control, "starts"))[1];
+    waitForCondition(() => refreshOwnerPid() !== firstRefreshPid);
+    waitForCondition(() => !processIsRunning(firstRefreshPid));
 
-    expect(secondPid).not.toBe(firstPid);
+    expect(secondGitPid).not.toBe(firstGitPid);
     expect(snapshotEntries()[0]).toMatchObject({
       workspaceId: "w1",
       panes: [{ cwd: workspace, branch: null }],
     });
 
-    writeFileSync(join(control, `release-${secondPid}`), "");
+    writeFileSync(join(control, `release-${secondGitPid}`), "");
     waitForSnapshot((snapshot) => snapshot[0]?.panes[0]?.branch === "slow-branch");
   });
 
@@ -375,6 +378,64 @@ printf 'slow-branch\\n'
 
     expect(text).toContain("one: shared [main]");
     expect(text).toContain("two: shared [main]");
+    expect(herdrCalls()).toEqual([
+      ["api", "snapshot"],
+      ["workspace", "focus", "w2"],
+    ]);
+  });
+
+  it("prefixes duplicate workspace names with their workspace ids", async () => {
+    const first = join(testDirectory, "one", "dotfiles");
+    const second = join(testDirectory, "two", "dotfiles");
+    mkdirSync(first, { recursive: true });
+    mkdirSync(second, { recursive: true });
+    const now = Date.now();
+    writeSnapshotCache([
+      {
+        workspaceId: "w1",
+        name: "dotfiles",
+        panes: [{ cwd: first, branch: "main", focused: true, lastFocused: now }],
+      },
+      {
+        workspaceId: "w2",
+        name: "dotfiles",
+        panes: [{ cwd: second, branch: "feature", focused: true, lastFocused: now - 1 }],
+      },
+    ]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "dotfiles",
+          active_tab_id: "w1:t1",
+          focused: true,
+          number: 1,
+        },
+        {
+          workspace_id: "w2",
+          label: "dotfiles",
+          active_tab_id: "w2:t1",
+          focused: false,
+          number: 2,
+        },
+      ],
+      tabs: [],
+      layouts: [
+        { workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" },
+        { workspace_id: "w2", tab_id: "w2:t1", focused_pane_id: "w2:p1" },
+      ],
+      panes: [
+        { workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: first },
+        { workspace_id: "w2", tab_id: "w2:t1", pane_id: "w2:p1", cwd: second },
+      ],
+    });
+
+    const result = await runPicker("\r");
+    const text = stripTerminalControls(result.stdout);
+
+    expect(text).toContain("w1: dotfiles [main]");
+    expect(text).toContain("w2: dotfiles [feature]");
     expect(herdrCalls()).toEqual([
       ["api", "snapshot"],
       ["workspace", "focus", "w2"],
@@ -776,6 +837,39 @@ function waitForCondition(predicate) {
     if (predicate()) return;
   }
   expect(predicate(), "background process did not reach the expected state").toBe(true);
+}
+
+function refreshOwnerPid() {
+  const ownerPath = join(stateDirectory, "snapshot-refresh.json");
+  if (!existsSync(ownerPath)) return undefined;
+  try {
+    const owner = JSON.parse(readFileSync(ownerPath, "utf8"));
+    return typeof owner?.pid === "number" ? owner.pid : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** @param {number | undefined} pid */
+function processIsRunning(pid) {
+  if (pid === undefined) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function stopSnapshotRefresh() {
+  const ownerPath = join(stateDirectory, "snapshot-refresh.json");
+  if (!existsSync(ownerPath)) return;
+  try {
+    const owner = JSON.parse(readFileSync(ownerPath, "utf8"));
+    if (typeof owner?.pid === "number") process.kill(-owner.pid, "SIGTERM");
+  } catch {
+    // The refresh already stopped.
+  }
 }
 
 /** @param {string} file */

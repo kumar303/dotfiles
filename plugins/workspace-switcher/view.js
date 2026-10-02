@@ -55,15 +55,21 @@ export function buildWorkspaceRows(history, selectedIndex) {
  */
 function entryRow(entry, selected) {
   const branch = entry.branch ? ` [${entry.branch}]` : "";
-  const directoryName = basename(entry.dir);
-  const name =
-    entry.workspaceName && entry.workspaceName !== directoryName
-      ? `${entry.workspaceName}: ${directoryName}`
-      : directoryName;
+  const name = workspaceEntryName(entry);
   return {
     kind: "entry",
     text: `${selected ? "   > " : "     "}${name}${branch}`,
     entry,
     selected,
   };
+}
+
+/** @param {WorkspaceEntry} entry */
+export function workspaceEntryName(entry) {
+  const directoryName = basename(entry.dir);
+  const name =
+    entry.workspaceName && entry.workspaceName !== directoryName
+      ? `${entry.workspaceName}: ${directoryName}`
+      : directoryName;
+  return entry.duplicateWorkspaceName && entry.workspaceId ? `${entry.workspaceId}: ${name}` : name;
 }

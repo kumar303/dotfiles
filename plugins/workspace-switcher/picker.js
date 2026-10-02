@@ -3,7 +3,6 @@
 
 import "./runtime.js";
 import { Box, Screen, escape } from "@unblessed/core";
-import { basename } from "node:path";
 import {
   currentWorkspaceDirectories,
   focusWorkspace,
@@ -18,7 +17,7 @@ import {
   startWorkspaceSnapshotRefresh,
 } from "./snapshot.js";
 import { applyTerminalThemePalette, readWorkspaceSwitcherTheme } from "./theme.js";
-import { buildWorkspaceRows } from "./view.js";
+import { buildWorkspaceRows, workspaceEntryName } from "./view.js";
 
 const theme = await readWorkspaceSwitcherTheme();
 applyTerminalThemePalette(theme);
@@ -163,11 +162,7 @@ function renderRow(row) {
   const prefix = row.selected ? "   > " : "     ";
   const color = row.selected ? theme.accent : theme.text;
   const branch = row.entry.branch ? `{${theme.muted}-fg} [${escape(row.entry.branch)}]{/}` : "";
-  const directoryName = basename(row.entry.dir);
-  const name =
-    row.entry.workspaceName && row.entry.workspaceName !== directoryName
-      ? `${row.entry.workspaceName}: ${directoryName}`
-      : directoryName;
+  const name = workspaceEntryName(row.entry);
   return `{${color}-fg}${prefix}${escape(name)}{/}${branch}`;
 }
 

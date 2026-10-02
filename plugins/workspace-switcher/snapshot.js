@@ -57,7 +57,10 @@ export function buildWorkspaceSnapshot(snapshot, cached, now = Date.now()) {
       typeof workspace.label === "string" && workspace.label
         ? workspace.label
         : basename(selectedDirectory) || workspaceId;
-    const cachedWorkspace = cached.find((candidate) => candidate.name === name);
+    const cachedByName = cached.filter((candidate) => candidate.name === name);
+    const cachedWorkspace =
+      cachedByName.find((candidate) => candidate.workspaceId === workspaceId) ??
+      (cachedByName.length === 1 ? cachedByName[0] : undefined);
 
     const panes = sourcePanes.map((pane) => {
       const cwd = resolve(/** @type {string} */ (pane.cwd));

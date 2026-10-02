@@ -16,6 +16,7 @@ const MAX_AGE_DAYS = 180;
  * @property {string} [workspaceName]
  * @property {string[]} [workspaceDirectories]
  * @property {(string | null)[]} [workspaceBranches]
+ * @property {boolean} [duplicateWorkspaceName]
  */
 
 /**
@@ -152,6 +153,11 @@ export function readWorkspaceHistory(stateDirectory, now = Date.now()) {
  */
 export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
   const historyEntries = [...history.today, ...history.earlier];
+  /** @type {Map<string, number>} */
+  const workspaceNameCounts = new Map();
+  for (const workspace of workspaces) {
+    workspaceNameCounts.set(workspace.name, (workspaceNameCounts.get(workspace.name) ?? 0) + 1);
+  }
   const current = workspaces.flatMap((workspace) => {
     const pane = workspace.panes.find((candidate) => candidate.focused);
     if (!pane) return [];
@@ -165,6 +171,7 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
         workspaceName: workspace.name,
         workspaceDirectories: workspace.panes.map((candidate) => candidate.cwd),
         workspaceBranches: workspace.panes.map((candidate) => candidate.branch),
+        duplicateWorkspaceName: (workspaceNameCounts.get(workspace.name) ?? 0) > 1,
       },
     ];
   });
