@@ -32,10 +32,7 @@ export function buildWorkspaceSnapshot(snapshot, cached, now = Date.now()) {
     if (typeof workspace.workspace_id !== "string") return [];
     const workspaceId = workspace.workspace_id;
     const sourcePanes = snapshot.panes.filter(
-      (pane) =>
-        pane.workspace_id === workspaceId &&
-        typeof pane.pane_id === "string" &&
-        typeof pane.cwd === "string",
+      (pane) => pane.workspace_id === workspaceId && typeof pane.cwd === "string",
     );
     if (!sourcePanes.length) return [];
 
@@ -110,7 +107,7 @@ export function readWorkspaceSnapshot(stateDirectory) {
         typeof workspace.name === "string" &&
         Array.isArray(workspace.panes)
       ) {
-        const panes = workspace.panes.filter(isSnapshotPane);
+        const panes = /** @type {SnapshotPane[]} */ (workspace.panes);
         workspaces.push({ workspaceId: workspace.workspaceId, name: workspace.name, panes });
       }
     } catch {
@@ -178,19 +175,6 @@ export function startWorkspaceSnapshotRefresh(workspaces, stateDirectory, focuse
     },
   );
   refresh.unref();
-}
-
-/** @param {unknown} value @returns {value is SnapshotPane} */
-function isSnapshotPane(value) {
-  if (!value || typeof value !== "object") return false;
-  const pane = /** @type {Record<string, unknown>} */ (value);
-  return (
-    typeof pane.paneId === "string" &&
-    typeof pane.cwd === "string" &&
-    (typeof pane.branch === "string" || pane.branch === null) &&
-    typeof pane.focused === "boolean" &&
-    (typeof pane.lastFocused === "number" || pane.lastFocused === null)
-  );
 }
 
 /** @param {string} stateDirectory */

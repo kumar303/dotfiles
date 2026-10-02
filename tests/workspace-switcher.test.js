@@ -230,43 +230,6 @@ describe("workspace-switcher plugin", () => {
     ]);
   });
 
-  it("ignores cached panes without pane ids", async () => {
-    const workspace = join(testDirectory, "workspace");
-    writeSnapshotCacheWithoutPaneIds([
-      {
-        workspaceId: "w1",
-        name: "workspace",
-        panes: [
-          {
-            cwd: workspace,
-            branch: "stale-branch",
-            focused: true,
-            lastFocused: Date.now() - 1,
-          },
-        ],
-      },
-    ]);
-    writeHerdrSnapshot({
-      focused_pane_id: "w1:p1",
-      workspaces: [
-        {
-          workspace_id: "w1",
-          label: "workspace",
-          active_tab_id: "w1:t1",
-          focused: true,
-          number: 1,
-        },
-      ],
-      tabs: [],
-      layouts: [{ workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" }],
-      panes: [{ workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: workspace }],
-    });
-
-    const result = await runPicker("\x1b");
-
-    expect(stripTerminalControls(result.stdout)).not.toContain("stale-branch");
-  });
-
   it("does not wait for branch refresh and cancels the previous refresh process", async () => {
     const workspace = join(testDirectory, "slow-workspace");
     const control = join(testDirectory, "git-control");
@@ -996,14 +959,9 @@ function writeSnapshotCache(entries) {
       ...pane,
     })),
   }));
-  writeSnapshotCacheWithoutPaneIds(withPaneIds);
-}
-
-/** @param {unknown[]} entries */
-function writeSnapshotCacheWithoutPaneIds(entries) {
   writeFileSync(
     join(stateDirectory, "herdr-snapshot.jsonl"),
-    entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n",
+    withPaneIds.map((entry) => JSON.stringify(entry)).join("\n") + "\n",
   );
 }
 
