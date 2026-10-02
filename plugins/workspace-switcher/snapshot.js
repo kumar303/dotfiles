@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 /**
  * @typedef {object} SnapshotPane
- * @property {string} [paneId]
+ * @property {string} paneId
  * @property {string} cwd
  * @property {string | null} branch
  * @property {boolean} focused
@@ -32,7 +32,10 @@ export function buildWorkspaceSnapshot(snapshot, cached, now = Date.now()) {
     if (typeof workspace.workspace_id !== "string") return [];
     const workspaceId = workspace.workspace_id;
     const sourcePanes = snapshot.panes.filter(
-      (pane) => pane.workspace_id === workspaceId && typeof pane.cwd === "string",
+      (pane) =>
+        pane.workspace_id === workspaceId &&
+        typeof pane.pane_id === "string" &&
+        typeof pane.cwd === "string",
     );
     if (!sourcePanes.length) return [];
 
@@ -64,26 +67,18 @@ export function buildWorkspaceSnapshot(snapshot, cached, now = Date.now()) {
       (cachedByName.length === 1 ? cachedByName[0] : undefined);
 
     const panes = sourcePanes.map((pane) => {
-      const paneId = typeof pane.pane_id === "string" ? pane.pane_id : undefined;
+      const paneId = /** @type {string} */ (pane.pane_id);
       const cwd = resolve(/** @type {string} */ (pane.cwd));
       const focused =
         typeof selectedPaneId === "string"
           ? pane.pane_id === selectedPaneId
           : cwd === selectedDirectory;
-      const cachedByDirectory =
-        cachedWorkspace?.panes.filter((candidate) => candidate.cwd === cwd) ?? [];
-      const cachedPane =
-        cachedByDirectory.find((candidate) => paneId && candidate.paneId === paneId) ??
-        (cachedByDirectory.length === 1
-          ? cachedByDirectory[0]
-          : focused
-            ? cachedByDirectory.find((candidate) => candidate.focused)
-            : undefined);
+      const cachedPane = cachedWorkspace?.panes.find((candidate) => candidate.paneId === paneId);
       const globallyFocused =
         pane.pane_id === snapshot.focused_pane_id ||
         (Boolean(workspace.focused) && Boolean(pane.focused));
       return {
-        ...(paneId ? { paneId } : {}),
+        paneId,
         cwd,
         branch: cachedPane?.branch ?? null,
         focused,
@@ -190,7 +185,7 @@ function isSnapshotPane(value) {
   if (!value || typeof value !== "object") return false;
   const pane = /** @type {Record<string, unknown>} */ (value);
   return (
-    (pane.paneId === undefined || typeof pane.paneId === "string") &&
+    typeof pane.paneId === "string" &&
     typeof pane.cwd === "string" &&
     (typeof pane.branch === "string" || pane.branch === null) &&
     typeof pane.focused === "boolean" &&

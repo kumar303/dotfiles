@@ -164,7 +164,7 @@ describe("workspace-switcher plugin", () => {
     const earlier = Date.now() - 24 * 60 * 60 * 1000;
     writeSnapshotCache([
       {
-        workspaceId: "old-w1",
+        workspaceId: "w1",
         name: "dotfiles",
         panes: [
           { cwd: dotfiles, branch: "cached-main", focused: true, lastFocused: earlier },
@@ -230,6 +230,43 @@ describe("workspace-switcher plugin", () => {
     ]);
   });
 
+  it("ignores cached panes without pane ids", async () => {
+    const workspace = join(testDirectory, "workspace");
+    writeSnapshotCacheWithoutPaneIds([
+      {
+        workspaceId: "w1",
+        name: "workspace",
+        panes: [
+          {
+            cwd: workspace,
+            branch: "stale-branch",
+            focused: true,
+            lastFocused: Date.now() - 1,
+          },
+        ],
+      },
+    ]);
+    writeHerdrSnapshot({
+      focused_pane_id: "w1:p1",
+      workspaces: [
+        {
+          workspace_id: "w1",
+          label: "workspace",
+          active_tab_id: "w1:t1",
+          focused: true,
+          number: 1,
+        },
+      ],
+      tabs: [],
+      layouts: [{ workspace_id: "w1", tab_id: "w1:t1", focused_pane_id: "w1:p1" }],
+      panes: [{ workspace_id: "w1", tab_id: "w1:t1", pane_id: "w1:p1", cwd: workspace }],
+    });
+
+    const result = await runPicker("\x1b");
+
+    expect(stripTerminalControls(result.stdout)).not.toContain("stale-branch");
+  });
+
   it("does not wait for branch refresh and cancels the previous refresh process", async () => {
     const workspace = join(testDirectory, "slow-workspace");
     const control = join(testDirectory, "git-control");
@@ -293,7 +330,7 @@ printf 'slow-branch\\n'
     const now = Date.now();
     writeSnapshotCache([
       {
-        workspaceId: "old-w1",
+        workspaceId: "w1",
         name: "dotfiles",
         panes: [
           {
@@ -342,12 +379,12 @@ printf 'slow-branch\\n'
     const now = Date.now();
     writeSnapshotCache([
       {
-        workspaceId: "old-w1",
+        workspaceId: "w1",
         name: "one",
         panes: [{ cwd: shared, branch: "main", focused: true, lastFocused: now }],
       },
       {
-        workspaceId: "old-w2",
+        workspaceId: "w2",
         name: "two",
         panes: [{ cwd: shared, branch: "main", focused: true, lastFocused: now - 1 }],
       },
@@ -453,12 +490,12 @@ printf 'slow-branch\\n'
     const checkout = createGitDirectory("checkout-web", "feature/payment");
     writeSnapshotCache([
       {
-        workspaceId: "old-w1",
+        workspaceId: "w1",
         name: "dotfiles",
         panes: [{ cwd: dotfiles, branch: "main", focused: true, lastFocused: Date.now() }],
       },
       {
-        workspaceId: "old-w2",
+        workspaceId: "w2",
         name: "web",
         panes: [
           {
@@ -929,9 +966,16 @@ function runPicker(input) {
  * }} snapshot
  */
 function writeHerdrSnapshot(snapshot) {
+  const panes = snapshot.panes.map((pane, index) => {
+    const value = /** @type {any} */ (pane);
+    return {
+      ...value,
+      pane_id: value.pane_id ?? `${value.workspace_id}:p-test-${index + 1}`,
+    };
+  });
   writeFileSync(
     herdrStatePath,
-    `${JSON.stringify({ result: { panes: snapshot.panes, snapshot } })}\n`,
+    `${JSON.stringify({ result: { panes, snapshot: { ...snapshot, panes } } })}\n`,
   );
 }
 
@@ -943,8 +987,20 @@ function writeHistory(entries) {
   );
 }
 
-/** @param {unknown[]} entries */
+/** @param {Array<any>} entries */
 function writeSnapshotCache(entries) {
+  const withPaneIds = entries.map((workspace) => ({
+    ...workspace,
+    panes: workspace.panes.map((/** @type {any} */ pane, /** @type {number} */ index) => ({
+      paneId: pane.paneId ?? `${workspace.workspaceId}:p${index + 1}`,
+      ...pane,
+    })),
+  }));
+  writeSnapshotCacheWithoutPaneIds(withPaneIds);
+}
+
+/** @param {unknown[]} entries */
+function writeSnapshotCacheWithoutPaneIds(entries) {
   writeFileSync(
     join(stateDirectory, "herdr-snapshot.jsonl"),
     entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n",
