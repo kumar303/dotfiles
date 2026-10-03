@@ -109,6 +109,10 @@ xnoremap <Down> gj
 inoremap <Up> <C-o>gk
 inoremap <Down> <C-o>gj
 
+" Move two whitespace-delimited WORDs at a time in normal mode.
+nnoremap W 2W
+nnoremap B 2B
+
 syntax on
 
 autocmd FileType go setlocal noexpandtab tabstop=4 shiftwidth=4 softtabstop=4
