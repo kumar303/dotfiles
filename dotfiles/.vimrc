@@ -101,6 +101,13 @@ autocmd BufWritePre * :%s/\s\+$//e
 
 " Soft wrap lines that exceed the window.
 au BufRead,BufNewFile *.* set wrap linebreak nolist textwidth=0 wrapmargin=0
+" Move by screen lines when using the arrow keys.
+nnoremap <Up> gk
+nnoremap <Down> gj
+xnoremap <Up> gk
+xnoremap <Down> gj
+inoremap <Up> <C-o>gk
+inoremap <Down> <C-o>gj
 
 syntax on
 
