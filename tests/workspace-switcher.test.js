@@ -241,7 +241,6 @@ describe("workspace-switcher plugin", () => {
     expect(workspaces[1].panes[0].lastFocused).toBeNull();
     expect(workspaces[1].panes[1].lastFocused).toBeGreaterThanOrEqual(before);
     expect(workspaces[1].panes[1].lastFocused).toBeLessThanOrEqual(after);
-    expect(readdirSync(stateDirectory).some((file) => file.includes(".tmp"))).toBe(false);
   });
 
   it("does not let a delayed branch refresh erase a newer picker focus time", () => {

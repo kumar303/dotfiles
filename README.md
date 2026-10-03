@@ -74,17 +74,15 @@ Add this `[include]` section to `.gitconfig`:
 
 ### File navigation
 
-| Scope | Key          | Action                                                    |
-| ----- | ------------ | --------------------------------------------------------- |
-| Vim   | `ctrl+p`     | Open a file picker                                        |
-| Vim   | `ctrl+tab`   | Switch between open or recent files                       |
-| Vim   | `ctrl+l`     | List code symbols in the file                             |
-| Vim   | `ctrl+g`     | Open the line on GitHub's `main`                          |
-| Vim   | `ctrl+j`     | Open the import under the cursor                          |
-| Vim   | `ctrl+s`     | Save the file                                             |
-| Vim   | `ctrl+opt+d` | View changed Git locations                                |
-| Vim   | `W`          | Move forward two WORDs (punctuation stays within a WORD)  |
-| Vim   | `B`          | Move backward two WORDs (punctuation stays within a WORD) |
+| Scope | Key          | Action                              |
+| ----- | ------------ | ----------------------------------- |
+| Vim   | `ctrl+p`     | Open a file picker                  |
+| Vim   | `ctrl+tab`   | Switch between open or recent files |
+| Vim   | `ctrl+l`     | List code symbols in the file       |
+| Vim   | `ctrl+g`     | Open the line on GitHub's `main`    |
+| Vim   | `ctrl+j`     | Open the import under the cursor    |
+| Vim   | `ctrl+s`     | Save the file                       |
+| Vim   | `ctrl+opt+d` | View changed Git locations          |
 
 ### Panes
 
@@ -107,10 +105,12 @@ Add this `[include]` section to `.gitconfig`:
 
 ### Editing
 
-| Scope | Key | Action |
-| ----- | --- | ------ |
-| Vim   | `u` | Undo   |
-| Vim   | `U` | Redo   |
+| Scope | Key | Action                                         |
+| ----- | --- | ---------------------------------------------- |
+| Vim   | `u` | Undo                                           |
+| Vim   | `U` | Redo                                           |
+| Vim   | `W` | Move forward two WORDs (ignoring punctuation)  |
+| Vim   | `B` | Move backward two WORDs (ignoring punctuation) |
 
 ## Agents
 
