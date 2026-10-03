@@ -92,6 +92,7 @@ execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/import-
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/list-symbols.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/agent-prompt.vim')
 execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/diff-view.vim')
+execute 'source' fnameescape(g:vim_dotfiles_directory . '/.vim/workflows/auto-reload.vim')
 
 " Strip trailing whitespace
 autocmd BufWritePre * :%s/\s\+$//e
