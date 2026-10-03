@@ -81,7 +81,6 @@ Add this `[include]` section to `.gitconfig`:
 | Vim   | `ctrl+l`     | List code symbols in the file       |
 | Vim   | `ctrl+g`     | Open the line on GitHub's `main`    |
 | Vim   | `ctrl+j`     | Open the import under the cursor    |
-| Vim   | `ctrl+s`     | Save the file                       |
 | Vim   | `ctrl+opt+d` | View changed Git locations          |
 
 ### Panes
@@ -105,12 +104,13 @@ Add this `[include]` section to `.gitconfig`:
 
 ### Editing
 
-| Scope | Key | Action                                         |
-| ----- | --- | ---------------------------------------------- |
-| Vim   | `u` | Undo                                           |
-| Vim   | `U` | Redo                                           |
-| Vim   | `W` | Move forward two WORDs (ignoring punctuation)  |
-| Vim   | `B` | Move backward two WORDs (ignoring punctuation) |
+| Scope | Key      | Action                                         |
+| ----- | -------- | ---------------------------------------------- |
+| Vim   | `u`      | Undo                                           |
+| Vim   | `U`      | Redo                                           |
+| Vim   | `ctrl+s` | Save the file                                  |
+| Vim   | `W`      | Move forward two WORDs (ignoring punctuation)  |
+| Vim   | `B`      | Move backward two WORDs (ignoring punctuation) |
 
 ## Agents
 
