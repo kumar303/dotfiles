@@ -1,0 +1,241 @@
+// @ts-check
+
+import { spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  createMarkdownRenderer,
+  startMarkdownPreview,
+} from "../dotfiles/.vim/bin/markdown-preview.js";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+/** @type {string} */
+let directory;
+/** @type {Awaited<ReturnType<typeof startMarkdownPreview>> | undefined} */
+let preview;
+/** @type {AbortController[]} */
+let controllers;
+/** @type {number | undefined} */
+let detachedPid;
+
+beforeEach(() => {
+  directory = mkdtempSync(join(tmpdir(), "markdown-preview-"));
+  controllers = [];
+});
+afterEach(async () => {
+  controllers.forEach((controller) => controller.abort());
+  await preview?.stop();
+  preview = undefined;
+  if (detachedPid) {
+    try {
+      process.kill(detachedPid);
+    } catch {}
+  }
+  detachedPid = undefined;
+  rmSync(directory, { recursive: true, force: true });
+});
+
+/** @param {() => boolean | Promise<boolean>} condition */
+async function waitFor(condition) {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    if (await condition()) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error("Markdown preview did not reach the expected state");
+}
+
+/** @param {string} url */
+async function listen(url) {
+  const controller = new AbortController();
+  controllers.push(controller);
+  const response = await fetch(new URL("events", url), { signal: controller.signal });
+  const reader = /** @type {ReadableStream<Uint8Array>} */ (response.body).getReader();
+  let text = "";
+  void (async () => {
+    try {
+      for (;;) {
+        const result = await reader.read();
+        if (result.done) break;
+        text += new TextDecoder().decode(result.value);
+      }
+    } catch {}
+  })();
+  return () => text;
+}
+
+describe("Markdown browser preview", () => {
+  it("renders GFM, headings, alerts, Mermaid, and highlighted language aliases safely", async () => {
+    const renderer = await createMarkdownRenderer();
+    const html = await renderer.render(
+      `# Hello world\n\n| Name | Value |\n| --- | --- |\n| A | B |\n\n- [x] Done\n\n~~removed~~\n\n> [!NOTE]\n> Important detail\n\n\`\`\`tsx\nconst node = <div>Hello</div>;\n\`\`\`\n\n\`\`\`ruby\ndef hello; end\n\`\`\`\n\n\`\`\`mermaid\ngraph TD; A-->B\n\`\`\`\n\n\`\`\`unknown-language\n<plain>\n\`\`\`\n<script>alert('bad')</script><img src="x" onerror="alert(1)"><a href="javascript:alert(1)">bad</a>`,
+    );
+    expect(html).toContain('id="hello-world"');
+    expect(html).toContain("<table>");
+    expect(html).toContain('type="checkbox"');
+    expect(html).toContain("<del>removed</del>");
+    expect(html).toContain("markdown-alert-note");
+    expect(html).toContain('class="mermaid"');
+    expect(html).toContain("graph TD; A--&gt;B");
+    expect(html).toContain('class="pl-');
+    expect(html).toContain("&lt;plain&gt;");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("onerror=");
+    expect(html).not.toContain("javascript:");
+  });
+
+  it("uses a free loopback port and serves local CSS, scripts, and Mermaid modules", async () => {
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Hello\n");
+    preview = await startMarkdownPreview(file);
+    const url = preview.url;
+    expect(new URL(url).hostname).toBe("127.0.0.1");
+    expect(Number(new URL(url).port)).toBeGreaterThan(0);
+    const page = await fetch(url);
+    expect(await page.text()).toContain("markdown-body");
+    expect(page.headers.get("content-security-policy")).toContain("script-src 'self'");
+    for (const asset of [
+      "github.css",
+      "highlight.css",
+      "preview.css",
+      "preview.js",
+      "mermaid/mermaid.esm.min.mjs",
+    ]) {
+      const response = await fetch(new URL(asset, url));
+      expect(response.status).toBe(200);
+      expect((await response.text()).length).toBeGreaterThan(100);
+    }
+    expect((await fetch(new URL("mermaid/%2e%2e%2fpackage.json", url))).status).toBe(404);
+    const content = await (await fetch(new URL("content", url))).json();
+    expect(content.html).toContain("Hello</h1>");
+  });
+
+  it("watches atomic saves and pushes changes to the browser", async () => {
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Before\n");
+    preview = await startMarkdownPreview(file);
+    const events = await listen(preview.url);
+    await waitFor(() => events().includes("event: ready"));
+    const replacement = join(directory, "replacement");
+    writeFileSync(replacement, "# After\n");
+    renameSync(replacement, file);
+    await waitFor(() => events().includes("event: change"));
+    const content = await (await fetch(new URL("content", preview.url))).json();
+    expect(content.html).toContain("After</h1>");
+  });
+
+  it("shows goodbye and shuts down after inactivity despite browser requests", async () => {
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Hello\n");
+    preview = await startMarkdownPreview(file, { idleMs: 150 });
+    const url = preview.url;
+    const events = await listen(url);
+    await fetch(url);
+    await waitFor(() => events().includes("event: goodbye"));
+    expect(events()).toContain("Goodbye!");
+    await waitFor(async () => {
+      try {
+        await fetch(url);
+        return false;
+      } catch {
+        return true;
+      }
+    });
+  });
+
+  it("resets inactivity only when the previewed file's contents change", async () => {
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Hello\n");
+    preview = await startMarkdownPreview(file, { idleMs: 400 });
+    const url = preview.url;
+    const events = await listen(url);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    writeFileSync(file, "# Changed\n");
+    await waitFor(() => events().includes("event: change"));
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    expect(events()).not.toContain("goodbye");
+    writeFileSync(file, "# Changed\n");
+    writeFileSync(join(directory, "unrelated.md"), "unrelated");
+    await waitFor(() => events().includes("goodbye"));
+  });
+
+  it("shows an error for a non-Markdown file and exits after serving the page", async () => {
+    const file = join(directory, "example.ts");
+    writeFileSync(file, "const x = 1");
+    preview = await startMarkdownPreview(file);
+    const url = preview.url;
+    const page = await (await fetch(url)).text();
+    expect(page).toContain("the file is not Markdown");
+    expect(page).not.toContain('src="');
+    await waitFor(async () => {
+      try {
+        await fetch(url);
+        return false;
+      } catch {
+        return true;
+      }
+    });
+  });
+
+  it("launches from Vim and keeps serving after Vim exits", async () => {
+    const bin = join(directory, "bin");
+    mkdirSync(bin);
+    const opened = join(directory, "opened");
+    const pid = join(directory, "pid");
+    const opener = join(bin, process.platform === "darwin" ? "open" : "xdg-open");
+    writeFileSync(
+      opener,
+      '#!/bin/sh\nprintf "%s" "$1" > "$PREVIEW_TEST_URL"\nprintf "%s" "$PPID" > "$PREVIEW_TEST_PID"\n',
+    );
+    chmodSync(opener, 0o755);
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Detached\n");
+    const result = spawnSync(
+      "vim",
+      [
+        "-Nu",
+        join(root, "dotfiles", ".vimrc"),
+        "-n",
+        "-es",
+        file,
+        "-c",
+        "call PreviewMarkdown()",
+        "-c",
+        "qa!",
+      ],
+      {
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          PREVIEW_TEST_URL: opened,
+          PREVIEW_TEST_PID: pid,
+        },
+        encoding: "utf8",
+        timeout: 5000,
+      },
+    );
+    expect(result.status).toBe(0);
+    await waitFor(() => {
+      try {
+        return readFileSync(opened, "utf8").startsWith("http");
+      } catch {
+        return false;
+      }
+    });
+    detachedPid = Number(readFileSync(pid, "utf8"));
+    const url = readFileSync(opened, "utf8");
+    const content = await (await fetch(new URL("content", url))).json();
+    expect(content.html).toContain("Detached</h1>");
+  });
+});

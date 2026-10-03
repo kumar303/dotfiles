@@ -104,13 +104,14 @@ Add this `[include]` section to `.gitconfig`:
 
 ### Editing
 
-| Scope | Key      | Action                                         |
-| ----- | -------- | ---------------------------------------------- |
-| Vim   | `u`      | Undo                                           |
-| Vim   | `U`      | Redo                                           |
-| Vim   | `ctrl+s` | Save the file                                  |
-| Vim   | `W`      | Move forward two WORDs (ignoring punctuation)  |
-| Vim   | `B`      | Move backward two WORDs (ignoring punctuation) |
+| Scope | Key      | Action                                            |
+| ----- | -------- | ------------------------------------------------- |
+| Vim   | `u`      | Undo                                              |
+| Vim   | `U`      | Redo                                              |
+| Vim   | `ctrl+s` | Save the file                                     |
+| Vim   | `ctrl+m` | Preview Markdown in a browser with auto-reloading |
+| Vim   | `W`      | Move forward two WORDs (ignoring punctuation)     |
+| Vim   | `B`      | Move backward two WORDs (ignoring punctuation)    |
 
 ## Agents
 
