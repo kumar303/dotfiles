@@ -9,7 +9,7 @@ function! PreviewMarkdown() abort
         echoerr 'Node.js is not available'
         return
     endif
-    let command = [node, g:vim_dotfiles_directory . '/.vim/bin/markdown-preview.js', 'start', file]
+    let command = [node, g:vim_dotfiles_directory . '/.vim/bin/markdown-preview/server.js', 'start', file]
     let output = system(join(map(command, 'shellescape(v:val)'), ' '))
     if v:shell_error
         echoerr empty(output) ? 'Cannot start Markdown preview' : trim(output)

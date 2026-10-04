@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createMarkdownRenderer,
   startMarkdownPreview,
-} from "../dotfiles/.vim/bin/markdown-preview.js";
+} from "../dotfiles/.vim/bin/markdown-preview/server.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 /** @type {string} */

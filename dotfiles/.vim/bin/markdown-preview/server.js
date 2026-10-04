@@ -153,7 +153,7 @@ export async function startMarkdownPreview(inputFile, options = {}) {
           });
         const bootstrap = invalidFileError
           ? ""
-          : await readFile(resolve(assets, "markdown-preview-bootstrap.js"), "utf8");
+          : await readFile(resolve(assets, "bootstrap.js"), "utf8");
         response.end(page(file, base, invalidFileError, bootstrap, nonce));
       } else if (path === `${base}events` && markdownFile) {
         response.writeHead(200, { "Content-Type": "text/event-stream", Connection: "keep-alive" });
@@ -192,12 +192,7 @@ export async function startMarkdownPreview(inputFile, options = {}) {
       } else if (path === `${base}preview.js` || path === `${base}preview.css`) {
         response.setHeader("Content-Type", path.endsWith(".js") ? "text/javascript" : "text/css");
         response.end(
-          await readFile(
-            resolve(
-              assets,
-              path.endsWith(".js") ? "markdown-preview-browser.js" : "markdown-preview.css",
-            ),
-          ),
+          await readFile(resolve(assets, path.endsWith(".js") ? "browser.js" : "preview.css")),
         );
       } else if (path.startsWith(`${base}mermaid/`)) {
         const asset = resolve(
@@ -316,7 +311,7 @@ function openBrowser(url) {
 if (process.argv[1] && resolve(process.argv[1]) === scriptPath) {
   const [mode, file] = process.argv.slice(2);
   if (!file || !["start", "serve"].includes(mode ?? "")) {
-    console.error("Usage: markdown-preview.js start <file>");
+    console.error("Usage: server.js start <file>");
     process.exitCode = 1;
   } else if (mode === "start") {
     const child = spawn(process.execPath, [scriptPath, "serve", resolve(file)], {

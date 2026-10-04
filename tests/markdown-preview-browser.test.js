@@ -5,11 +5,11 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 const bootstrap = readFileSync(
-  new URL("../dotfiles/.vim/bin/markdown-preview-bootstrap.js", import.meta.url),
+  new URL("../dotfiles/.vim/bin/markdown-preview/bootstrap.js", import.meta.url),
   "utf8",
 );
 const browser = readFileSync(
-  new URL("../dotfiles/.vim/bin/markdown-preview-browser.js", import.meta.url),
+  new URL("../dotfiles/.vim/bin/markdown-preview/browser.js", import.meta.url),
   "utf8",
 );
 
