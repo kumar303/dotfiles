@@ -1,6 +1,7 @@
 // @ts-check
 
 import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import {
   chmodSync,
   mkdirSync,
@@ -103,7 +104,12 @@ describe("Markdown browser preview", () => {
     expect(new URL(url).hostname).toBe("127.0.0.1");
     expect(Number(new URL(url).port)).toBeGreaterThan(0);
     const page = await fetch(url);
-    expect(await page.text()).toContain("markdown-body");
+    const html = await page.text();
+    expect(html).toContain("markdown-body");
+    expect(html).toContain('nonce="');
+    expect(html.indexOf('window.addEventListener("error"')).toBeLessThan(
+      html.indexOf('type="module"'),
+    );
     expect(page.headers.get("content-security-policy")).toContain("script-src 'self'");
     for (const asset of [
       "github.css",
@@ -186,6 +192,75 @@ describe("Markdown browser preview", () => {
         return true;
       }
     });
+  });
+
+  it("reports watcher startup errors without hiding the Markdown content", async () => {
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Still visible\n");
+    preview = await startMarkdownPreview(file, {
+      watchDirectory() {
+        throw new Error("watch setup failed");
+      },
+    });
+    const events = await listen(preview.url);
+    await waitFor(() => events().includes("watch setup failed"));
+    expect(events()).toContain("Auto-reloading stopped:");
+    const content = await (await fetch(new URL("content", preview.url))).json();
+    expect(content.html).toContain("Still visible</h1>");
+  });
+
+  it("reports watcher runtime errors to current and reconnected pages", async () => {
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Hello\n");
+    const watcher = Object.assign(new EventEmitter(), { close() {} });
+    preview = await startMarkdownPreview(file, {
+      watchDirectory: () => /** @type {import("node:fs").FSWatcher} */ (watcher),
+    });
+    const events = await listen(preview.url);
+    await waitFor(() => events().includes("ready"));
+    watcher.emit("error", new Error("watch descriptor failed"));
+    await waitFor(() => events().includes("watch descriptor failed"));
+    const reconnected = await listen(preview.url);
+    await waitFor(() => reconnected().includes("watch descriptor failed"));
+  });
+
+  it("returns renderer errors to the page and retries renderer initialization", async () => {
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Hello\n");
+    let calls = 0;
+    preview = await startMarkdownPreview(file, {
+      async createRenderer() {
+        calls += 1;
+        if (calls === 1) throw new Error("highlighter initialization failed");
+        return {
+          async render() {
+            return "<p>Recovered</p>";
+          },
+        };
+      },
+    });
+    const response = await fetch(new URL("content", preview.url));
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "highlighter initialization failed" });
+    const recovered = await (await fetch(new URL("content", preview.url))).json();
+    expect(recovered.html).toContain("Recovered");
+  });
+
+  it("reports file read errors and recovers when identical contents return", async () => {
+    const file = join(directory, "hello.md");
+    writeFileSync(file, "# Hello\n");
+    preview = await startMarkdownPreview(file);
+    const events = await listen(preview.url);
+    await waitFor(() => events().includes("ready"));
+    rmSync(file);
+    await waitFor(() => events().includes("event: change"));
+    const response = await fetch(new URL("content", preview.url));
+    expect(response.status).toBe(500);
+    expect((await response.json()).error).toContain("ENOENT");
+    const previousEvents = events().length;
+    writeFileSync(file, "# Hello\n");
+    await waitFor(() => events().length > previousEvents);
+    expect((await fetch(new URL("content", preview.url))).status).toBe(200);
   });
 
   it("launches from Vim and keeps serving after Vim exits", async () => {

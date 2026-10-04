@@ -90,14 +90,16 @@ export async function createMarkdownRenderer() {
   };
 }
 
-/** @param {string} file @param {string} base @param {string | undefined} [error] */
-function page(file, base, error) {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(basename(file))}</title><link rel="stylesheet" href="${base}github.css"><link rel="stylesheet" href="${base}highlight.css"><link rel="stylesheet" href="${base}preview.css"></head><body><div id="status" role="status">${escapeHtml(error ?? "Loading Markdown…")}</div><article class="markdown-body" id="markdown"></article>${error ? "" : `<script type="module" src="${base}preview.js"></script>`}</body></html>`;
+/** @param {string} file @param {string} base @param {string | undefined} error @param {string} bootstrap @param {string} nonce */
+function page(file, base, error, bootstrap, nonce) {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(basename(file))}</title><link rel="stylesheet" href="${base}github.css"><link rel="stylesheet" href="${base}highlight.css"><link rel="stylesheet" href="${base}preview.css"></head><body><div id="status" role="status">${escapeHtml(error ?? "Loading Markdown…")}</div><article class="markdown-body" id="markdown"></article>${error ? "" : `<script nonce="${nonce}">${bootstrap}</script><script type="module" src="${base}preview.js"></script>`}</body></html>`;
 }
 
 /**
  * @param {string} inputFile
- * @param {{idleMs?: number, openBrowser?: (url: string) => void}} [options]
+ * @param {{idleMs?: number, openBrowser?: (url: string) => void,
+ *   watchDirectory?: (directory: string, listener: (event: string, filename: string | Buffer | null) => void) => import("node:fs").FSWatcher,
+ *   createRenderer?: typeof createMarkdownRenderer}} [options]
  */
 export async function startMarkdownPreview(inputFile, options = {}) {
   const file = resolve(inputFile);
@@ -115,6 +117,7 @@ export async function startMarkdownPreview(inputFile, options = {}) {
   let rendererPromise;
   let source = "";
   let fileError = "";
+  let watcherError = "";
   let revision = 0;
   let stopped = false;
   /** @type {NodeJS.Timeout | undefined} */
@@ -137,9 +140,10 @@ export async function startMarkdownPreview(inputFile, options = {}) {
       const path = new URL(request.url ?? "/", url).pathname;
       response.setHeader("Cache-Control", "no-store");
       response.setHeader("X-Content-Type-Options", "nosniff");
+      const nonce = randomBytes(24).toString("hex");
       response.setHeader(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`,
       );
       if (path === base) {
         response.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -147,17 +151,27 @@ export async function startMarkdownPreview(inputFile, options = {}) {
           response.once("finish", () => {
             void stop(invalidFileError);
           });
-        response.end(page(file, base, invalidFileError));
+        const bootstrap = invalidFileError
+          ? ""
+          : await readFile(resolve(assets, "markdown-preview-bootstrap.js"), "utf8");
+        response.end(page(file, base, invalidFileError, bootstrap, nonce));
       } else if (path === `${base}events` && markdownFile) {
         response.writeHead(200, { "Content-Type": "text/event-stream", Connection: "keep-alive" });
         clients.add(response);
         response.write(`event: ready\ndata: ${revision}\n\n`);
+        if (watcherError)
+          response.write(`event: preview-error\ndata: ${JSON.stringify(watcherError)}\n\n`);
         request.on("close", () => clients.delete(response));
       } else if (path === `${base}content` && markdownFile) {
         if (fileError) throw new Error(fileError);
         if (rendered?.revision !== revision) {
           rendering ??= (async () => {
-            rendererPromise ??= createMarkdownRenderer();
+            rendererPromise ??= (options.createRenderer ?? createMarkdownRenderer)().catch(
+              (error) => {
+                rendererPromise = undefined;
+                throw error;
+              },
+            );
             renderer = await rendererPromise;
             const currentRevision = revision;
             const html = await renderer.render(source);
@@ -237,11 +251,12 @@ export async function startMarkdownPreview(inputFile, options = {}) {
   async function readSource() {
     try {
       const next = await readFile(file, "utf8");
+      const recovering = Boolean(fileError);
       fileError = "";
-      if (next === source) return;
+      if (next === source && !recovering) return;
+      if (next !== source) resetIdle();
       source = next;
       revision += 1;
-      resetIdle();
       for (const client of clients) client.write(`event: change\ndata: ${revision}\n\n`);
     } catch (error) {
       fileError = error instanceof Error ? error.message : String(error);
@@ -260,22 +275,34 @@ export async function startMarkdownPreview(inputFile, options = {}) {
   if (markdownFile) {
     await readSource();
     try {
-      watcher = watch(dirname(file), (_event, filename) => {
+      watcher = (options.watchDirectory ?? watch)(dirname(file), (_event, filename) => {
         if (filename !== null && filename.toString() !== basename(file)) return;
         clearTimeout(debounce);
         debounce = setTimeout(() => {
           void readSource();
         }, 60);
       });
-      watcher.on("error", () => {
-        void stop("Goodbye! The file watcher stopped.");
+      watcher.on("error", (error) => reportWatcherError(error));
+      watcher.on("close", () => {
+        if (!stopped && !watcherError)
+          reportWatcherError(new Error("The file watcher closed unexpectedly."));
       });
-    } catch {
-      fileError ||= "Cannot watch the file's directory.";
+    } catch (error) {
+      reportWatcherError(error);
     }
   }
+  server.on("error", (error) => {
+    void stop(`Preview server error: ${error.message}`);
+  });
   options.openBrowser?.(url);
   return { url, stop };
+
+  /** @param {unknown} error */
+  function reportWatcherError(error) {
+    watcherError = `Auto-reloading stopped: ${error instanceof Error ? error.message : String(error)}`;
+    for (const client of clients)
+      client.write(`event: preview-error\ndata: ${JSON.stringify(watcherError)}\n\n`);
+  }
 }
 
 /** @param {string} url */
@@ -299,6 +326,15 @@ if (process.argv[1] && resolve(process.argv[1]) === scriptPath) {
     });
     child.unref();
   } else {
-    await startMarkdownPreview(file, { openBrowser });
+    const preview = await startMarkdownPreview(file, { openBrowser });
+    /** @param {unknown} error */
+    const fatalError = (error) => {
+      process.exitCode = 1;
+      void preview.stop(
+        `Preview server error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    };
+    process.on("uncaughtException", fatalError);
+    process.on("unhandledRejection", fatalError);
   }
 }
