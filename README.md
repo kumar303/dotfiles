@@ -1,8 +1,11 @@
 # Dotfiles
 
 This is my setup for [Herdr](https://github.com/ogulcancelik/herdr) and Vim in [Ghostty](https://ghostty.org/).
+I [wrote](https://farmdev.com/thoughts/2026/deep-agent-integration-with-herdr/) about how it has accelerated my productivity while coding with agents.
 
-See [pie](https://github.com/kumar303/pie) for `pi` configuration.
+I mainly use the [pi](https://pi.dev/) coding agent and I also share some general purpose [pie[xtensions, skills, and stuff]](https://github.com/kumar303/pie).
+
+How would you use this repo? I dunno, maybe just copy the parts you like? It's tailored to my specific workflow so it may not work for you.
 
 # 📹
 
@@ -53,7 +56,7 @@ Add this `[include]` section to `.gitconfig`:
     path = ~/.gitconfig.defaults
 ```
 
-## Zsh commands
+## Shell commands
 
 | Command                              | Description            |
 | ------------------------------------ | ---------------------- |
@@ -110,29 +113,14 @@ Add this `[include]` section to `.gitconfig`:
 | Vim   | `U`      | Redo                                              |
 | Vim   | `ctrl+s` | Save the file                                     |
 | Vim   | `ctrl+m` | Preview Markdown in a browser with auto-reloading |
-| Vim   | `W`      | Move forward two WORDs (ignoring punctuation)     |
-| Vim   | `B`      | Move backward two WORDs (ignoring punctuation)    |
+| Vim   | `W`      | Move forward two words (ignoring punctuation)     |
+| Vim   | `B`      | Move backward two words (ignoring punctuation)    |
 
 ## Agents
 
 | Scope | Key      | Action                                                  |
 | ----- | -------- | ------------------------------------------------------- |
 | Vim   | `ctrl+a` | Starts an agent prompt for the current file / selection |
-
-## Vim
-
-`ctrl+r` and `ctrl+f` can also pass any ripgrep option. Example of searching for
-the text `authorization`:
-
-```vim
-:Rg -g'!**/*test*' authorization
-:RgFile authorization
-```
-
-## Vim pane toggle
-
-`ctrl+backtick` closes Vim when it hides the pane. Save changes before hiding
-it.
 
 ## Development
 
