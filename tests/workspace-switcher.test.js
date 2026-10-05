@@ -276,6 +276,84 @@ describe("workspace-switcher plugin", () => {
     expect(snapshotEntries()[0].panes[0].lastFocused).toBe(now);
   });
 
+  it("uses newer recorded history when a unique workspace's cached focus time is stale", () => {
+    const now = Date.now();
+    const yesterday = new Date(now).setHours(0, 0, 0, 0) - 1;
+    const dir = join(testDirectory, "Self reflection, peer review, mastery");
+    const workspaces = [
+      {
+        workspaceId: "w3A",
+        name: "Self reflection, peer review, mastery",
+        panes: [
+          { paneId: "w3A:p1", cwd: dir, branch: "main", focused: true, lastFocused: yesterday },
+          { paneId: "w3A:p2", cwd: dir, branch: "main", focused: false, lastFocused: yesterday },
+        ],
+      },
+    ];
+    writeHistory([{ dir, branch: "main", lastFocused: now }]);
+
+    const history = mergeCurrentWorkspaces(
+      workspaces,
+      readWorkspaceHistory(stateDirectory, now),
+      now,
+    );
+
+    expect(history.today).toMatchObject([{ workspaceId: "w3A", lastFocused: now }]);
+    expect(history.earlier).toEqual([]);
+    expect(workspaces[0].panes[0].lastFocused).toBe(yesterday);
+  });
+
+  it("does not apply ambiguous directory history to duplicate workspaces", () => {
+    const now = Date.now();
+    const yesterday = new Date(now).setHours(0, 0, 0, 0) - 1;
+    const dir = join(testDirectory, "shared");
+    const workspaces = ["w1", "w2"].map((workspaceId) => ({
+      workspaceId,
+      name: "shared",
+      panes: [
+        {
+          paneId: `${workspaceId}:p1`,
+          cwd: dir,
+          branch: null,
+          focused: true,
+          lastFocused: yesterday,
+        },
+      ],
+    }));
+    writeHistory([{ dir, branch: null, lastFocused: now }]);
+
+    const history = mergeCurrentWorkspaces(
+      workspaces,
+      readWorkspaceHistory(stateDirectory, now),
+      now,
+    );
+
+    expect(history.today).toEqual([]);
+    expect(history.earlier.map((entry) => entry.lastFocused)).toEqual([yesterday, yesterday]);
+  });
+
+  it("keeps a newer cached focus time instead of older directory history", () => {
+    const now = Date.now();
+    const yesterday = new Date(now).setHours(0, 0, 0, 0) - 1;
+    const dir = join(testDirectory, "workspace");
+    const workspaces = [
+      {
+        workspaceId: "w1",
+        name: "workspace",
+        panes: [{ paneId: "w1:p1", cwd: dir, branch: null, focused: true, lastFocused: now }],
+      },
+    ];
+    writeHistory([{ dir, branch: null, lastFocused: yesterday }]);
+
+    const history = mergeCurrentWorkspaces(
+      workspaces,
+      readWorkspaceHistory(stateDirectory, now),
+      now,
+    );
+
+    expect(history.today[0].lastFocused).toBe(now);
+  });
+
   it("records branch history, deduplicates directories, and orders by recent focus", async () => {
     const checkout = createGitDirectory("checkout-web", "feature/payment");
     const dotfiles = createGitDirectory("dotfiles", "main");

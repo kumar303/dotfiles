@@ -174,15 +174,29 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
   for (const workspace of workspaces) {
     workspaceNameCounts.set(workspace.name, (workspaceNameCounts.get(workspace.name) ?? 0) + 1);
   }
+  const directoryOwners = new Map();
+  for (const workspace of workspaces) {
+    for (const dir of new Set(workspace.panes.map((pane) => pane.cwd))) {
+      directoryOwners.set(dir, (directoryOwners.get(dir) ?? 0) + 1);
+    }
+  }
   const current = workspaces.flatMap((workspace) => {
     const pane = workspace.panes.find((candidate) => candidate.focused);
     if (!pane) return [];
     const remembered = historyEntries.find((entry) => entry.dir === pane.cwd);
+    // Directory history cannot identify which workspace used a shared path.
+    // Keep unknown pane times unknown; reconcile only an existing focus record.
+    const lastFocused =
+      pane.lastFocused !== null &&
+      directoryOwners.get(pane.cwd) === 1 &&
+      typeof remembered?.lastFocused === "number"
+        ? Math.max(pane.lastFocused, remembered.lastFocused)
+        : pane.lastFocused;
     return [
       {
         dir: pane.cwd,
         branch: pane.branch ?? remembered?.branch ?? null,
-        lastFocused: pane.lastFocused,
+        lastFocused,
         workspaceId: workspace.workspaceId,
         workspaceName: workspace.name,
         workspaceDirectories: workspace.panes.map((candidate) => candidate.cwd),
