@@ -350,7 +350,7 @@ describe("split-vim-above", () => {
     expect(focusedLineAfterRestore()).toBe(4);
   });
 
-  it("restores the same layout in every tab of a workspace", () => {
+  it("restores the same layout in tabs with the same workspace and source cwd", () => {
     const a = createFile("project-one/a.js");
     const b = createFile("project-one/b.js");
     const vimState = layoutState([
@@ -362,7 +362,7 @@ describe("split-vim-above", () => {
       sourcePane({
         pane_id: "w1:p2",
         terminal_id: "term_source_two",
-        cwd: join(testDirectory, "project-two"),
+        cwd: join(testDirectory, "project-one"),
         tab_id: "w1:t2",
         focused: false,
       }),
@@ -376,6 +376,133 @@ describe("split-vim-above", () => {
     const restoreScript = restoreScriptFromLastRun();
     expect(restoreScript).toContain(a);
     expect(restoreScript).toContain(b);
+  });
+
+  it("remembers separate layouts for different source directories in the same workspace", () => {
+    const firstFile = createFile("dir1/first.js");
+    const secondFile = createFile("dir2/second.js");
+    setPanes([
+      sourcePane({ cwd: dirname(firstFile) }),
+      sourcePane({
+        pane_id: "w1:p2",
+        terminal_id: "term_two",
+        tab_id: "w1:t2",
+        cwd: dirname(secondFile),
+        focused: false,
+      }),
+    ]);
+    runScript({ paneId: "w1:p1" });
+    runScript({ paneId: "w1:p1", vimState: layoutState([[11, firstFile]]) });
+    clearHerdrCalls();
+
+    runScript({ paneId: "w1:p2" });
+    expect(herdrCommandCalls("run").at(-1)).toEqual([
+      "pane",
+      "run",
+      "w1:p102",
+      "vim",
+      dirname(secondFile),
+    ]);
+    runScript({ paneId: "w1:p2", vimState: layoutState([[22, secondFile]]) });
+    clearHerdrCalls();
+
+    runScript({ paneId: "w1:p1" });
+    expect(restoreScriptFromLastRun()).toContain(firstFile);
+    expect(restoreScriptFromLastRun()).not.toContain(secondFile);
+    runScript({ paneId: "w1:p1", vimState: layoutState([[11, firstFile]]) });
+    clearHerdrCalls();
+    runScript({ paneId: "w1:p2" });
+    expect(restoreScriptFromLastRun()).toContain(secondFile);
+    expect(restoreScriptFromLastRun()).not.toContain(firstFile);
+  });
+
+  it("saves to the launch directory even if the source pane changes cwd before closing Vim", () => {
+    const firstFile = createFile("dir1/first.js");
+    const secondFile = createFile("dir2/second.js");
+    setPanes([sourcePane({ cwd: dirname(firstFile) })]);
+    runScript();
+    const state = JSON.parse(readFileSync(panesPath, "utf8"));
+    state.result.panes.find((/** @type {Pane} */ pane) => pane.pane_id === "w1:p1").cwd =
+      dirname(secondFile);
+    writeFileSync(panesPath, JSON.stringify(state));
+    const vimState = layoutState([[11, firstFile]]);
+
+    runScript({ vimState });
+
+    expect(readLayoutState("w1", dirname(firstFile))).toEqual(vimState);
+    clearHerdrCalls();
+    runScript();
+    expect(herdrCommandCalls("run").at(-1)).toEqual([
+      "pane",
+      "run",
+      "w1:p102",
+      "vim",
+      dirname(secondFile),
+    ]);
+  });
+
+  it("saves to the launch directory when Vim changes cwd and closes itself", () => {
+    const file = createFile("dir1/file.js");
+    const otherFile = createFile("dir2/other.js");
+    setPanes([sourcePane({ cwd: dirname(file) })]);
+    runScript();
+    const state = JSON.parse(readFileSync(panesPath, "utf8"));
+    state.result.panes.find((/** @type {Pane} */ pane) => pane.pane_id === "w1:p101").cwd =
+      dirname(otherFile);
+    writeFileSync(panesPath, JSON.stringify(state));
+    const vimState = layoutState([[11, file]]);
+
+    runScript({ paneId: "w1:p101", vimState });
+
+    expect(readLayoutState("w1", dirname(file))).toEqual(vimState);
+    clearHerdrCalls();
+    runScript();
+    expect(restoreScriptFromLastRun()).toContain(file);
+    expect(restoreScriptFromLastRun()).not.toContain(otherFile);
+  });
+
+  it("does not reuse or delete unscoped legacy layouts", () => {
+    const file = createFile("old/file.js");
+    const cwd = join(testDirectory, "new");
+    const id = createHash("sha256").update("w1").digest("hex").slice(0, 16);
+    const path = join(stateDirectory, "vim-layouts", `${id}.json`);
+    const legacyState = layoutState([[11, file]]);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, JSON.stringify(legacyState));
+    setPanes([sourcePane({ cwd })]);
+
+    runScript();
+
+    expect(herdrCommandCalls("run").at(-1)).toEqual(["pane", "run", "w1:p101", "vim", cwd]);
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual(legacyState);
+  });
+
+  it("keeps memories separate for different workspaces in the same directory", () => {
+    const file = createFile("shared/file.js");
+    setPanes([
+      sourcePane({ cwd: dirname(file) }),
+      sourcePane({
+        pane_id: "w2:p1",
+        workspace_id: "w2",
+        terminal_id: "term_two",
+        tab_id: "w2:t1",
+        cwd: dirname(file),
+        focused: false,
+      }),
+    ]);
+    runScript({ paneId: "w1:p1" });
+    runScript({ paneId: "w1:p1", vimState: layoutState([[11, file]]) });
+    clearHerdrCalls();
+
+    runScript({ paneId: "w2:p1" });
+
+    expect(herdrCommandCalls("run").at(-1)).toEqual([
+      "pane",
+      "run",
+      "w2:p102",
+      "vim",
+      dirname(file),
+    ]);
   });
 
   it("starts separate Vim processes for different tabs", () => {
@@ -542,9 +669,15 @@ function createFile(relativePath) {
   return path;
 }
 
-/** @param {string} workspaceId */
-function layoutStatePath(workspaceId) {
-  const id = createHash("sha256").update(workspaceId).digest("hex").slice(0, 16);
+/** @param {string} workspaceId @param {string} [cwd] */
+function layoutStatePath(workspaceId, cwd) {
+  cwd ??= JSON.parse(readFileSync(panesPath, "utf8")).result.panes.find(
+    (/** @type {Pane} */ pane) => pane.workspace_id === workspaceId,
+  ).cwd;
+  const id = createHash("sha256")
+    .update(JSON.stringify([workspaceId, cwd]))
+    .digest("hex")
+    .slice(0, 16);
   return join(stateDirectory, "vim-layouts", `${id}.json`);
 }
 
@@ -555,9 +688,9 @@ function writeLayoutState(workspaceId, state) {
   writeFileSync(path, `${JSON.stringify(state)}\n`);
 }
 
-/** @param {string} workspaceId */
-function readLayoutState(workspaceId) {
-  return JSON.parse(readFileSync(layoutStatePath(workspaceId), "utf8"));
+/** @param {string} workspaceId @param {string} [cwd] */
+function readLayoutState(workspaceId, cwd) {
+  return JSON.parse(readFileSync(layoutStatePath(workspaceId, cwd), "utf8"));
 }
 
 function restoreScriptFromLastRun() {

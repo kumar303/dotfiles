@@ -27,7 +27,7 @@ import { join, resolve } from "node:path";
 /** @typedef {{result: {pane: Pane}}} PaneResponse */
 /** @typedef {{result: {root_pane: Pane}}} TabCreateResponse */
 /** @typedef {{result: {move_result: {pane: Pane}}}} PaneMoveResponse */
-/** @typedef {{pane_id: string, terminal_id: string}} PaneMarker */
+/** @typedef {{pane_id: string, terminal_id: string, source_cwd?: string}} PaneMarker */
 /** @typedef {{file: string, line: number | null}} RequestedFile */
 /** @typedef {["leaf", number] | ["row" | "col", VimLayout[]]} VimLayout */
 /** @typedef {{lnum: number, col: number, topline: number, leftcol: number}} VimView */
@@ -134,9 +134,10 @@ function acquireLock(lockDirectory) {
   return true;
 }
 
-/** @param {string} workspaceId */
-function vimLayoutPath(workspaceId) {
-  const id = createHash("sha256").update(workspaceId).digest("hex").slice(0, 16);
+/** @param {string} workspaceId @param {string} cwd */
+function vimLayoutPath(workspaceId, cwd) {
+  const scope = JSON.stringify([workspaceId, resolve(cwd)]);
+  const id = createHash("sha256").update(scope).digest("hex").slice(0, 16);
   return join(vimLayoutDirectory, `${id}.json`);
 }
 
@@ -462,7 +463,8 @@ function main() {
             pane.workspace_id === sourcePane.workspace_id,
         )
       : undefined;
-    const layoutPath = vimLayoutPath(sourcePane.workspace_id);
+    const layoutCwd = markedPane ? (marker?.source_cwd ?? markedPane.cwd) : sourcePane.cwd;
+    const layoutPath = vimLayoutPath(sourcePane.workspace_id, layoutCwd);
 
     if (markedPane) {
       if (requestedFile) {
@@ -481,6 +483,7 @@ function main() {
     writeJsonAtomically(paneMarkerFile, {
       pane_id: movedPane.pane_id,
       terminal_id: requireTerminalId(movedPane),
+      source_cwd: resolve(sourcePane.cwd),
     });
   } finally {
     rmSync(paneLockDirectory, { recursive: true, force: true });
