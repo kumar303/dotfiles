@@ -75,8 +75,6 @@ Add this `[include]` section to `.gitconfig`:
 | Herdr | `cmd+shift+k`             | Close the terminal tab            |
 | Herdr | `ctrl+backtick`           | Show, hide, or focus the Vim pane |
 
-Vim remembers open files and split layouts separately for each workspace and source pane directory.
-
 ### File navigation
 
 | Scope | Key          | Action                              |
