@@ -104,7 +104,7 @@ describe("workspace-switcher plugin", () => {
     expect(readdirSync(stateDirectory)).toEqual(["herdr-snapshot.jsonl"]);
   });
 
-  it("keeps uncached focus times in Earlier when the picker reads Herdr", async () => {
+  it("uses recorded history without inventing cached focus times when the picker reads Herdr", async () => {
     const current = createGitDirectory("current", "main");
     const other = createGitDirectory("other", "develop");
     writeHistory([{ dir: current, branch: "main", lastFocused: Date.now() }]);
@@ -128,8 +128,8 @@ describe("workspace-switcher plugin", () => {
       null,
     ]);
     const history = mergeCurrentWorkspaces(snapshotEntries(), readWorkspaceHistory(stateDirectory));
-    expect(history.today).toEqual([]);
-    expect(history.earlier.map((entry) => entry.dir)).toEqual([current, other]);
+    expect(history.today.map((entry) => entry.dir)).toEqual([current]);
+    expect(history.earlier.map((entry) => entry.dir)).toEqual([other]);
   });
 
   it("records only the event workspace pane's focus time in the atomic snapshot", () => {
@@ -274,6 +274,86 @@ describe("workspace-switcher plugin", () => {
     );
 
     expect(snapshotEntries()[0].panes[0].lastFocused).toBe(now);
+  });
+
+  it("ranks recorded recent work near the top of Earlier when cached pane timestamps are null", () => {
+    const now = new Date("2026-10-15T09:36:26+01:00").getTime();
+    const lastFocused = 1791561684095;
+    const dir = join(testDirectory, "review-dev-dash-checkout-ui-extension-log", "checkout-web");
+    const olderDir = join(testDirectory, "older", "checkout-web");
+    const unknownDir = join(testDirectory, "unknown");
+    const branch = "haozhi/dev-dash-checkout-ui-extension-log";
+    const workspaces = [
+      {
+        workspaceId: "w37",
+        name: "checkout-web",
+        panes: [
+          {
+            paneId: "w37:p1",
+            cwd: olderDir,
+            branch: "older",
+            focused: true,
+            lastFocused: 1791553813457,
+          },
+        ],
+      },
+      {
+        workspaceId: "w3D",
+        name: "checkout-web",
+        panes: [
+          { paneId: "w3D:p1", cwd: dir, branch, focused: true, lastFocused: null },
+          { paneId: "w3D:p2", cwd: dir, branch: null, focused: false, lastFocused: null },
+        ],
+      },
+      {
+        workspaceId: "wUnknown",
+        name: "unknown",
+        panes: [
+          {
+            paneId: "wUnknown:p1",
+            cwd: unknownDir,
+            branch: null,
+            focused: true,
+            lastFocused: null,
+          },
+        ],
+      },
+    ];
+    writeHistory([{ dir, branch, lastFocused }]);
+
+    const history = mergeCurrentWorkspaces(
+      workspaces,
+      readWorkspaceHistory(stateDirectory, now),
+      now,
+    );
+
+    expect(history.today).toEqual([]);
+    expect(history.earlier.map((entry) => entry.workspaceId)).toEqual(["w3D", "w37", "wUnknown"]);
+    expect(history.earlier[0]).toMatchObject({ branch, lastFocused });
+    expect(history.earlier[2].lastFocused).toBeNull();
+    expect(workspaces[1].panes.map((pane) => pane.lastFocused)).toEqual([null, null]);
+  });
+
+  it("keeps null focus times when directory history belongs to multiple workspaces", () => {
+    const now = Date.now();
+    const dir = join(testDirectory, "shared");
+    const workspaces = ["w1", "w2"].map((workspaceId) => ({
+      workspaceId,
+      name: "shared",
+      panes: [
+        { paneId: `${workspaceId}:p1`, cwd: dir, branch: null, focused: true, lastFocused: null },
+      ],
+    }));
+    writeHistory([{ dir, branch: null, lastFocused: now }]);
+
+    const history = mergeCurrentWorkspaces(
+      workspaces,
+      readWorkspaceHistory(stateDirectory, now),
+      now,
+    );
+
+    expect(history.today).toEqual([]);
+    expect(history.earlier.map((entry) => entry.lastFocused)).toEqual([null, null]);
   });
 
   it("uses newer recorded history when a unique workspace's cached focus time is stale", () => {
