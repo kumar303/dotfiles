@@ -276,6 +276,98 @@ describe("workspace-switcher plugin", () => {
     expect(snapshotEntries()[0].panes[0].lastFocused).toBe(now);
   });
 
+  it.each(["cached pane", "directory history"])(
+    "puts a workspace in Today using its most recent activity from an unselected pane's %s",
+    (source) => {
+      const now = new Date("2026-10-15T12:05:00+01:00").getTime();
+      const lastFocused = 1792061942710;
+      const selectedDir = join(testDirectory, "tree", "checkout-web");
+      const otherDir = join(testDirectory, "tree", "shopify");
+      const branch = "use-graphql-metafield-owner-type";
+      const workspaces = [
+        {
+          workspaceId: "w3B",
+          name: "shopify",
+          panes: [
+            {
+              paneId: "w3B:p9",
+              cwd: selectedDir,
+              branch,
+              focused: true,
+              lastFocused: 1791366857535,
+            },
+            {
+              paneId: "w3B:p2",
+              cwd: otherDir,
+              branch: "other-branch",
+              focused: false,
+              lastFocused: source === "cached pane" ? lastFocused : null,
+            },
+          ],
+        },
+      ];
+      writeHistory([
+        { dir: selectedDir, branch: "old-branch", lastFocused: 1791367748614 },
+        {
+          dir: otherDir,
+          branch: "other-branch",
+          lastFocused: source === "directory history" ? lastFocused : 1792055854067,
+        },
+      ]);
+      const before = JSON.stringify(workspaces);
+
+      const history = mergeCurrentWorkspaces(
+        workspaces,
+        readWorkspaceHistory(stateDirectory, now),
+        now,
+      );
+
+      expect(history.today).toMatchObject([
+        { workspaceId: "w3B", workspaceName: "shopify", dir: selectedDir, branch, lastFocused },
+      ]);
+      expect(history.earlier).toEqual([]);
+      expect(JSON.stringify(workspaces)).toBe(before);
+    },
+  );
+
+  it("does not attribute shared directory history to an unselected pane in another workspace", () => {
+    const now = Date.now();
+    const yesterday = new Date(now).setHours(0, 0, 0, 0) - 1;
+    const dir = join(testDirectory, "shared");
+    const selectedDir = join(testDirectory, "selected");
+    const workspaces = [
+      {
+        workspaceId: "w1",
+        name: "first",
+        panes: [{ paneId: "w1:p1", cwd: dir, branch: null, focused: true, lastFocused: now }],
+      },
+      {
+        workspaceId: "w2",
+        name: "second",
+        panes: [
+          {
+            paneId: "w2:p1",
+            cwd: selectedDir,
+            branch: null,
+            focused: true,
+            lastFocused: yesterday,
+          },
+          { paneId: "w2:p2", cwd: dir, branch: null, focused: false, lastFocused: null },
+        ],
+      },
+    ];
+    writeHistory([{ dir, branch: null, lastFocused: now }]);
+
+    const history = mergeCurrentWorkspaces(
+      workspaces,
+      readWorkspaceHistory(stateDirectory, now),
+      now,
+    );
+
+    expect(history.today.map((entry) => entry.workspaceId)).toEqual(["w1"]);
+    expect(history.earlier).toMatchObject([{ workspaceId: "w2", lastFocused: yesterday }]);
+  });
+
   it("ranks recorded recent work near the top of Earlier when cached pane timestamps are null", () => {
     const now = new Date("2026-10-15T09:36:26+01:00").getTime();
     const lastFocused = 1791561684095;

@@ -184,12 +184,21 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
     const pane = workspace.panes.find((candidate) => candidate.focused);
     if (!pane) return [];
     const remembered = historyEntries.find((entry) => entry.dir === pane.cwd);
-    // Directory history cannot identify which workspace used a shared path.
-    // A missing cached timestamp must not hide a recorded focus event.
-    const lastFocused =
-      directoryOwners.get(pane.cwd) === 1 && typeof remembered?.lastFocused === "number"
-        ? Math.max(pane.lastFocused ?? -Infinity, remembered.lastFocused)
-        : pane.lastFocused;
+    // Workspace recency includes every pane; the selected pane supplies the label.
+    /** @type {number | null} */
+    let lastFocused = null;
+    for (const candidate of workspace.panes) {
+      // Directory history cannot identify which workspace used a shared path.
+      const recorded =
+        directoryOwners.get(candidate.cwd) === 1
+          ? historyEntries.find((entry) => entry.dir === candidate.cwd)?.lastFocused
+          : null;
+      for (const timestamp of [candidate.lastFocused, recorded]) {
+        if (typeof timestamp === "number" && (lastFocused === null || timestamp > lastFocused)) {
+          lastFocused = timestamp;
+        }
+      }
+    }
     return [
       {
         dir: pane.cwd,
