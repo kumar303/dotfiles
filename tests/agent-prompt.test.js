@@ -112,7 +112,7 @@ qa!
     expect(result.options.at(-1)).toBe("--layout=reverse-list");
     expect(result.options).toContain("--expect=ctrl-y");
     expect(result.options).toContain(
-      "--bind=ctrl-q:backward-word,ctrl-x:forward-word,change:refresh-preview",
+      "--bind=ctrl-j:put(\n),ctrl-q:backward-word,ctrl-x:forward-word,change:refresh-preview",
     );
     expect(result.termMapping).toBe("<C-Y>");
     expect(result.termBackward).toBe("<C-Q>");
@@ -228,6 +228,45 @@ qa!
       ["agent", "get", "w1:p1"],
       ["agent", "read", "w1:p1", "--source", "visible", "--lines", "200", "--format", "text"],
       ["agent", "prompt", "w1:p1", "example.ts:2\n\nExplain this"],
+    ]);
+  });
+
+  it.each([
+    ["multiple lines", ["First line", "Second line"]],
+    ["blank lines", ["First line", "", "Second line", ""]],
+    ["a line that resembles a submit key", ["First line", "ctrl-y", "Second line"]],
+  ])("preserves %s when it submits a multiline prompt", (_name, queryLines) => {
+    writeHerdrState([agent("w1:p1", "w1", "pi")]);
+    const lines = [...queryLines, "", "w1:p1\tpi  idle"];
+
+    runVim(
+      `let g:agent_prompt_context = 'example.ts:1'
+call AgentPromptResults(json_decode($VIM_TEST_LINES))
+qa!
+`,
+      { VIM_TEST_LINES: JSON.stringify(lines) },
+    );
+
+    expect(herdrCalls()).toEqual([
+      ["agent", "get", "w1:p1"],
+      ["agent", "read", "w1:p1", "--source", "visible", "--lines", "200", "--format", "text"],
+      ["agent", "prompt", "w1:p1", `example.ts:1\n\n${queryLines.join("\n")}`],
+    ]);
+  });
+
+  it("preserves newlines when option-enter submits a multiline follow-up", () => {
+    writeHerdrState([agent("w1:p3", "w1", "reviewer")]);
+
+    runVim(`let g:agent_prompt_context = 'example.ts:1'
+call AgentPromptResults(['First line', '', 'Second line', 'ctrl-y', "w1:p3\\treviewer  working"])
+qa!
+`);
+
+    expect(herdrCalls()).toEqual([
+      ["agent", "get", "w1:p3"],
+      ["agent", "read", "w1:p3", "--source", "visible", "--lines", "200", "--format", "text"],
+      ["pane", "send-text", "w1:p3", "example.ts:1\n\nFirst line\n\nSecond line"],
+      ["agent", "send-keys", "w1:p3", "alt+enter"],
     ]);
   });
 

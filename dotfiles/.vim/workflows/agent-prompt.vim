@@ -1,4 +1,5 @@
 tnoremap <M-CR> <C-y>
+tnoremap <S-CR> <C-j>
 tnoremap <M-b> <C-q>
 tnoremap <M-f> <C-x>
 
@@ -67,7 +68,7 @@ endfunction
 function! AgentPromptOptions(state)
     let preview_command = shellescape(g:vim_dotfiles_directory . '/.vim/bin/agent-prompt-preview')
     return g:fzf_picker_options + [
-        \ '--bind=ctrl-q:backward-word,ctrl-x:forward-word,change:refresh-preview',
+        \ "--bind=ctrl-j:put(\n),ctrl-q:backward-word,ctrl-x:forward-word,change:refresh-preview",
         \ '--delimiter=\t',
         \ '--expect=ctrl-y',
         \ '--header=' . a:state.context,
@@ -117,9 +118,9 @@ function! AgentPromptResults(lines)
     if len(a:lines) < 3
         return
     endif
-    let mode = a:lines[1] ==# 'ctrl-y' ? 'follow-up' : 'steer'
-    let target = matchstr(a:lines[2], '^[^\t]\+')
-    let query = a:lines[0]
+    let mode = a:lines[-2] ==# 'ctrl-y' ? 'follow-up' : 'steer'
+    let target = matchstr(a:lines[-1], '^[^\t]\+')
+    let query = join(a:lines[:-3], "\n")
     let prompt = g:agent_prompt_context . (empty(query) ? '' : "\n\n" . query)
     let prompt_path = tempname()
     call writefile(split(prompt, "\n", 1), prompt_path)
