@@ -25,6 +25,7 @@ describe("OpenCurrentFileOnGitHub", () => {
   it.each([
     ["GitHub", "git@github.com:owner/repo.git", "owner/repo"],
     ["Gitstream", "https://gitstream.shopify.io/shop/world.git", "shop/world"],
+    ["Delta", "https://delta.shopify.io/shop/world.git", "shop/world"],
   ])("opens a %s origin on GitHub's main branch", (_name, remote, githubRepository) => {
     const repository = join(testDirectory, "project");
     const sourceDirectory = join(repository, "a directory");

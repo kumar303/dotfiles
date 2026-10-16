@@ -30,8 +30,8 @@ function! OpenCurrentFileOnGitHub()
         let repository = substitute(remote, '^https\?://github\.com/', '', '')
     elseif remote =~# '^ssh://git@github\.com/'
         let repository = substitute(remote, '^ssh://git@github\.com/', '', '')
-    elseif remote =~# '^https\?://\%([^/]\+\.\)\?gitstream\.shopify\.io/'
-        let repository = substitute(remote, '^https\?://\%([^/]\+\.\)\?gitstream\.shopify\.io/', '', '')
+    elseif remote =~# '^https\?://\%([^/]\+\.\)\?\%(gitstream\|delta\)\.shopify\.io/'
+        let repository = substitute(remote, '^https\?://\%([^/]\+\.\)\?\%(gitstream\|delta\)\.shopify\.io/', '', '')
     else
         echoerr 'Origin is not a GitHub repository'
         return
