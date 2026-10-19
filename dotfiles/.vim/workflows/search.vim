@@ -42,7 +42,7 @@ let s:project_ripgrep_options = "--hidden -g'!**/*test*'"
 
 function! VisualRipgrepMapping()
     let term = join(getregion(getpos('v'), getpos('.')), ' ')
-    return ":\<C-u>Rg " . s:project_ripgrep_options . ' ' . term
+    return ":\<C-u>Rg " . s:project_ripgrep_options . ' ' . shellescape(term)
 endfunction
 
 function! RipgrepFile(args)
