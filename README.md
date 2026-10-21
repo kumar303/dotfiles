@@ -84,7 +84,7 @@ Add this `[include]` section to `.gitconfig`:
 | Vim   | `ctrl+l`     | List code symbols in the file       |
 | Vim   | `ctrl+g`     | Open the line on GitHub's `main`    |
 | Vim   | `ctrl+j`     | Open the import under the cursor    |
-| Vim   | `ctrl+opt+d` | View changed Git locations          |
+| Vim   | `ctrl+opt+d` | Navigate git diff hunks             |
 
 ### Panes
 
