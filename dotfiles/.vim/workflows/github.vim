@@ -2,7 +2,7 @@ function! EncodeGitHubPath(path)
     return substitute(a:path, '[ %#?]', '\=printf("%%%02X", char2nr(submatch(0)))', 'g')
 endfunction
 
-function! OpenCurrentFileOnGitHub()
+function! OpenCurrentFileOnGitHub() range
     let file = expand('%:p')
     if !filereadable(file)
         echoerr 'Current buffer is not a readable file'
@@ -39,7 +39,11 @@ function! OpenCurrentFileOnGitHub()
     let repository = substitute(repository, '\.git$', '', '')
 
     let relative_file = file[strlen(root) + 1:]
-    let url = 'https://github.com/' . repository . '/blob/main/' . EncodeGitHubPath(relative_file) . '#L' . line('.')
+    let fragment = '#L' . a:firstline
+    if a:lastline > a:firstline
+        let fragment .= '-L' . a:lastline
+    endif
+    let url = 'https://github.com/' . repository . '/blob/main/' . EncodeGitHubPath(relative_file) . fragment
     let opener = has('macunix') ? 'open' : 'xdg-open'
     call system(shellescape(opener) . ' ' . shellescape(url))
     if v:shell_error
@@ -48,3 +52,4 @@ function! OpenCurrentFileOnGitHub()
 endfunction
 
 nnoremap <silent> <C-g> :call OpenCurrentFileOnGitHub()<CR>
+xnoremap <silent> <C-g> :call OpenCurrentFileOnGitHub()<CR>
