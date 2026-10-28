@@ -22,6 +22,7 @@ export class HerdrError extends Error {
  * @property {string} label
  * @property {string} status
  * @property {string} tabLabel
+ * @property {boolean} currentTab
  */
 
 /**
@@ -56,11 +57,19 @@ export function listWorkspaceAgents(workspaceId, run = runHerdr) {
     }),
   );
 
+  const panesResponse = /** @type {any} */ (run(["pane", "list", "--workspace", workspaceId]));
+  const currentPane = panesResponse?.result?.panes?.find(
+    (/** @type {any} */ pane) => pane.pane_id === process.env.HERDR_PANE_ID,
+  );
+  // Moving the Vim pane between tabs does not update its inherited environment.
+  const currentTabId = currentPane?.tab_id ?? process.env.HERDR_TAB_ID;
+
   return workspaceAgents.map((agent) => ({
     paneId: agent.pane_id,
     label: firstString(agent.name, agent.display_agent, agent.agent, agent.pane_id),
     status: typeof agent.agent_status === "string" ? agent.agent_status : "unknown",
     tabLabel: tabLabels.get(agent.tab_id) ?? agent.tab_id,
+    currentTab: agent.tab_id === currentTabId,
   }));
 }
 

@@ -131,6 +131,49 @@ qa!
     expect(herdrCalls()).toEqual([
       ["agent", "list"],
       ["tab", "list", "--workspace", "w1"],
+      ["pane", "list", "--workspace", "w1"],
+    ]);
+  });
+
+  it.each([
+    ["the current tab", "w1:t2", [], "w1:p3"],
+    ["a tab without an agent", "w1:t9", [], "w1:p1"],
+    ["a missing tab ID", "", [], "w1:p1"],
+    [
+      "a Vim pane moved from its original tab",
+      "w1:t9",
+      [{ pane_id: "w1:p2", workspace_id: "w1", tab_id: "w1:t2" }],
+      "w1:p3",
+    ],
+  ])("preselects the appropriate agent for %s", (_name, tabId, panes, expectedPane) => {
+    writeHerdrState(
+      [
+        agent("w1:p1", "w1", "first", "w1:t1"),
+        agent("w1:p3", "w1", "second", "w1:t2"),
+        agent("w1:p4", "w1", "third", "w1:t2"),
+      ],
+      [],
+      panes,
+    );
+    const sourcePath = join(testDirectory, "example.ts");
+    const resultPath = join(testDirectory, "selection.json");
+    writeFileSync(sourcePath, "alpha\n");
+
+    runVim(
+      `execute 'edit ' . fnameescape($VIM_TEST_SOURCE)
+let state = AgentPromptState(0)
+call writefile([json_encode({'selected': get(state.entries, get(state, 'position', 1) - 1), 'entries': state.entries})], $VIM_TEST_RESULT)
+qa!
+`,
+      { HERDR_TAB_ID: tabId, VIM_TEST_SOURCE: sourcePath, VIM_TEST_RESULT: resultPath },
+    );
+
+    const state = JSON.parse(readFileSync(resultPath, "utf8"));
+    expect(state.selected.split("\t")[0]).toBe(expectedPane);
+    expect(state.entries.map((/** @type {string} */ entry) => entry.split("\t")[0])).toEqual([
+      "w1:p1",
+      "w1:p3",
+      "w1:p4",
     ]);
   });
 
@@ -447,14 +490,15 @@ function runVim(script, environment = {}) {
 /**
  * @param {unknown[]} agents
  * @param {unknown[]} [tabs]
+ * @param {unknown[]} [panes]
  */
-function writeHerdrState(agents, tabs = []) {
+function writeHerdrState(agents, tabs = [], panes = []) {
   writeFileSync(
     herdrStatePath,
     `${JSON.stringify({
       result: {
         agents,
-        panes: [],
+        panes,
         snapshot: { panes: [], workspaces: [] },
         tabs,
       },

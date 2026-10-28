@@ -61,13 +61,21 @@ function! AgentPromptState(include_selection)
         return {'context': '', 'entries': []}
     endif
     let agents = json_decode(output)
+    let position = 1
+    for index in range(len(agents))
+        if get(agents[index], 'currentTab', 0)
+            let position = index + 1
+            break
+        endif
+    endfor
     let entries = map(agents, 'printf("%s\t%s  %s  tab:%s", v:val.paneId, v:val.label, v:val.status, v:val.tabLabel)')
-    return {'context': AgentPromptContext(context), 'entries': entries}
+    return {'context': AgentPromptContext(context), 'entries': entries, 'position': position}
 endfunction
 
 function! AgentPromptOptions(state)
     let preview_command = shellescape(g:vim_dotfiles_directory . '/.vim/bin/agent-prompt-preview')
     return g:fzf_picker_options + [
+        \ '--bind=load:pos(' . get(a:state, 'position', 1) . ')',
         \ "--bind=ctrl-j:put(\n),ctrl-q:backward-word,ctrl-x:forward-word,change:refresh-preview",
         \ '--delimiter=\t',
         \ '--expect=ctrl-y',
