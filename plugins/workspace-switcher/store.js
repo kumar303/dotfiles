@@ -2,7 +2,7 @@
 
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 const MAX_LIST = 500;
 const MAX_AGE_DAYS = 180;
@@ -180,6 +180,43 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
       directoryOwners.set(dir, (directoryOwners.get(dir) ?? 0) + 1);
     }
   }
+  // A worktree's .git marker stays put when a pane changes directories.
+  /** @type {Map<string, string | null>} */
+  const roots = new Map();
+  /** @param {string} dir @returns {string | null} */
+  function gitRoot(dir) {
+    if (roots.has(dir)) return roots.get(dir) ?? null;
+    const parent = dirname(dir);
+    const root = existsSync(join(dir, ".git")) ? dir : parent === dir ? null : gitRoot(parent);
+    roots.set(dir, root);
+    return root;
+  }
+  /** @type {Map<string, Set<string>>} */
+  const rootOwners = new Map();
+  for (const workspace of workspaces) {
+    for (const pane of workspace.panes) {
+      const root = gitRoot(pane.cwd);
+      if (!root) continue;
+      const owners = rootOwners.get(root) ?? new Set();
+      owners.add(workspace.workspaceId);
+      rootOwners.set(root, owners);
+    }
+  }
+  /** @type {Map<WorkspaceEntry, string>} */
+  const historicalOwners = new Map();
+  for (const entry of historyEntries) {
+    const root = gitRoot(entry.dir);
+    const owners = root ? rootOwners.get(root) : undefined;
+    // Do not guess when separate open workspaces share a repository.
+    if (!entry.workspaceId && owners?.size === 1) {
+      historicalOwners.set(entry, [...owners][0]);
+    } else if (
+      entry.workspaceId &&
+      workspaces.some((workspace) => workspace.workspaceId === entry.workspaceId)
+    ) {
+      historicalOwners.set(entry, entry.workspaceId);
+    }
+  }
   const current = workspaces.flatMap((workspace) => {
     const pane = workspace.panes.find((candidate) => candidate.focused);
     if (!pane) return [];
@@ -199,6 +236,17 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
         }
       }
     }
+    const aliases = historyEntries.filter(
+      (entry) => historicalOwners.get(entry) === workspace.workspaceId,
+    );
+    for (const entry of aliases) {
+      if (entry.lastFocused !== null && (lastFocused === null || entry.lastFocused > lastFocused)) {
+        lastFocused = entry.lastFocused;
+      }
+    }
+    const oldDirectories = aliases.filter(
+      (entry) => !workspace.panes.some((candidate) => candidate.cwd === entry.dir),
+    );
     return [
       {
         dir: pane.cwd,
@@ -206,8 +254,14 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
         lastFocused,
         workspaceId: workspace.workspaceId,
         workspaceName: workspace.name,
-        workspaceDirectories: workspace.panes.map((candidate) => candidate.cwd),
-        workspaceBranches: workspace.panes.map((candidate) => candidate.branch),
+        workspaceDirectories: [
+          ...workspace.panes.map((candidate) => candidate.cwd),
+          ...oldDirectories.map((entry) => entry.dir),
+        ],
+        workspaceBranches: [
+          ...workspace.panes.map((candidate) => candidate.branch),
+          ...oldDirectories.map((entry) => entry.branch),
+        ],
         duplicateWorkspaceName: (workspaceNameCounts.get(workspace.name) ?? 0) > 1,
       },
     ];
@@ -217,8 +271,12 @@ export function mergeCurrentWorkspaces(workspaces, history, now = Date.now()) {
   );
   const combined = [
     ...current,
-    ...history.today.filter((entry) => !currentDirectories.has(entry.dir)),
-    ...history.earlier.filter((entry) => !currentDirectories.has(entry.dir)),
+    ...history.today.filter(
+      (entry) => !currentDirectories.has(entry.dir) && !historicalOwners.has(entry),
+    ),
+    ...history.earlier.filter(
+      (entry) => !currentDirectories.has(entry.dir) && !historicalOwners.has(entry),
+    ),
   ].sort((left, right) => (right.lastFocused ?? -Infinity) - (left.lastFocused ?? -Infinity));
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);

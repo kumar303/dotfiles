@@ -368,6 +368,64 @@ describe("workspace-switcher plugin", () => {
     expect(history.earlier).toMatchObject([{ workspaceId: "w2", lastFocused: yesterday }]);
   });
 
+  it("merges an old directory into the open workspace for the same Git worktree", () => {
+    const root = createGitDirectory("src", "topic");
+    const oldDir = join(root, "areas/world-support/zone-templates");
+    mkdirSync(oldDir, { recursive: true });
+    const otherRoot = createGitDirectory("different-worktree", "topic");
+    const now = Date.now();
+    writeHistory([
+      { dir: oldDir, branch: "topic", lastFocused: now },
+      { dir: otherRoot, branch: "topic", lastFocused: now - 1 },
+    ]);
+    const workspaces = [
+      {
+        workspaceId: "w4M",
+        name: "zone-templates",
+        panes: [{ paneId: "w4M:p1", cwd: root, branch: "topic", focused: true, lastFocused: null }],
+      },
+    ];
+
+    const history = mergeCurrentWorkspaces(
+      workspaces,
+      readWorkspaceHistory(stateDirectory, now),
+      now,
+    );
+
+    expect(history.today).toMatchObject([
+      { workspaceId: "w4M", dir: root, lastFocused: now, workspaceDirectories: [root, oldDir] },
+      { dir: otherRoot },
+    ]);
+    expect(history.earlier).toEqual([]);
+  });
+
+  it("does not merge separate open workspaces in the same Git repository", () => {
+    const root = createGitDirectory("repo", "topic");
+    const nested = join(root, "nested");
+    mkdirSync(nested);
+    const historic = join(root, "historic");
+    mkdirSync(historic);
+    const now = Date.now();
+    writeHistory([
+      { dir: nested, branch: "topic", lastFocused: now },
+      { dir: historic, branch: "topic", lastFocused: now - 1 },
+    ]);
+    const workspaces = [root, nested].map((cwd, index) => ({
+      workspaceId: `w${index}`,
+      name: "repo",
+      panes: [{ paneId: `w${index}:p1`, cwd, branch: "topic", focused: true, lastFocused: now }],
+    }));
+
+    const history = mergeCurrentWorkspaces(
+      workspaces,
+      readWorkspaceHistory(stateDirectory, now),
+      now,
+    );
+
+    expect(history.today.map((entry) => entry.workspaceId)).toEqual(["w0", "w1", undefined]);
+    expect(history.today[2].dir).toBe(historic);
+  });
+
   it("ranks recorded recent work near the top of Earlier when cached pane timestamps are null", () => {
     const now = new Date("2026-10-15T09:36:26+01:00").getTime();
     const lastFocused = 1791561684095;
