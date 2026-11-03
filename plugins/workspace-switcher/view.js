@@ -71,5 +71,7 @@ export function workspaceEntryName(entry) {
     entry.workspaceName && entry.workspaceName !== directoryName
       ? `${entry.workspaceName}: ${directoryName}`
       : directoryName;
-  return entry.duplicateWorkspaceName && entry.workspaceId ? `${entry.workspaceId}: ${name}` : name;
+  const label =
+    entry.duplicateWorkspaceName && entry.workspaceId ? `${entry.workspaceId}: ${name}` : name;
+  return entry.state === "done" ? `${label} (done)` : label;
 }

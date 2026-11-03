@@ -10,6 +10,7 @@ import {
   writeWorkspaceSnapshot,
 } from "./snapshot.js";
 import { recordWorkspace, seedWorkspaceHistory } from "./store.js";
+import { recordWorkspaceActivation } from "./workspace-state.js";
 
 /** @typedef {{workspace_cwd?: unknown, workspace_id?: unknown}} PluginContext */
 
@@ -34,7 +35,19 @@ const workspace = workspaces.find(
     (typeof context.workspace_id !== "string" &&
       candidate.panes.some((pane) => pane.focused && pane.cwd === context.workspace_cwd)),
 );
-if (workspace) markWorkspaceFocused(workspaces, workspace.workspaceId, now);
+if (workspace) {
+  markWorkspaceFocused(workspaces, workspace.workspaceId, now);
+  recordWorkspaceActivation(
+    {
+      dir: context.workspace_cwd,
+      branch: null,
+      lastFocused: now,
+      workspaceId: workspace.workspaceId,
+      workspaceDirectories: workspace.panes.map((pane) => pane.cwd),
+    },
+    stateDirectory,
+  );
+}
 writeWorkspaceSnapshot(workspaces, stateDirectory);
 
 /** @param {string} name */

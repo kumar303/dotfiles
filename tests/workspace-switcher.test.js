@@ -24,6 +24,7 @@ import {
   readWorkspaceHistory,
 } from "../plugins/workspace-switcher/store.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { setWorkspaceState } from "../plugins/workspace-switcher/workspace-state.js";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const pluginDirectory = join(repositoryRoot, "plugins", "workspace-switcher");
@@ -1324,6 +1325,142 @@ printf 'slow-branch\\n'
     expect(lastToday).toBeGreaterThan(lastBottomWorkspace);
   });
 
+  it.each([false, true])("pages with left/right arrows while search mode is %s", async (search) => {
+    const entries = Array.from({ length: 30 }, (_, i) => ({
+      dir: join(testDirectory, `workspace-${String(i).padStart(2, "0")}`),
+      branch: null,
+      lastFocused: Date.now() - i,
+    }));
+    writeHistory(entries);
+    if (search) setWorkspaceState(entries[19], stateDirectory, "done");
+    await runPicker(`${search ? "/workspace" : ""}\x1b[C\r`);
+    expect(herdrCalls().at(-1)).toEqual([
+      "workspace",
+      "create",
+      "--cwd",
+      entries[19].dir,
+      "--focus",
+    ]);
+    clearHerdrCalls();
+    await runPicker(`${search ? "/workspace" : ""}\x1b[C\x1b[D\r`);
+    expect(herdrCalls().at(-1)).toEqual([
+      "workspace",
+      "create",
+      "--cwd",
+      entries[0].dir,
+      "--focus",
+    ]);
+  });
+
+  it("marks a workspace done with d, persists it, and hides it without closing it", async () => {
+    const done = join(testDirectory, "finished");
+    const todo = join(testDirectory, "remaining");
+    writeHistory([
+      { dir: done, branch: null, lastFocused: Date.now() },
+      { dir: todo, branch: null, lastFocused: Date.now() - 1 },
+    ]);
+    await runPicker("d\x1b");
+    clearHerdrCalls();
+    await runPicker("\r");
+    expect(herdrCalls().at(-1)).toEqual(["workspace", "create", "--cwd", todo, "--focus"]);
+    expect(herdrCalls().some((args) => args[1] === "close")).toBe(false);
+  });
+
+  it("finds done workspaces in search and restores todo when opened", async () => {
+    const done = join(testDirectory, "finished");
+    writeHistory([{ dir: done, branch: null, lastFocused: Date.now() }]);
+    await runPicker("d\x1b");
+    clearHerdrCalls();
+    const result = await runPicker("/finished\r");
+    expect(stripTerminalControls(result.stdout)).toContain("finished (done)");
+    expect(herdrCalls().at(-1)).toEqual(["workspace", "create", "--cwd", done, "--focus"]);
+    clearHerdrCalls();
+    await runPicker("\r");
+    expect(herdrCalls().at(-1)).toEqual(["workspace", "create", "--cwd", done, "--focus"]);
+  });
+
+  it("marks done and closes all tabs with D, then reopens through search", async () => {
+    const dir = join(testDirectory, "finished");
+    writeHistory([{ dir, branch: null, lastFocused: Date.now() }]);
+    writeHerdrSnapshot({
+      workspaces: [{ workspace_id: "w1", focused: true }],
+      tabs: [
+        { workspace_id: "w1", tab_id: "w1:t1" },
+        { workspace_id: "w1", tab_id: "w1:t2" },
+      ],
+      panes: [{ workspace_id: "w1", cwd: dir, focused: true }],
+    });
+    await runPicker("D/finished\r");
+    expect(herdrCalls()).toContainEqual(["workspace", "close", "w1"]);
+    expect(herdrCalls().at(-1)).toEqual(["workspace", "create", "--cwd", dir, "--focus"]);
+    const snapshot = JSON.parse(readFileSync(herdrStatePath, "utf8")).result.snapshot;
+    expect(snapshot.workspaces).toEqual([]);
+    expect(snapshot.tabs).toEqual([]);
+  });
+
+  it("keeps the workspace todo when closing it fails", async () => {
+    const dir = join(testDirectory, "unfinished");
+    writeHerdrSnapshot({
+      workspaces: [{ workspace_id: "w1", focused: true }],
+      panes: [{ workspace_id: "w1", cwd: dir, focused: true }],
+    });
+    pluginEnvironment.HERDR_MOCK_CLOSE_FAILURE = "1";
+    const result = await runPicker("D\r");
+    expect(stripTerminalControls(result.stdout)).toContain("workspace close w1");
+    expect(herdrCalls()).toContainEqual(["workspace", "focus", "w1"]);
+  });
+
+  it("selects a remaining todo workspace after marking the last row done", async () => {
+    const first = join(testDirectory, "first");
+    const last = join(testDirectory, "last");
+    writeHistory([
+      { dir: first, branch: null, lastFocused: Date.now() },
+      { dir: last, branch: null, lastFocused: Date.now() - 1 },
+    ]);
+    await runPicker("Gd\r");
+    expect(herdrCalls().at(-1)).toEqual(["workspace", "create", "--cwd", first, "--focus"]);
+  });
+
+  it("keeps the active workspace done after the first use of the new state feature", async () => {
+    const dir = join(testDirectory, "current");
+    writeHerdrSnapshot({
+      workspaces: [{ workspace_id: "w1", focused: true }],
+      panes: [{ workspace_id: "w1", cwd: dir, focused: true }],
+    });
+    await runPicker("d\x1b");
+    emitPluginEvent("workspace.focused", { workspace_id: "w1", workspace_cwd: dir });
+    clearHerdrCalls();
+    await runPicker("\r\x1b");
+    expect(herdrCalls()).toEqual([["api", "snapshot"]]);
+  });
+
+  it("does not revive a done workspace on pane focus, but revives it when switching back", async () => {
+    const dir = join(testDirectory, "finished");
+    const other = join(testDirectory, "other");
+    writeHerdrSnapshot({
+      workspaces: [{ workspace_id: "w1", focused: true }, { workspace_id: "w2" }],
+      panes: [
+        { workspace_id: "w1", cwd: dir, focused: true },
+        { workspace_id: "w2", cwd: other, focused: true },
+      ],
+    });
+    emitPluginEvent("workspace.focused", { workspace_id: "w1", workspace_cwd: dir });
+    await runPicker("/finished\r");
+    await runPicker("gd\x1b");
+    emitPluginEvent("workspace.focused", { workspace_id: "w1", workspace_cwd: dir });
+    clearHerdrCalls();
+    await runPicker("/finished\x1b");
+    // Search includes done entries; default still excludes this workspace.
+    clearHerdrCalls();
+    await runPicker("\r");
+    expect(herdrCalls()).toContainEqual(["workspace", "focus", "w2"]);
+    emitPluginEvent("workspace.focused", { workspace_id: "w2", workspace_cwd: other });
+    emitPluginEvent("workspace.focused", { workspace_id: "w1", workspace_cwd: dir });
+    clearHerdrCalls();
+    await runPicker("g\r");
+    expect(herdrCalls()).toContainEqual(["workspace", "focus", "w1"]);
+  });
+
   it("renders a key legend at the bottom of the picker", async () => {
     const remembered = join(testDirectory, "remembered");
     writeHistory([{ dir: remembered, branch: null, lastFocused: Date.now() }]);
@@ -1331,7 +1468,7 @@ printf 'slow-branch\\n'
     const result = await runPicker("\r");
 
     expect(stripTerminalControls(result.stdout)).toContain(
-      "↑/↓ select  •  g/G top/bottom  •  d/u page  •  enter open  •  / search  •  esc close",
+      "↑/↓ select • ←/→ page • g/G top/bottom • d done • D done+close • enter open • / search • esc close",
     );
   });
 

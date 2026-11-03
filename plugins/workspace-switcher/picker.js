@@ -5,12 +5,18 @@ import "./runtime.js";
 import { Box, Screen, escape } from "@unblessed/core";
 import {
   currentWorkspaceDirectories,
+  closeWorkspace,
   focusWorkspace,
   openWorkspace,
   readSnapshot,
 } from "./herdr.js";
 import { WorkspacePickerModel } from "./model.js";
 import { mergeCurrentWorkspaces, readWorkspaceHistory } from "./store.js";
+import {
+  applyWorkspaceStates,
+  recordWorkspaceActivation,
+  setWorkspaceState,
+} from "./workspace-state.js";
 import {
   buildWorkspaceSnapshot,
   cancelWorkspaceSnapshotRefresh,
@@ -25,21 +31,24 @@ import { buildWorkspaceRows, workspaceEntryName } from "./view.js";
 const theme = await readWorkspaceSwitcherTheme();
 applyTerminalThemePalette(theme);
 const KEY_LEGEND =
-  "↑/↓ select  •  g/G top/bottom  •  d/u page  •  enter open  •  / search  •  esc close";
+  "↑/↓ select • ←/→ page • g/G top/bottom • d done • D done+close • enter open • / search • esc close";
 const stateDirectory = requiredEnvironment("HERDR_PLUGIN_STATE_DIR");
 const initialSnapshot = readSnapshot();
 const currentWorkspaces = buildWorkspaceSnapshot(
   initialSnapshot,
   readWorkspaceSnapshot(stateDirectory),
 );
-const model = new WorkspacePickerModel(
-  mergeCurrentWorkspaces(currentWorkspaces, readWorkspaceHistory(stateDirectory)),
-);
 const focusedWorkspaceIdValue = initialSnapshot.workspaces.find(
   (workspace) => workspace.focused,
 )?.workspace_id;
 const focusedWorkspaceId =
   typeof focusedWorkspaceIdValue === "string" ? focusedWorkspaceIdValue : undefined;
+const history = mergeCurrentWorkspaces(currentWorkspaces, readWorkspaceHistory(stateDirectory));
+const activeEntry = [...history.today, ...history.earlier].find(
+  (entry) => entry.workspaceId === focusedWorkspaceId,
+);
+if (activeEntry?.workspaceId) recordWorkspaceActivation(activeEntry, stateDirectory);
+const model = new WorkspacePickerModel(applyWorkspaceStates(history, stateDirectory));
 const currentDirectory = currentWorkspaceDirectories(initialSnapshot)[0]?.dir;
 const previousWorkspaceIndex = model.entries.findIndex(
   (entry) => entry.workspaceId && entry.workspaceId !== focusedWorkspaceId,
@@ -93,6 +102,8 @@ function handleKeypress(character, key) {
       model.move(-1);
     } else if (key.name === "down") {
       model.move(1);
+    } else if (key.name === "right" || key.name === "left") {
+      model.move((key.name === "right" ? 1 : -1) * Math.max(1, Math.floor(content.height / 2)));
     } else if (key.name === "backspace") {
       model.backspaceSearch();
     } else if (isSearchCharacter(character)) {
@@ -117,12 +128,11 @@ function handleKeypress(character, key) {
   } else if (key.name === "down") {
     model.move(1);
     render();
-  } else if (character === "d") {
-    model.move(Math.max(1, Math.floor(content.height / 2)));
+  } else if (key.name === "right" || key.name === "left") {
+    model.move((key.name === "right" ? 1 : -1) * Math.max(1, Math.floor(content.height / 2)));
     render();
-  } else if (character === "u") {
-    model.move(-Math.max(1, Math.floor(content.height / 2)));
-    render();
+  } else if (character === "d" || character === "D") {
+    markDone(character === "D");
   } else if (character === "g") {
     model.selectedIndex = 0;
     render();
@@ -133,7 +143,27 @@ function handleKeypress(character, key) {
 }
 
 render();
-startWorkspaceSnapshotRefresh(currentWorkspaces, stateDirectory, focusedWorkspaceId);
+const refreshProcess = startWorkspaceSnapshotRefresh(
+  currentWorkspaces,
+  stateDirectory,
+  focusedWorkspaceId,
+);
+
+function stopRefresh() {
+  cancelWorkspaceSnapshotRefresh(stateDirectory);
+  // The child may not have written its ownership file yet.
+  if (
+    refreshProcess.pid &&
+    refreshProcess.exitCode === null &&
+    refreshProcess.signalCode === null
+  ) {
+    try {
+      process.kill(-refreshProcess.pid, "SIGTERM");
+    } catch {
+      /* The refresh already stopped. */
+    }
+  }
+}
 
 function render() {
   const rows = buildWorkspaceRows(model.filteredHistory, model.selectedIndex);
@@ -179,7 +209,7 @@ function selectWorkspace() {
   try {
     if (selected.workspaceId) {
       focusWorkspace(selected.workspaceId);
-      cancelWorkspaceSnapshotRefresh(stateDirectory);
+      stopRefresh();
       const workspaces = buildWorkspaceSnapshot(
         initialSnapshot,
         readWorkspaceSnapshot(stateDirectory),
@@ -189,11 +219,50 @@ function selectWorkspace() {
     } else {
       openWorkspace(selected.dir, readSnapshot());
     }
+    setWorkspaceState(selected, stateDirectory, "todo");
     close();
   } catch (error) {
     errorMessage = error instanceof Error ? error.message : String(error);
     render();
   }
+}
+
+/** @param {boolean} closeTabs */
+function markDone(closeTabs) {
+  const selected = model.selectedEntry();
+  if (!selected) return;
+  try {
+    setWorkspaceState(selected, stateDirectory, "done");
+    if (closeTabs && selected.workspaceId) {
+      stopRefresh();
+      try {
+        closeWorkspace(selected.workspaceId);
+      } catch (error) {
+        setWorkspaceState(selected, stateDirectory, "todo");
+        throw error;
+      }
+      const id = selected.workspaceId;
+      initialSnapshot.workspaces = initialSnapshot.workspaces.filter(
+        (workspace) => workspace.workspace_id !== id,
+      );
+      initialSnapshot.panes = initialSnapshot.panes.filter((pane) => pane.workspace_id !== id);
+      initialSnapshot.tabs = initialSnapshot.tabs?.filter((tab) => tab.workspace_id !== id);
+      initialSnapshot.layouts = initialSnapshot.layouts?.filter(
+        (layout) => layout.workspace_id !== id,
+      );
+      writeWorkspaceSnapshot(
+        buildWorkspaceSnapshot(initialSnapshot, readWorkspaceSnapshot(stateDirectory)),
+        stateDirectory,
+      );
+      delete selected.workspaceId;
+    }
+    selected.state = "done";
+    model.selectedIndex = Math.min(model.selectedIndex, Math.max(0, model.entries.length - 1));
+    errorMessage = "";
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : String(error);
+  }
+  render();
 }
 
 function close() {

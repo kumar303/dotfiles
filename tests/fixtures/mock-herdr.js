@@ -77,6 +77,18 @@ if (area === "api" && command === "snapshot") {
   output({ result: {} });
 } else if (area === "pane") {
   handlePaneCommand(command);
+} else if (area === "workspace" && command === "close") {
+  if (process.env.HERDR_MOCK_CLOSE_FAILURE) fail("workspace close failed");
+  const snapshot = /** @type {any} */ (state.result.snapshot);
+  for (const key of ["workspaces", "panes", "tabs", "layouts"]) {
+    if (Array.isArray(snapshot?.[key]))
+      snapshot[key] = snapshot[key].filter(
+        (/** @type {any} */ item) => item.workspace_id !== args[2],
+      );
+  }
+  state.result.panes = state.result.panes.filter((pane) => pane.workspace_id !== args[2]);
+  saveState(state);
+  output({ result: {} });
 } else if (area === "workspace" && ["create", "focus", "rename"].includes(String(command))) {
   output({ result: {} });
 } else if (area === "plugin" && command === "pane" && args[2] === "open") {

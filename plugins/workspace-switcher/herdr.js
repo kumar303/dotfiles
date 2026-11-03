@@ -98,6 +98,11 @@ export function focusWorkspace(workspaceId, run = runHerdr) {
   run(["workspace", "focus", workspaceId]);
 }
 
+/** @param {string} workspaceId @param {HerdrRunner} [run] */
+export function closeWorkspace(workspaceId, run = runHerdr) {
+  run(["workspace", "close", workspaceId]);
+}
+
 /** @param {HerdrRunner} [run] */
 export function openPickerPopup(run = runHerdr) {
   run([

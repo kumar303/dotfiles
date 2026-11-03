@@ -17,8 +17,14 @@ export class WorkspacePickerModel {
   /** @returns {WorkspaceHistory} */
   get filteredHistory() {
     return {
-      today: filterWorkspaces(this.history.today, this.searchQuery),
-      earlier: filterWorkspaces(this.history.earlier, this.searchQuery),
+      today: filterWorkspaces(
+        this.history.today.filter((entry) => this.searchMode || entry.state !== "done"),
+        this.searchQuery,
+      ),
+      earlier: filterWorkspaces(
+        this.history.earlier.filter((entry) => this.searchMode || entry.state !== "done"),
+        this.searchQuery,
+      ),
     };
   }
 

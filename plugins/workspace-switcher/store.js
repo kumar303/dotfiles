@@ -12,6 +12,7 @@ const MAX_AGE_DAYS = 180;
  * @property {string} dir
  * @property {string | null} branch
  * @property {number | null} lastFocused
+ * @property {'todo' | 'done'} [state]
  * @property {string} [workspaceId]
  * @property {string} [workspaceName]
  * @property {string[]} [workspaceDirectories]

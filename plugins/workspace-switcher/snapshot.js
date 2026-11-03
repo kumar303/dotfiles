@@ -176,6 +176,7 @@ export function startWorkspaceSnapshotRefresh(workspaces, stateDirectory, focuse
     },
   );
   refresh.unref();
+  return refresh;
 }
 
 /** @param {string} stateDirectory */
