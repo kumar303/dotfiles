@@ -1398,6 +1398,31 @@ printf 'slow-branch\\n'
     expect(snapshot.tabs).toEqual([]);
   });
 
+  it("handles D on a history-only workspace without attempting to close it", async () => {
+    const finished = join(testDirectory, "finished");
+    const remaining = join(testDirectory, "remaining");
+    writeHistory([
+      { dir: finished, branch: null, lastFocused: Date.now() },
+      { dir: remaining, branch: null, lastFocused: Date.now() - 1 },
+    ]);
+
+    await runPicker("D\x1b");
+    expect(herdrCalls()).toEqual([["api", "snapshot"]]);
+    clearHerdrCalls();
+    await runPicker("\r");
+    expect(herdrCalls().at(-1)).toEqual(["workspace", "create", "--cwd", remaining, "--focus"]);
+    clearHerdrCalls();
+    const result = await runPicker("/finished\r");
+    expect(stripTerminalControls(result.stdout)).toContain("finished (done)");
+    expect(herdrCalls().at(-1)).toEqual(["workspace", "create", "--cwd", finished, "--focus"]);
+    expect(herdrCalls().some((args) => args[1] === "close")).toBe(false);
+  });
+
+  it("ignores D when no workspace is selected", async () => {
+    await runPicker("D\x1b");
+    expect(herdrCalls()).toEqual([["api", "snapshot"]]);
+  });
+
   it("keeps the workspace todo when closing it fails", async () => {
     const dir = join(testDirectory, "unfinished");
     writeHerdrSnapshot({
