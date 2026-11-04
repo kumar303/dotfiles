@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * @typedef {object} Pane
@@ -437,6 +438,8 @@ function main() {
       file: resolve(sourcePane.cwd, location?.[1] || requestedFileArgument),
       line: Number.isSafeInteger(line) ? line : null,
     };
+  } else if (process.env.HERDR_PLUGIN_CLICKED_URL) {
+    requestedFile = { file: fileURLToPath(process.env.HERDR_PLUGIN_CLICKED_URL), line: null };
   }
 
   mkdirSync(paneMarkerDirectory, { recursive: true });

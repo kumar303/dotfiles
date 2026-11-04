@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -563,6 +563,59 @@ describe("split-vim-above", () => {
     expect(herdrCommandCalls("close")).not.toContainEqual(["pane", "close", "w1:p8"]);
   });
 
+  it.each(["", "localhost"])("opens a clicked file URL with host '%s' in Vim", (host) => {
+    const file = createFile("project/a dir/quo'te #% ü:42");
+    const url = pathToFileURL(file);
+    url.hostname = host;
+    setPanes([sourcePane({ cwd: "/other" })]);
+
+    runScript({ clickedUrl: url.href });
+
+    expect(herdrCommandCalls("run")).toContainEqual(["pane", "run", "w1:p101", "vim", file]);
+  });
+
+  it("opens a clicked file URL in an existing Vim split instead of toggling it off", () => {
+    const file = createFile("project/quo'te.md");
+    setPanes([sourcePane()]);
+    runScript();
+    clearHerdrCalls();
+
+    runScript({ clickedUrl: pathToFileURL(file).href });
+
+    const text = herdrCommandCalls("send-text")
+      .map((args) => args[3])
+      .join("\n");
+    expect(text).toContain("rightbelow vsplit ");
+    expect(text).toContain(`fnameescape('${file.replaceAll("'", "''")}')`);
+    expect(herdrCommandCalls("close")).toHaveLength(0);
+    expect(commandCalls("tab", "create")).toHaveLength(0);
+  });
+
+  it.each(["https://example.com/file.md", "file://remote/tmp/file.md", "file:///tmp/%ZZ"])(
+    "rejects an unsupported clicked URL without changing panes: %s",
+    (clickedUrl) => {
+      setPanes([sourcePane()]);
+
+      runScript({ clickedUrl, expectedStatus: 1 });
+
+      expect(herdrCalls()).toEqual([["pane", "list"]]);
+    },
+  );
+
+  it("keeps explicit --file arguments ahead of a clicked URL", () => {
+    setPanes([sourcePane({ cwd: "/tmp/project" })]);
+
+    runScript({ filePath: "src/file.ts", clickedUrl: "file:///tmp/other.md" });
+
+    expect(herdrCommandCalls("run")).toContainEqual([
+      "pane",
+      "run",
+      "w1:p101",
+      "vim",
+      "/tmp/project/src/file.ts",
+    ]);
+  });
+
   it("starts Vim with a requested file when no layout was remembered", () => {
     setPanes([sourcePane({ cwd: "/tmp/project" })]);
 
@@ -610,7 +663,7 @@ function setPanes(panes) {
 }
 
 /**
- * @param {{paneId?: string, filePath?: string, vimState?: VimState, agentPromptMarker?: string}} [options]
+ * @param {{paneId?: string, filePath?: string, clickedUrl?: string, expectedStatus?: number, vimState?: VimState, agentPromptMarker?: string}} [options]
  */
 function runScript(options = {}) {
   const args = options.filePath ? ["--file", options.filePath] : [];
@@ -620,6 +673,7 @@ function runScript(options = {}) {
       ...process.env,
       HERDR_BIN_PATH: mockHerdrPath,
       HERDR_PANE_ID: options.paneId || "w1:p1",
+      HERDR_PLUGIN_CLICKED_URL: options.clickedUrl ?? "",
       HERDR_MOCK_COUNTER: counterPath,
       HERDR_MOCK_LOG: herdrLogPath,
       HERDR_MOCK_PANES: panesPath,
@@ -630,7 +684,7 @@ function runScript(options = {}) {
   });
 
   expect(result.error).toBeUndefined();
-  expect(result.status, result.stderr).toBe(0);
+  expect(result.status, result.stderr).toBe(options.expectedStatus ?? 0);
 }
 
 /** @returns {string[][]} */

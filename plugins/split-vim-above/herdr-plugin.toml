@@ -1,7 +1,7 @@
 id = "kumar303.split-vim-above"
 name = "Split Vim Above"
-version = "0.3.11"
-min_herdr_version = "0.8.2"
+version = "0.3.12"
+min_herdr_version = "0.9.0"
 description = "Toggle Vim panes and restore their split files across workspace tabs"
 platforms = ["linux", "macos"]
 
@@ -10,3 +10,9 @@ id = "toggle"
 title = "Toggle Vim pane above"
 contexts = ["pane"]
 command = ["node", "split-vim-above.js"]
+
+[[link_handlers]]
+id = "local-file"
+title = "Open local file in Vim"
+pattern = "^file://"
+action = "toggle"
