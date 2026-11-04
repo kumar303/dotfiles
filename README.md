@@ -78,9 +78,6 @@ Add this `[include]` section to `.gitconfig`:
 The workspace switcher shows todo workspaces. Press `d` to mark one done or `D` to also close its tabs.
 Search includes done workspaces; open one to restore it to todo. Use `←`/`→` to page, including during search.
 
-Ctrl-click a `file://` hyperlink in Herdr to open it in the Vim pane, in a new split if Vim already has files open.
-Ctrl-click HTTP and HTTPS links to open them in a browser. Cmd-click uses macOS's default application instead.
-
 ### File navigation
 
 | Scope | Key          | Action                              |
