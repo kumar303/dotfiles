@@ -75,9 +75,6 @@ Add this `[include]` section to `.gitconfig`:
 | Herdr | `cmd+shift+k`             | Close the terminal tab            |
 | Herdr | `ctrl+backtick`           | Show, hide, or focus the Vim pane |
 
-The workspace switcher shows todo workspaces. Press `d` to mark one done or `D` to also close its tabs.
-Search includes done workspaces; open one to restore it to todo. Use `←`/`→` to page, including during search.
-
 ### File navigation
 
 | Scope | Key          | Action                              |
