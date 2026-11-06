@@ -574,33 +574,59 @@ describe("split-vim-above", () => {
     expect(herdrCommandCalls("run")).toContainEqual(["pane", "run", "w1:p101", "vim", file]);
   });
 
-  it("opens a clicked file URL in an existing Vim split instead of toggling it off", () => {
-    const file = createFile("project/quo'te.md");
-    setPanes([sourcePane()]);
-    runScript();
-    clearHerdrCalls();
+  it.each([
+    ["evals/report/summary.md", "evals/report/summary.md"],
+    ["./evals/report/summary.md", "evals/report/summary.md"],
+    ["../report/summary.md", "../report/summary.md"],
+    ["summary.md", "summary.md"],
+    ["report/a%20dir/quo%27te%20%23%25%20%C3%BC.md", "report/a dir/quo'te #% ü.md"],
+    ["report/a space.md", "report/a space.md"],
+    ["report/summary.md?raw=1#details", "report/summary.md"],
+  ])("resolves a clicked relative link against the source pane cwd: %s", (clickedUrl, path) => {
+    const cwd = join(testDirectory, "project", "subdir");
+    mkdirSync(cwd, { recursive: true });
+    const file = createFile(join("project", "subdir", path));
+    setPanes([sourcePane({ cwd })]);
 
-    runScript({ clickedUrl: pathToFileURL(file).href });
+    runScript({ clickedUrl });
 
-    const text = herdrCommandCalls("send-text")
-      .map((args) => args[3])
-      .join("\n");
-    expect(text).toContain("rightbelow vsplit ");
-    expect(text).toContain(`fnameescape('${file.replaceAll("'", "''")}')`);
-    expect(herdrCommandCalls("close")).toHaveLength(0);
-    expect(commandCalls("tab", "create")).toHaveLength(0);
+    expect(herdrCommandCalls("run")).toContainEqual(["pane", "run", "w1:p101", "vim", file]);
   });
 
-  it.each(["https://example.com/file.md", "file://remote/tmp/file.md", "file:///tmp/%ZZ"])(
-    "rejects an unsupported clicked URL without changing panes: %s",
-    (clickedUrl) => {
-      setPanes([sourcePane()]);
+  it.each(["absolute", "relative"])(
+    "opens a clicked %s file link in an existing Vim split instead of toggling it off",
+    (kind) => {
+      const file = createFile("project/quo'te.md");
+      setPanes([sourcePane({ cwd: dirname(file) })]);
+      runScript();
+      clearHerdrCalls();
 
-      runScript({ clickedUrl, expectedStatus: 1 });
+      runScript({ clickedUrl: kind === "relative" ? "quo%27te.md" : pathToFileURL(file).href });
 
-      expect(herdrCalls()).toEqual([["pane", "list"]]);
+      const text = herdrCommandCalls("send-text")
+        .map((args) => args[3])
+        .join("\n");
+      expect(text).toContain("rightbelow vsplit ");
+      expect(text).toContain(`fnameescape('${file.replaceAll("'", "''")}')`);
+      expect(herdrCommandCalls("close")).toHaveLength(0);
+      expect(commandCalls("tab", "create")).toHaveLength(0);
     },
   );
+
+  it.each([
+    "http://example.com/file.md",
+    "https://example.com/file.md",
+    "javascript:alert(1)",
+    "//remote/tmp/file.md",
+    "file://remote/tmp/file.md",
+    "file:///tmp/%ZZ",
+  ])("rejects an unsupported clicked URL without changing panes: %s", (clickedUrl) => {
+    setPanes([sourcePane()]);
+
+    runScript({ clickedUrl, expectedStatus: 1 });
+
+    expect(herdrCalls()).toEqual([["pane", "list"]]);
+  });
 
   it("keeps explicit --file arguments ahead of a clicked URL", () => {
     setPanes([sourcePane({ cwd: "/tmp/project" })]);
