@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 
 const stateDirectory =
   process.env.VIEW_DIFF_IN_VIM_STATE_DIR ?? join(homedir(), ".cache", "view-diff-in-vim");
+const gitTimeoutMs = 60_000;
 
 /**
  * @param {string} cwd
@@ -32,10 +33,13 @@ function git(cwd, arguments_, options = {}) {
       encoding: options.encoding === "buffer" ? "buffer" : "utf8",
       maxBuffer: 20 * 1024 * 1024,
       stdio: ["ignore", "pipe", "pipe"],
-      timeout: 10_000,
+      timeout: gitTimeoutMs,
     });
   } catch (error) {
     if (options.allowFailure) return options.encoding === "buffer" ? Buffer.alloc(0) : "";
+    if (error && typeof error === "object" && "code" in error && error.code === "ETIMEDOUT") {
+      throw new Error(`git ${arguments_.join(" ")} timed out after ${gitTimeoutMs / 1000} seconds`);
+    }
     const detail =
       error && typeof error === "object" && "stderr" in error
         ? String(error.stderr).trim()

@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -71,6 +71,53 @@ describe("view-diff-in-vim entrypoint", () => {
       { id: "working", label: "Uncommitted diff" },
       { id: "branch", label: "Branch diff" },
     ]);
+  });
+
+  it("waits for a Git status that takes more than ten seconds", () => {
+    const binDirectory = join(stateDirectory, "bin");
+    const realGit = execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim();
+    mkdirSync(binDirectory);
+    const wrapper = join(binDirectory, "git");
+    writeFileSync(
+      wrapper,
+      `#!/bin/sh
+if [ "$1" = status ]; then sleep 11; fi
+exec "${realGit}" "$@"
+`,
+    );
+    chmodSync(wrapper, 0o755);
+
+    const choices = JSON.parse(
+      runText(["choices", testDirectory], {
+        PATH: `${binDirectory}:${process.env.PATH}`,
+      }),
+    );
+
+    expect(choices).toEqual([{ id: "branch", label: "Branch diff" }]);
+  }, 30_000);
+
+  it("reports a Git timeout instead of hiding it as a generic command failure", () => {
+    const preload = join(stateDirectory, "timeout.mjs");
+    writeFileSync(
+      preload,
+      `import childProcess from 'node:child_process';
+import {syncBuiltinESMExports} from 'node:module';
+const original = childProcess.execFileSync;
+childProcess.execFileSync = (command, args, options) => {
+  if (command === 'git' && args[0] === 'status') {
+    throw Object.assign(new Error('spawnSync git ETIMEDOUT'), {code: 'ETIMEDOUT', stderr: ''});
+  }
+  return original(command, args, options);
+};
+syncBuiltinESMExports();
+`,
+    );
+
+    expect(() =>
+      runText(["choices", testDirectory], {
+        NODE_OPTIONS: `--import=${pathToFileURL(preload).href}`,
+      }),
+    ).toThrow("git status --porcelain --untracked-files=normal timed out after");
   });
 
   it("stores an uncommitted view and reports hunk locations and gutter signs", () => {
